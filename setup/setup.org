@@ -1,0 +1,16 @@
+#+title: Setup
+
+
+* conda , pyenv
+
+https://stackoverflow.com/a/58045984
+
+#+begin_src tmux :line-mode current
+brew install --cask anaconda
+# init conda, the following command write scripts into your shell init file automatically
+conda init
+
+# disable init of env "base"
+conda config --set auto_activate_base false
+conda config --set env
+#+end_src
