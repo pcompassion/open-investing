@@ -12,5 +12,19 @@ conda init
 
 # disable init of env "base"
 conda config --set auto_activate_base false
-conda config --set env
+
+# https://martinralbrecht.wordpress.com/2020/08/23/conda-jupyter-and-emacs/
+# conda create -n ia-conda
+# conda activate ia-conda
+# conda install jupyter
+
+conda env create -f environment.yml
+python -m ipykernel install --user --name=$CONDA_DEFAULT_ENV
+# Installed kernelspec ia-conda in /Users/littlehome/Library/Jupyter/kernels/ia-conda
+
+#+end_src
+
+#+begin_src tmux
+# conda list --export > environment.yml
+
 #+end_src

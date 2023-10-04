@@ -1,0 +1,159 @@
+#+title: 2 8
+
+#+PROPERTY: header-args:jupyter-python :tangle test.py
+
+
+#+begin_src jupyter-python
+import pandas as pd
+pd.set_option('display.width', 220)
+
+pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+#+end_src
+
+#+RESULTS:
+:    a  b
+: 0  1  3
+: 1  2  4
+
+#+begin_src jupyter-python
+adult  = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data",
+names = ['age','workclass','fnlwgt', 'education',    'education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss', 'hours_per_week', 'native_country','label'], index_col = False)
+print("Shape of data{}".format(adult.shape))
+adult.head()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Shape of data(32561, 15)
+:    age          workclass  fnlwgt   education  education_num       marital_status          occupation    relationship    race      sex  capital_gain  capital_loss  hours_per_week  native_country   label
+: 0   39          State-gov   77516   Bachelors             13        Never-married        Adm-clerical   Not-in-family   White     Male          2174             0              40   United-States   <=50K
+: 1   50   Self-emp-not-inc   83311   Bachelors             13   Married-civ-spouse     Exec-managerial         Husband   White     Male             0             0              13   United-States   <=50K
+: 2   38            Private  215646     HS-grad              9             Divorced   Handlers-cleaners   Not-in-family   White     Male             0             0              40   United-States   <=50K
+: 3   53            Private  234721        11th              7   Married-civ-spouse   Handlers-cleaners         Husband   Black     Male             0             0              40   United-States   <=50K
+: 4   28            Private  338409   Bachelors             13   Married-civ-spouse      Prof-specialty            Wife   Black   Female             0             0              40            Cuba   <=50K
+:END:
+
+
+
+
+#+begin_src jupyter-python
+import sys
+print(sys.path)
+#+end_src
+
+#+RESULTS:
+: ['/Users/littlehome/projects/open-investing/notes/islr/ex', '/Users/littlehome/.conda/envs/ia-conda/lib/python311.zip', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11/lib-dynload', '', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11/site-packages']
+
+
+#+begin_src jupyter-python
+import os
+print(os.environ)
+#+end_src
+
+#+begin_src jupyter-python
+
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+df = adult.sample(10000, random_state = 100).sort_index(axis=0)
+df.head()
+#+end_src
+
+#+RESULTS:
+:     age   workclass  fnlwgt   education  education_num          marital_status          occupation    relationship                 race      sex  capital_gain  capital_loss  hours_per_week  native_country   label
+: 3    53     Private  234721        11th              7      Married-civ-spouse   Handlers-cleaners         Husband                Black     Male             0             0              40   United-States   <=50K
+: 4    28     Private  338409   Bachelors             13      Married-civ-spouse      Prof-specialty            Wife                Black   Female             0             0              40            Cuba   <=50K
+: 6    49     Private  160187         9th              5   Married-spouse-absent       Other-service   Not-in-family                Black   Female             0             0              16         Jamaica   <=50K
+: 8    31     Private   45781     Masters             14           Never-married      Prof-specialty   Not-in-family                White   Female         14084             0              50   United-States    >50K
+: 11   30   State-gov  141297   Bachelors             13      Married-civ-spouse      Prof-specialty         Husband   Asian-Pac-Islander     Male             0             0              40           India    >50K
+
+
+#+begin_src jupyter-python
+df.index.name = 'index_adult'
+df.index
+# df.columns
+#+end_src
+
+#+RESULTS:
+: Index([    3,     4,     6,     8,    11,    12,    16,    23,    26,    29,
+:        ...
+:        32525, 32526, 32529, 32536, 32541, 32542, 32543, 32548, 32550, 32556], dtype='int64', name='index_adult', length=10000)
+
+
+
+#+begin_src jupyter-python
+df.columns
+#+end_src
+
+#+RESULTS:
+: Index(['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'label'], dtype='object')
+
+#+begin_src jupyter-python
+df.loc[6, ['age']]
+#+end_src
+
+#+RESULTS:
+: age    49
+: Name: 6, dtype: object
+
+
+#+begin_src jupyter-python
+cols = ['age', 'education', 'marital_status', 'occupation', 'race', 'sex', 'native_country', 'label']
+df = df[cols]
+df.head()
+#+end_src
+
+#+RESULTS:
+:              age   education          marital_status          occupation                 race      sex  native_country   label
+: index_adult
+: 3             53        11th      Married-civ-spouse   Handlers-cleaners                Black     Male   United-States   <=50K
+: 4             28   Bachelors      Married-civ-spouse      Prof-specialty                Black   Female            Cuba   <=50K
+: 6             49         9th   Married-spouse-absent       Other-service                Black   Female         Jamaica   <=50K
+: 8             31     Masters           Never-married      Prof-specialty                White   Female   United-States    >50K
+: 11            30   Bachelors      Married-civ-spouse      Prof-specialty   Asian-Pac-Islander     Male           India    >50K
+
+#+begin_src jupyter-python
+df.groupby('native_country').groups.keys()
+#+end_src
+
+#+RESULTS:
+: dict_keys([' ?', ' Cambodia', ' Canada', ' China', ' Columbia', ' Cuba', ' Dominican-Republic', ' Ecuador', ' El-Salvador', ' England', ' France', ' Germany', ' Greece', ' Guatemala', ' Haiti', ' Holand-Netherlands', ' Honduras', ' Hong', ' Hungary', ' India', ' Iran', ' Ireland', ' Italy', ' Jamaica', ' Japan', ' Laos', ' Mexico', ' Nicaragua', ' Outlying-US(Guam-USVI-etc)', ' Peru', ' Philippines', ' Poland', ' Portugal', ' Puerto-Rico', ' Scotland', ' South', ' Taiwan', ' Thailand', ' Trinadad&Tobago', ' United-States', ' Vietnam', ' Yugoslavia'])
+
+#+begin_src jupyter-python
+ind = df[df.native_country == " India"]
+ind.head()
+#+end_src
+
+#+RESULTS:
+:              age   education          marital_status        occupation                 race      sex native_country   label
+: index_adult
+: 11            30   Bachelors      Married-civ-spouse    Prof-specialty   Asian-Pac-Islander     Male          India    >50K
+: 1029          48     Masters   Married-spouse-absent             Sales   Asian-Pac-Islander     Male          India   <=50K
+: 2130          28        11th               Separated      Adm-clerical   Asian-Pac-Islander   Female          India   <=50K
+: 2989          44     Masters      Married-civ-spouse   Exec-managerial   Asian-Pac-Islander     Male          India   <=50K
+: 4480          30   Bachelors      Married-civ-spouse             Sales   Asian-Pac-Islander     Male          India   <=50K
+
+#+begin_src jupyter-python
+df.reset_index().head()
+#+end_src
+
+#+RESULTS:
+:    index_adult  age   education          marital_status          occupation                 race      sex  native_country   label
+: 0            3   53        11th      Married-civ-spouse   Handlers-cleaners                Black     Male   United-States   <=50K
+: 1            4   28   Bachelors      Married-civ-spouse      Prof-specialty                Black   Female            Cuba   <=50K
+: 2            6   49         9th   Married-spouse-absent       Other-service                Black   Female         Jamaica   <=50K
+: 3            8   31     Masters           Never-married      Prof-specialty                White   Female   United-States    >50K
+: 4           11   30   Bachelors      Married-civ-spouse      Prof-specialty   Asian-Pac-Islander     Male           India    >50K
+
+#+begin_src jupyter-python
+cross = pd.crosstab(ind.sex, ind.label)
+cross
+#+end_src
+
+#+RESULTS:
+: label     <=50K   >50K
+: sex
+:  Female       4      0
+:  Male        16     17
