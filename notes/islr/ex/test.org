@@ -4,16 +4,17 @@
 
 
 #+begin_src jupyter-python
+display_width = 220
+
 import pandas as pd
-pd.set_option('display.width', 220)
+pd.set_option('display.width', display_width)
+
+import numpy as np
+np.set_printoptions(linewidth=display_width)
+
 
 pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 #+end_src
-
-#+RESULTS:
-:    a  b
-: 0  1  3
-: 1  2  4
 
 #+begin_src jupyter-python
 adult  = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data",
@@ -22,39 +23,8 @@ print("Shape of data{}".format(adult.shape))
 adult.head()
 #+end_src
 
-#+RESULTS:
-:RESULTS:
-: Shape of data(32561, 15)
-:    age          workclass  fnlwgt   education  education_num       marital_status          occupation    relationship    race      sex  capital_gain  capital_loss  hours_per_week  native_country   label
-: 0   39          State-gov   77516   Bachelors             13        Never-married        Adm-clerical   Not-in-family   White     Male          2174             0              40   United-States   <=50K
-: 1   50   Self-emp-not-inc   83311   Bachelors             13   Married-civ-spouse     Exec-managerial         Husband   White     Male             0             0              13   United-States   <=50K
-: 2   38            Private  215646     HS-grad              9             Divorced   Handlers-cleaners   Not-in-family   White     Male             0             0              40   United-States   <=50K
-: 3   53            Private  234721        11th              7   Married-civ-spouse   Handlers-cleaners         Husband   Black     Male             0             0              40   United-States   <=50K
-: 4   28            Private  338409   Bachelors             13   Married-civ-spouse      Prof-specialty            Wife   Black   Female             0             0              40            Cuba   <=50K
-:END:
 
 
-
-
-#+begin_src jupyter-python
-import sys
-print(sys.path)
-#+end_src
-
-#+RESULTS:
-: ['/Users/littlehome/projects/open-investing/notes/islr/ex', '/Users/littlehome/.conda/envs/ia-conda/lib/python311.zip', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11/lib-dynload', '', '/Users/littlehome/.conda/envs/ia-conda/lib/python3.11/site-packages']
-
-
-#+begin_src jupyter-python
-import os
-print(os.environ)
-#+end_src
-
-#+begin_src jupyter-python
-
-#+end_src
-
-#+RESULTS:
 
 #+begin_src jupyter-python
 df = adult.sample(10000, random_state = 100).sort_index(axis=0)
@@ -83,20 +53,10 @@ df.index
 
 
 
-#+begin_src jupyter-python
-df.columns
-#+end_src
-
-#+RESULTS:
-: Index(['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'label'], dtype='object')
 
 #+begin_src jupyter-python
 df.loc[6, ['age']]
 #+end_src
-
-#+RESULTS:
-: age    49
-: Name: 6, dtype: object
 
 
 #+begin_src jupyter-python
@@ -105,21 +65,29 @@ df = df[cols]
 df.head()
 #+end_src
 
-#+RESULTS:
-:              age   education          marital_status          occupation                 race      sex  native_country   label
-: index_adult
-: 3             53        11th      Married-civ-spouse   Handlers-cleaners                Black     Male   United-States   <=50K
-: 4             28   Bachelors      Married-civ-spouse      Prof-specialty                Black   Female            Cuba   <=50K
-: 6             49         9th   Married-spouse-absent       Other-service                Black   Female         Jamaica   <=50K
-: 8             31     Masters           Never-married      Prof-specialty                White   Female   United-States    >50K
-: 11            30   Bachelors      Married-civ-spouse      Prof-specialty   Asian-Pac-Islander     Male           India    >50K
-
 #+begin_src jupyter-python
 df.groupby('native_country').groups.keys()
 #+end_src
+#+begin_src jupyter-python
+df.reset_index().head()
+#+end_src
 
 #+RESULTS:
-: dict_keys([' ?', ' Cambodia', ' Canada', ' China', ' Columbia', ' Cuba', ' Dominican-Republic', ' Ecuador', ' El-Salvador', ' England', ' France', ' Germany', ' Greece', ' Guatemala', ' Haiti', ' Holand-Netherlands', ' Honduras', ' Hong', ' Hungary', ' India', ' Iran', ' Ireland', ' Italy', ' Jamaica', ' Japan', ' Laos', ' Mexico', ' Nicaragua', ' Outlying-US(Guam-USVI-etc)', ' Peru', ' Philippines', ' Poland', ' Portugal', ' Puerto-Rico', ' Scotland', ' South', ' Taiwan', ' Thailand', ' Trinadad&Tobago', ' United-States', ' Vietnam', ' Yugoslavia'])
+#+begin_example
+   index_adult  age   workclass  fnlwgt   education  education_num          marital_status          occupation    relationship                 race      sex  capital_gain  capital_loss  hours_per_week  native_country  \
+0            3   53     Private  234721        11th              7      Married-civ-spouse   Handlers-cleaners         Husband                Black     Male             0             0              40   United-States
+1            4   28     Private  338409   Bachelors             13      Married-civ-spouse      Prof-specialty            Wife                Black   Female             0             0              40            Cuba
+2            6   49     Private  160187         9th              5   Married-spouse-absent       Other-service   Not-in-family                Black   Female             0             0              16         Jamaica
+3            8   31     Private   45781     Masters             14           Never-married      Prof-specialty   Not-in-family                White   Female         14084             0              50   United-States
+4           11   30   State-gov  141297   Bachelors             13      Married-civ-spouse      Prof-specialty         Husband   Asian-Pac-Islander     Male             0             0              40           India
+
+    label
+0   <=50K
+1   <=50K
+2   <=50K
+3    >50K
+4    >50K
+#+end_example
 
 #+begin_src jupyter-python
 ind = df[df.native_country == " India"]
@@ -127,25 +95,86 @@ ind.head()
 #+end_src
 
 #+RESULTS:
-:              age   education          marital_status        occupation                 race      sex native_country   label
-: index_adult
-: 11            30   Bachelors      Married-civ-spouse    Prof-specialty   Asian-Pac-Islander     Male          India    >50K
-: 1029          48     Masters   Married-spouse-absent             Sales   Asian-Pac-Islander     Male          India   <=50K
-: 2130          28        11th               Separated      Adm-clerical   Asian-Pac-Islander   Female          India   <=50K
-: 2989          44     Masters      Married-civ-spouse   Exec-managerial   Asian-Pac-Islander     Male          India   <=50K
-: 4480          30   Bachelors      Married-civ-spouse             Sales   Asian-Pac-Islander     Male          India   <=50K
+#+begin_example
+             age      workclass  fnlwgt   education  education_num          marital_status        occupation    relationship                 race      sex  capital_gain  capital_loss  hours_per_week native_country  \
+index_adult
+11            30      State-gov  141297   Bachelors             13      Married-civ-spouse    Prof-specialty         Husband   Asian-Pac-Islander     Male             0             0              40          India
+1029          48   Self-emp-inc  138370     Masters             14   Married-spouse-absent             Sales   Not-in-family   Asian-Pac-Islander     Male             0             0              50          India
+2130          28      State-gov  130620        11th              7               Separated      Adm-clerical       Unmarried   Asian-Pac-Islander   Female             0             0              40          India
+2989          44        Private  178385     Masters             14      Married-civ-spouse   Exec-managerial         Husband   Asian-Pac-Islander     Male             0             0              48          India
+4480          30        Private  302149   Bachelors             13      Married-civ-spouse             Sales         Husband   Asian-Pac-Islander     Male             0             0              40          India
+
+              label
+index_adult
+11             >50K
+1029          <=50K
+2130          <=50K
+2989          <=50K
+4480          <=50K
+#+end_example
+
+
 
 #+begin_src jupyter-python
-df.reset_index().head()
+ind.head()
 #+end_src
 
 #+RESULTS:
-:    index_adult  age   education          marital_status          occupation                 race      sex  native_country   label
-: 0            3   53        11th      Married-civ-spouse   Handlers-cleaners                Black     Male   United-States   <=50K
-: 1            4   28   Bachelors      Married-civ-spouse      Prof-specialty                Black   Female            Cuba   <=50K
-: 2            6   49         9th   Married-spouse-absent       Other-service                Black   Female         Jamaica   <=50K
-: 3            8   31     Masters           Never-married      Prof-specialty                White   Female   United-States    >50K
-: 4           11   30   Bachelors      Married-civ-spouse      Prof-specialty   Asian-Pac-Islander     Male           India    >50K
+#+begin_example
+             age      workclass  fnlwgt   education  education_num          marital_status        occupation    relationship                 race      sex  capital_gain  capital_loss  hours_per_week native_country  \
+index_adult
+11            30      State-gov  141297   Bachelors             13      Married-civ-spouse    Prof-specialty         Husband   Asian-Pac-Islander     Male             0             0              40          India
+1029          48   Self-emp-inc  138370     Masters             14   Married-spouse-absent             Sales   Not-in-family   Asian-Pac-Islander     Male             0             0              50          India
+2130          28      State-gov  130620        11th              7               Separated      Adm-clerical       Unmarried   Asian-Pac-Islander   Female             0             0              40          India
+2989          44        Private  178385     Masters             14      Married-civ-spouse   Exec-managerial         Husband   Asian-Pac-Islander     Male             0             0              48          India
+4480          30        Private  302149   Bachelors             13      Married-civ-spouse             Sales         Husband   Asian-Pac-Islander     Male             0             0              40          India
+
+              label
+index_adult
+11             >50K
+1029          <=50K
+2130          <=50K
+2989          <=50K
+4480          <=50K
+#+end_example
+
+
+#+begin_src jupyter-python
+columns = ['sex', 'label']
+ind.loc[:, columns] = ind[columns].apply(lambda col: col.str.strip())
+
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+df['sex'].str.strip()
+class Series: 
+    def str(self):
+        class Str:
+            def strip(self2):
+                return map(self, strip)
+
+        return Str()
+#+end_src
+
+#+RESULTS:
+#+begin_example
+index_adult
+3          Male
+4        Female
+6        Female
+8        Female
+11         Male
+          ...
+32542      Male
+32543    Female
+32548      Male
+32550      Male
+32556    Female
+Name: sex, Length: 10000, dtype: object
+#+end_example
 
 #+begin_src jupyter-python
 cross = pd.crosstab(ind.sex, ind.label)
@@ -153,7 +182,124 @@ cross
 #+end_src
 
 #+RESULTS:
-: label     <=50K   >50K
+: label   <=50K  >50K
 : sex
-:  Female       4      0
-:  Male        16     17
+: Female      4     0
+: Male       16    17
+
+
+#+begin_src jupyter-python
+cross.index
+#+end_src
+
+#+RESULTS:
+: Index(['Female', 'Male'], dtype='object', name='sex')
+
+#+begin_src jupyter-python
+cross.loc['Male']
+#+end_src
+
+#+RESULTS:
+: label
+: <=50K    16
+: >50K     17
+: Name: Male, dtype: int64
+
+
+#+begin_src jupyter-python
+ind_50 = ind.loc[ind['label'] == '>50K', :]
+ind_50.head()
+#+end_src
+
+#+RESULTS:
+:              age     workclass  fnlwgt     education  education_num       marital_status       occupation    relationship                 race   sex  capital_gain  capital_loss  hours_per_week native_country label
+: index_adult
+: 11            30     State-gov  141297     Bachelors             13   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male             0             0              40          India  >50K
+: 8124          36       Private  172104   Prof-school             15        Never-married   Prof-specialty   Not-in-family                Other  Male             0             0              40          India  >50K
+: 9939          43   Federal-gov  325706   Prof-school             15   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male             0             0              50          India  >50K
+: 10590         35       Private   98283   Prof-school             15        Never-married   Prof-specialty   Not-in-family   Asian-Pac-Islander  Male             0             0              40          India  >50K
+: 10661         59       Private  122283   Prof-school             15   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male         99999             0              40          India  >50K
+
+
+
+#+begin_src jupyter-python
+ind_50.reset_index(inplace=True)
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+ind_50.head()
+#+end_src
+
+#+RESULTS:
+:    index_adult  age     workclass  fnlwgt     education  education_num       marital_status       occupation    relationship                 race   sex  capital_gain  capital_loss  hours_per_week native_country label
+: 0           11   30     State-gov  141297     Bachelors             13   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male             0             0              40          India  >50K
+: 1         8124   36       Private  172104   Prof-school             15        Never-married   Prof-specialty   Not-in-family                Other  Male             0             0              40          India  >50K
+: 2         9939   43   Federal-gov  325706   Prof-school             15   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male             0             0              50          India  >50K
+: 3        10590   35       Private   98283   Prof-school             15        Never-married   Prof-specialty   Not-in-family   Asian-Pac-Islander  Male             0             0              40          India  >50K
+: 4        10661   59       Private  122283   Prof-school             15   Married-civ-spouse   Prof-specialty         Husband   Asian-Pac-Islander  Male         99999             0              40          India  >50K
+
+#+begin_src jupyter-python
+adult.loc[ind_50.index_adult, 'hours_per_week']
+#+end_src
+
+#+RESULTS:
+#+begin_example
+11       40
+8124     40
+9939     50
+10590    40
+10661    40
+13551    40
+16923    60
+17834    50
+21128    50
+24154    50
+25739    40
+26356    40
+28264    70
+28433    55
+28452    40
+28798    50
+31327    60
+Name: hours_per_week, dtype: int64
+#+end_example
+
+#+begin_src jupyter-python
+adult['hours_per_week'][ind_50.index_adult]
+#+end_src
+
+#+RESULTS:
+#+begin_example
+11       40
+8124     40
+9939     50
+10590    40
+10661    40
+13551    40
+16923    60
+17834    50
+21128    50
+24154    50
+25739    40
+26356    40
+28264    70
+28433    55
+28452    40
+28798    50
+31327    60
+Name: hours_per_week, dtype: int64
+#+end_example
+
+#+RESULTS:
+:RESULTS:
+:    a  b
+: 0  1  4
+: 1  2  5
+: 2  3  6
+:    a  b
+: 0  1  4
+: 1  2  5
+:END:

@@ -22,46 +22,20 @@ pd.options.display.float_format = '{:,.2f}'.format # Print only 2 decimal cases.
 
 #+begin_src jupyter-python
 college = pd.read_csv("../data/College.csv")
-college.head(5)
 college = college.set_index("Unnamed: 0") # The default option 'drop=True', deletes the column
 college.index.name = 'Names'
-college.head()
+
+college.head(5)
 #+end_src
 
 #+RESULTS:
-#+begin_example
-                             Private  Apps  Accept  Enroll  Top10perc  \
-Names
-Abilene Christian University     Yes  1660    1232     721         23
-Adelphi University               Yes  2186    1924     512         16
-Adrian College                   Yes  1428    1097     336         22
-Agnes Scott College              Yes   417     349     137         60
-Alaska Pacific University        Yes   193     146      55         16
-
-                              Top25perc  F.Undergrad  P.Undergrad  Outstate  \
-Names
-Abilene Christian University         52         2885          537      7440
-Adelphi University                   29         2683         1227     12280
-Adrian College                       50         1036           99     11250
-Agnes Scott College                  89          510           63     12960
-Alaska Pacific University            44          249          869      7560
-
-                              Room.Board  Books  Personal  PhD  Terminal  \
-Names
-Abilene Christian University        3300    450      2200   70        78
-Adelphi University                  6450    750      1500   29        30
-Adrian College                      3750    400      1165   53        66
-Agnes Scott College                 5450    450       875   92        97
-Alaska Pacific University           4120    800      1500   76        72
-
-                              S.F.Ratio  perc.alumni  Expend  Grad.Rate
-Names
-Abilene Christian University      18.10           12    7041         60
-Adelphi University                12.20           16   10527         56
-Adrian College                    12.90           30    8735         54
-Agnes Scott College                7.70           37   19016         59
-Alaska Pacific University         11.90            2   10922         15
-#+end_example
+:                              Private  Apps  Accept  Enroll  Top10perc  Top25perc  F.Undergrad  P.Undergrad  Outstate  Room.Board  Books  Personal  PhD  Terminal  S.F.Ratio  perc.alumni  Expend  Grad.Rate
+: Names
+: Abilene Christian University     Yes  1660    1232     721         23         52         2885          537      7440        3300    450      2200   70        78      18.10           12    7041         60
+: Adelphi University               Yes  2186    1924     512         16         29         2683         1227     12280        6450    750      1500   29        30      12.20           16   10527         56
+: Adrian College                   Yes  1428    1097     336         22         50         1036           99     11250        3750    400      1165   53        66      12.90           30    8735         54
+: Agnes Scott College              Yes   417     349     137         60         89          510           63     12960        5450    450       875   92        97       7.70           37   19016         59
+: Alaska Pacific University        Yes   193     146      55         16         44          249          869      7560        4120    800      1500   76        72      11.90            2   10922         15
 
 
 #+begin_src jupyter-python
@@ -77,10 +51,256 @@ pass
 
 
 #+begin_src jupyter-python
-pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+college.describe(include='all')
 #+end_src
 
 #+RESULTS:
-:    a  b
-: 0  1  3
-: 1  2  4
+:            Apps    Accept   Enroll  Top10perc  Top25perc  F.Undergrad  P.Undergrad  Outstate  Room.Board    Books  Personal    PhD  Terminal  S.F.Ratio  perc.alumni    Expend  Grad.Rate
+: count    777.00    777.00   777.00     777.00     777.00       777.00       777.00    777.00      777.00   777.00    777.00 777.00    777.00     777.00       777.00    777.00     777.00
+: mean   3,001.64  2,018.80   779.97      27.56      55.80     3,699.91       855.30 10,440.67    4,357.53   549.38  1,340.64  72.66     79.70      14.09        22.74  9,660.17      65.46
+: std    3,870.20  2,451.11   929.18      17.64      19.80     4,850.42     1,522.43  4,023.02    1,096.70   165.11    677.07  16.33     14.72       3.96        12.39  5,221.77      17.18
+: min       81.00     72.00    35.00       1.00       9.00       139.00         1.00  2,340.00    1,780.00    96.00    250.00   8.00     24.00       2.50         0.00  3,186.00      10.00
+: 25%      776.00    604.00   242.00      15.00      41.00       992.00        95.00  7,320.00    3,597.00   470.00    850.00  62.00     71.00      11.50        13.00  6,751.00      53.00
+: 50%    1,558.00  1,110.00   434.00      23.00      54.00     1,707.00       353.00  9,990.00    4,200.00   500.00  1,200.00  75.00     82.00      13.60        21.00  8,377.00      65.00
+: 75%    3,624.00  2,424.00   902.00      35.00      69.00     4,005.00       967.00 12,925.00    5,050.00   600.00  1,700.00  85.00     92.00      16.50        31.00 10,830.00      78.00
+: max   48,094.00 26,330.00 6,392.00      96.00     100.00    31,643.00    21,836.00 21,700.00    8,124.00 2,340.00  6,800.00 103.00    100.00      39.80        64.00 56,233.00     118.00
+
+#+begin_src jupyter-python
+g = sns.PairGrid(college, vars=college.iloc[:,1:11], hue='Private')
+g.map_upper(plt.scatter, s=3)
+g.map_diag(plt.hist)
+g.map_lower(plt.scatter, s=3)
+g.fig.set_size_inches(9, 9)
+g.add_legend()
+
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: 625c241c-792d-4461-a38d-4acaff955345
+[[file:./.ob-jupyter/bafe6b502f5d17ab363ff72df8e9747bac55d4cd.png]]
+:END:
+
+#+begin_src jupyter-python
+sns.boxplot(x='Private', y='Outstate', data=college);
+
+#+end_src
+# Plotting boxplots for both Height and Weight
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df)
+plt.title("Boxplots of Height and Weight")
+plt.show()
+#+RESULTS:
+[[file:./.ob-jupyter/f683bf194ba448646974ed980ceac5d46e450713.png]]
+
+
+
+#+begin_src jupyter-python
+# Randomly generating a sample dataset
+np.random.seed(42)  # for reproducibility
+data = {
+    'Height': np.random.normal(160, 10, 100),  # Heights: mean=160cm, std_dev=10cm
+    'Weight': np.random.normal(60, 15, 100)    # Weights: mean=60kg, std_dev=15kg
+}
+
+df = pd.DataFrame(data)
+
+# Plotting using Seaborn
+sns.scatterplot(data=df, x='Height', y='Weight')
+plt.title("Scatter plot of Height vs. Weight")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Text(0.5, 1.0, 'Scatter plot of Height vs. Weight')
+[[file:./.ob-jupyter/1c1d70fbe69a409b2d4783527a35e9b5aef37117.png]]
+:END:
+
+
+#+begin_src jupyter-python
+# Plotting boxplots for both Height and Weight
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df)
+plt.title("Boxplots of Height and Weight")
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/b6a4fc2f7dc6196fd7f90e3e24714cfd1d372099.png]]
+
+
+#+begin_src jupyter-python
+df['BMI'] = df['Weight'] / (df['Height'] / 100)**2
+
+# Plotting boxplots for BMI and Weight
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df[['BMI', 'Weight']])
+plt.title("Boxplots of BMI and Weight")
+plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/ffc51fa88fe84dc7d9594cc552c091a9e0e1af77.png]]
+
+
+#+begin_src jupyter-python
+
+# Adding Gender column (approximately half males and half females)
+df['Gender'] = ['Male' if i < 50 else 'Female' for i in range(100)]
+
+# Plotting boxplots for BMI by Gender
+plt.figure(figsize=(10, 5))
+sns.boxplot(x='Gender', y='BMI', data=df)
+plt.title("Boxplots of BMI by Gender")
+plt.show()
+
+# Plotting boxplots for Weight by Gender
+plt.figure(figsize=(10, 5))
+sns.boxplot(x='Gender', y='Weight', data=df)
+plt.title("Boxplots of Weight by Gender")
+plt.show()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+[[file:./.ob-jupyter/a9cfe7d278c6851432c2e06d0f0fd830976f2634.png]]
+[[file:./.ob-jupyter/d197429de6d5493fcd86657d7bdab527d90e1177.png]]
+:END:
+
+
+#+begin_src jupyter-python
+college.head()
+#+end_src
+
+#+RESULTS:
+:                              Private  Apps  Accept  Enroll  Top10perc  Top25perc  F.Undergrad  P.Undergrad  Outstate  Room.Board  Books  Personal  PhD  Terminal  S.F.Ratio  perc.alumni  Expend  Grad.Rate
+: Names
+: Abilene Christian University     Yes  1660    1232     721         23         52         2885          537      7440        3300    450      2200   70        78      18.10           12    7041         60
+: Adelphi University               Yes  2186    1924     512         16         29         2683         1227     12280        6450    750      1500   29        30      12.20           16   10527         56
+: Adrian College                   Yes  1428    1097     336         22         50         1036           99     11250        3750    400      1165   53        66      12.90           30    8735         54
+: Agnes Scott College              Yes   417     349     137         60         89          510           63     12960        5450    450       875   92        97       7.70           37   19016         59
+: Alaska Pacific University        Yes   193     146      55         16         44          249          869      7560        4120    800      1500   76        72      11.90            2   10922         15
+
+#+begin_src jupyter-python
+college = college.assign(Elite=np.where(college['Top10perc']>50, 'Yes', 'No'))
+college
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                               Private   Apps  Accept  Enroll  Top10perc  Top25perc  F.Undergrad  P.Undergrad  Outstate  Room.Board  Books  Personal  PhD  Terminal  S.F.Ratio  perc.alumni  Expend  Grad.Rate Elite
+Names
+Abilene Christian University       Yes   1660    1232     721         23         52         2885          537      7440        3300    450      2200   70        78      18.10           12    7041         60    No
+Adelphi University                 Yes   2186    1924     512         16         29         2683         1227     12280        6450    750      1500   29        30      12.20           16   10527         56    No
+Adrian College                     Yes   1428    1097     336         22         50         1036           99     11250        3750    400      1165   53        66      12.90           30    8735         54    No
+Agnes Scott College                Yes    417     349     137         60         89          510           63     12960        5450    450       875   92        97       7.70           37   19016         59   Yes
+Alaska Pacific University          Yes    193     146      55         16         44          249          869      7560        4120    800      1500   76        72      11.90            2   10922         15    No
+...                                ...    ...     ...     ...        ...        ...          ...          ...       ...         ...    ...       ...  ...       ...        ...          ...     ...        ...   ...
+Worcester State College             No   2197    1515     543          4         26         3089         2029      6797        3900    500      1200   60        60      21.00           14    4469         40    No
+Xavier University                  Yes   1959    1805     695         24         47         2849         1107     11520        4960    600      1250   73        75      13.30           31    9189         83    No
+Xavier University of Louisiana     Yes   2097    1915     695         34         61         2793          166      6900        4200    617       781   67        75      14.40           20    8323         49    No
+Yale University                    Yes  10705    2453    1317         95         99         5217           83     19840        6510    630      2115   96        96       5.80           49   40386         99   Yes
+York College of Pennsylvania       Yes   2989    1855     691         28         63         2988         1726      4990        3560    500      1250   75        75      18.10           28    4509         99    No
+
+[777 rows x 19 columns]
+#+end_example
+
+
+#+begin_src jupyter-python
+college = college.loc[college['Top10perc']>50, 'Elite'] = 'Yes'
+#+end_src
+
+
+#+begin_src jupyter-python
+college.head()
+#+end_src
+
+#+RESULTS:
+:                              Private  Apps  Accept  Enroll  Top10perc  Top25perc  F.Undergrad  P.Undergrad  Outstate  Room.Board  Books  Personal     PhD  Terminal  S.F.Ratio  perc.alumni  Expend  Grad.Rate Elite
+: Names
+: Abilene Christian University     Yes  1660    1232     721         23         52         2885          537      7440        3300    450      2200  Medium        78      18.10           12    7041         60    No
+: Adelphi University               Yes  2186    1924     512         16         29         2683         1227     12280        6450    750      1500     Low        30      12.20           16   10527         56    No
+: Adrian College                   Yes  1428    1097     336         22         50         1036           99     11250        3750    400      1165  Medium        66      12.90           30    8735         54    No
+: Agnes Scott College              Yes   417     349     137         60         89          510           63     12960        5450    450       875    High        97       7.70           37   19016         59   Yes
+: Alaska Pacific University        Yes   193     146      55         16         44          249          869      7560        4120    800      1500    High        72      11.90            2   10922         15    No
+
+#+begin_src jupyter-python
+college['PhD'] = pd.cut(college['PhD'], 3, labels=['Low', 'Medium', 'High'])
+#+end_src
+
+
+#+begin_src jupyter-python
+
+college['PhD']
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Names
+Abilene Christian University      Medium
+Adelphi University                   Low
+Adrian College                    Medium
+Agnes Scott College                 High
+Alaska Pacific University           High
+                                   ...
+Worcester State College           Medium
+Xavier University                   High
+Xavier University of Louisiana    Medium
+Yale University                     High
+York College of Pennsylvania        High
+Name: PhD, Length: 777, dtype: category
+Categories (3, object): ['Low' < 'Medium' < 'High']
+#+end_example
+
+
+#+begin_src jupyter-python
+college['Grad.Rate'] = pd.cut(college['Grad.Rate'], 5, labels=['Very low', 'Low', 'Medium', 'High', 'Very high'])
+college['Books'] = pd.cut(college['Books'], 2, labels=['Low', 'High'])
+college['Enroll'] = pd.cut(college['Enroll'], 4, labels=['Very low', 'Low', 'High', 'Very high'])
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+fig = plt.figure()
+
+plt.subplot(221)
+# college['PhD'].value_counts().plot(kind='bar', title = 'Private');
+college.groupby('PhD').size().sort_values(ascending=False).plot(kind='bar', title = 'Private');
+plt.subplot(222)
+college['Grad.Rate'].value_counts().plot(kind='bar', title = 'Grad.Rate');
+plt.subplot(223)
+college['Books'].value_counts().plot(kind='bar', title = 'Books');
+plt.subplot(224)
+college['Enroll'].value_counts().plot(kind='bar', title = 'Enroll');
+
+fig.subplots_adjust(hspace=1) # To add space between subplots
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/fdbca49733c363a224a958d7518942f56398abde.png]]
+
+
+#+begin_src jupyter-python
+college['PhD'].value_counts()
+#+end_src
+
+#+RESULTS:
+: PhD
+: High      455
+: Medium    294
+: Low        28
+: Name: count, dtype: int64
+
+
+#+begin_src jupyter-python
+college.groupby("PhD").size()
+#+end_src
+
+#+RESULTS:
+: PhD
+: Low        28
+: Medium    294
+: High      455
+: dtype: int64

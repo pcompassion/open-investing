@@ -9,7 +9,6 @@ https://stackoverflow.com/a/58045984
 brew install --cask anaconda
 # init conda, the following command write scripts into your shell init file automatically
 conda init
-
 # disable init of env "base"
 conda config --set auto_activate_base false
 
@@ -27,4 +26,10 @@ python -m ipykernel install --user --name=$CONDA_DEFAULT_ENV
 #+begin_src tmux
 # conda list --export > environment.yml
 
+#+end_src
+
+#+begin_src tmux
+# Set Conda-Forge as the Highest Priority Channel: If mixing default and conda-forge channels, it's generally a good idea to set conda-forge as the highest priority to avoid binary incompatibilities:
+conda config --add channels conda-forge
+conda config --set channel_priority strict
 #+end_src
