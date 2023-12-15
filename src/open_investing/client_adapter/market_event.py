@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Dict
-from open_investing.market_event.market_event import MarketEvent
+from open_investing.market_event.market_event import MarketEventSpec
+
 
 class MarketEventSourceRegistry:
     event_source_classes: Dict{MarketEvent, MarketEventSource} = {}
