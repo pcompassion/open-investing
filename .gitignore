@@ -2,4 +2,11 @@
 .idea
 *.log
 tmp/
-.ob-jupyter/
+.env
+*.pyc
+.ipynb_checkpoints/
+**/settings/local.py
+.env.*
+**/logs
+**/.ob-jupyter
+.vscode

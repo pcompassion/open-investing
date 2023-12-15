@@ -1,0 +1,16 @@
+#+title: Strategy
+
+
+* generates decision
+
+
+* api
+
+
+** update decision
+
+
+
+* data
+
+decision

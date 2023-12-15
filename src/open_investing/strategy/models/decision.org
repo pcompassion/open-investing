@@ -1,0 +1,9 @@
+#+title: Decision
+
+where if first order is fulfilled then perform second order,
+and if first order is partially fulfilled, perform second order proportionally
+
+
+
+if first order is not fulfilled and diverged (first order was limit order and price moved to the opposite direction so that it's harder to meet the limit order price),
+change the first order's limit order price
