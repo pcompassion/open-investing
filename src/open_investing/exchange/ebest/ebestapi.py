@@ -42,6 +42,7 @@ HEADERS_DATA = {
 
 
 class EbestApi:
+    name: str = "ebest"
     _instances: Dict[str, "EbestApi"] = {}
 
     @classmethod

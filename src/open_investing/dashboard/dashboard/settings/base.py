@@ -145,3 +145,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # for frontend
 CORS_ORIGIN_WHITELIST = ["http://localhost:3000"]
+
+import redis
+import json
+
+redis_client = redis.Redis(
+    host="localhost", port=6379, db=0
+)  # adjust parameters as needed

@@ -4,6 +4,8 @@ import functools
 import operator
 import itertools
 from typing import Union, Dict
+from abc import ABC
+from open_investing.const.const import EXCHANGE
 
 
 class MarketEventType(Enum):
@@ -13,7 +15,7 @@ class MarketEventType(Enum):
 
 
 class MarketEventSourceType(Enum):
-    EXCHANGE = "exchange"
+    EXCHANGE = EXCHANGE
 
 
 class MarketEvent:
@@ -27,36 +29,37 @@ class MarketEvent:
         self,
         event_type: MarketEventType,
         source_name: str,
-        cron_expression: str,
+        cron_time: str,
         data: Dict[str, Union[str, int, float]] = None,
-        source_type: str = "exchange",
+        source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE,
     ):
         self.event_type = event_type
         self.source_name = source_name
         self.source_type = source_type
-        self.cron_expression = cron_expression
+        self.cron_time = cron_time
         self.data = data if data is not None else {}
+
+    def __str__(self):
+        return f"{self.event_type.value} {self.source_type}:{self.source_name} {self.cron_time} {self.data}"
 
     def __eq__(self, other):
         if isinstance(other, MarketEvent):
             return (
                 self.event_type,
                 self.source_name,
-                self.cron_expression,
+                self.cron_time,
                 tuple(self.data.items()),
             ) == (
                 other.event_type,
                 other.source_name,
-                other.cron_expression,
+                other.cron_time,
                 tuple(other.data.items()),
             )
         return NotImplemented
 
     def __hash__(self):
         # Hash the individual attributes
-        attrs_hash = map(
-            hash, (self.event_type, self.source_name, self.cron_expression)
-        )
+        attrs_hash = map(hash, (self.event_type, self.source_name, self.cron_time))
 
         # Hash the key-value pairs in the data dictionary
         data_items_hash = map(hash, tuple(self.data.items()))
@@ -67,9 +70,13 @@ class MarketEvent:
 
     @property
     def source_manager(self):
-        pass
+        match self.source_type:
+            case MarketEventSourceType.EXCHANGE:
+                return store[EXCHANGE].get_exchange(
+                    self.source_name, event_type=self.event_type
+                )
 
 
-class MarketEventSource:
+class IMarketEventSource(ABC):
     def __init__(self, market_event: MarketEvent):
         self.market_event = market_event
