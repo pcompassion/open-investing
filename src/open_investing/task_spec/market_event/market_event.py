@@ -22,18 +22,13 @@ class MarketEventSourceType(Enum):
     EXCHANGE = EXCHANGE
 
 
-class MarketEventSpec(BaseModel):
+class MarketEventSpec(TaskSpec):
     event_type: MarketEventType
     source_name: str
-    cron_time: str
-    data: Dict[str, Union[str, int, float]] = {}
     source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE
 
     def __str__(self):
-        return f"{self.event_type.value} {self.source_type.value}:{self.source_name} {self.cron_time} {self.data}"
-
-    def __str__(self):
-        return f"{self.event_type.value} {self.source_type}:{self.source_name} {self.cron_time} {self.data}"
+        return f"{self.event_type} {self.source_type}:{self.source_name} {self.cron_time} {self.data}"
 
     def __eq__(self, other):
         if isinstance(other, MarketEventSpec):

@@ -24,6 +24,7 @@ class SecurityOption(models.Model):
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
+    timeframe = models.DurationField()
 
     data = models.JSONField(default=dict)
 
@@ -57,6 +58,7 @@ class SecurityFuture(models.Model):
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
+    timeframe = models.DurationField()
 
     data = models.JSONField(default=dict)
 
@@ -71,19 +73,3 @@ class SecurityFuture(models.Model):
     @classmethod
     def set_data_interface(cls, new_interface):
         cls.data_interface = new_interface
-
-
-class MarketIndicatorDay(models.Model):
-    name = models.CharField(max_length=100, blank=True)
-    value = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
-
-    date = models.DateField()
-    create_time = models.DateTimeField(auto_now_add=True)
-
-    exchange_api_code = models.CharField(max_length=32, blank=True)
-    exchange_name = models.CharField(max_length=32, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["name", "date"], name="unique_name_date")
-        ]
