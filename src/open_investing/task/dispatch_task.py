@@ -9,6 +9,12 @@ redis_client = redis.Redis(
 )  # adjust parameters as needed
 
 
-def dispatch_task(task_info):
-    task_json = json.dumps(task_info)
-    redis_client.rpush("task_queue", task_json)  # 'task_queue' is the Redis list name
+class TaskDispatcher:
+    def dispatch_task(self, task_info):
+        task_json = json.dumps(task_info)
+        redis_client.rpush(
+            "task_queue", task_json
+        )  # 'task_queue' is the Redis list name
+
+
+task_dispatcher = TaskDispatcher()

@@ -9,6 +9,14 @@ from open_investing.exchange.ebest.api_data import EbestApiData
 from open_investing.order.const.order import OrderDirection, OrderPriceType
 
 
+class IndexCode(Enum):
+    Kospi = "kospi"
+    Kospi200 = "kospi200"
+    Krx100 = "krx100"
+    Kosdaq = "kosdaq"
+    Vkospi = "vkospi"
+
+
 class EbestApiField:
     field_name_map = {
         MarketType.STOCK: {
@@ -33,6 +41,11 @@ class EbestApiField:
         OrderDirection.BUY: "2",
         OrderPriceType.LIMIT: "00",
         OrderPriceType.MARKET: "03",
+        IndexCode.Kospi: "001",
+        IndexCode.Kospi200: "101",
+        IndexCode.Krx100: "501",
+        IndexCode.Kosdaq: "301",
+        IndexCode.Vkospi: "205",
     }
 
     @classmethod

@@ -9,19 +9,21 @@ class TaskManager:
         self.command_queue = asyncio.Queue()
         self.new_command_event = asyncio.Event()
 
-    async def start_task(self, name, coro):
-        if name not in self.tasks:
-            task = asyncio.create_task(coro)
-            self.tasks[name] = task
+    async def start_task(self, task_spec):
+        if task_spec not in self.tasks:
+            task_spec_handler_cls = task_spec_handlers[task_spec]
+            task_spec_handler = task_spec_handler_cls(task_spec)
 
-    def stop_task(self, name):
-        task = self.tasks.get(name)
-        if task:
-            task.cancel()
-            del self.tasks[name]
+            self.tasks[task_spec] = handler
 
-    async def enqueue_task_command(self, command):
-        await self.command_queue.put(command)
+    def stop_task(self, task_spec):
+        task_handler = self.tasks.get(task_spec)
+        if task_handler:
+            task_handler.task.cancel()
+            del self.tasks[task_spec]
+
+    async def enqueue_task_command(self, task_info):
+        await self.command_queue.put(task_info)
         self.new_command_event.set()
 
     async def run(self):
@@ -30,9 +32,12 @@ class TaskManager:
             self.new_command_event.clear()  # Reset the event
 
             while not self.command_queue.empty():
-                command = await self.command_queue.get()
+                task_info = await self.command_queue.get()
+                task_spec = task_info["task_spec"]
+
+                command = task_info["command"]
 
                 if command["type"] == "start":
-                    await self.start_task(command["name"], command["coro"])
+                    await self.start_task(task_spec)
                 elif command["type"] == "stop":
                     self.stop_task(command["name"])

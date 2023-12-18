@@ -16,6 +16,8 @@ class EbestUrl:
     stock_order: str = "/stock/order"
     option_order: str = "/futureoption/order"
 
+    market_indicator: str = "/indtp/market-data"
+
     def __init__(self):
         self.base_url: str = "https://openapi.ebestsec.co.kr:8080"
 
@@ -44,8 +46,12 @@ class EbestCode:
     # t0425 주식체결/미체결
     expcode: str = "expcode"
 
+    # t1511 업종현재가
+    upcode: str = "upcode"
+
     dummy: str = "dummy"
 
 
 class FieldName(Enum):
     SECURITY_CODE = "security_code"
+    INDEX_CODE = "index_code"

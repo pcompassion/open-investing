@@ -119,11 +119,15 @@ class EbestApi:
         headers: Optional[Dict[str, Any]] = None,
         body_block: Optional[Dict[str, Any]] = None,
     ):
+        from open_investing.exchange.ebest.api_field import EbestApiField
+
         body_block = body_block or {}
         api_data = EbestApiData.get_api_data(tr_code)
 
         default_body_block = api_data.get("body", {}).copy() or {}
-        body_block = {**default_body_block, **body_block}
+        send_data = EbestApiField.get_send_data(tr_code=tr_code, **body_block)
+
+        body_block = {**default_body_block, **send_data}
 
         headers = headers or {}
         default_headers = HEADERS_DATA.get("headers", {}).copy() or {}

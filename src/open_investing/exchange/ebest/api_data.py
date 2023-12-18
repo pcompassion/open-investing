@@ -17,6 +17,13 @@ class EbestApiData:
             "f_page_meta_block_name": "{tr_code}OutBlock",
             "f_data_block_name": "{tr_code}OutBlock1",
         },
+        "t1511": {
+            "body": {},
+            "field_name_map": {
+                FieldName.INDEX_CODE.value: EbestCode.upcode,
+            },
+            "api_path": EbestUrl.market_indicator,
+        },
         "t2105": {
             "body": {},
             "field_name_map": {
