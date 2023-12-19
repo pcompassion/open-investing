@@ -2,25 +2,47 @@
 
 import asyncio
 
-
 class TaskManager:
     def __init__(self):
-        self.tasks = {}
+        self.listeners = defaultdict(list)
+        self.broadcast_listeners = []
+
+        self.task_spec_handlers = {}
         self.command_queue = asyncio.Queue()
         self.new_command_event = asyncio.Event()
 
-    async def start_task(self, task_spec):
-        if task_spec not in self.tasks:
-            task_spec_handler_cls = task_spec_handlers[task_spec]
-            task_spec_handler = task_spec_handler_cls(task_spec)
+    def subscribe(self, task_spec, listener):
+        if listener not in self.listeners[task_spec]:
+            self.listeners[task_spec].append(listener)
 
-            self.tasks[task_spec] = handler
+    def subscribe_all(self, listener):
+        if listener not in self.broadcast_listeners:
+            self.broadcast_listeners.append(listener)
+
+    async def notify_listeners(self, message):
+        task_spec = message["task_spec"]
+
+        listeners = self.listeners[task_spec]
+
+        for listener in listeners:
+            await listener(message)
+
+        for listener in self.broadcast_listeners:
+            await listener(message)
+
+    async def start_task(self, task_spec):
+        if task_spec not in self.task_spec_handlers:
+            task_spec_handler_cls = self.task_spec_handlers[task_spec]
+            task_spec_handler = task_spec_handler_cls(task_spec)
+            task_spec_handler.subscribe(self.notify_listeners)
+
+            self.task_spec_handlers[task_spec] = task_spec_handler
 
     def stop_task(self, task_spec):
-        task_handler = self.tasks.get(task_spec)
+        task_handler = self.task_spec_handlers.get(task_spec)
         if task_handler:
             task_handler.task.cancel()
-            del self.tasks[task_spec]
+            del self.task_spec_handlers[task_spec]
 
     async def enqueue_task_command(self, task_info):
         await self.command_queue.put(task_info)

@@ -1,6 +1,0 @@
-#+title: Axis
-
-
-#+begin_src jupyter-python
-np.argmax(Q, axis=1)
-#+end_src
