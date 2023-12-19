@@ -3,6 +3,12 @@
 from abc import ABC, abstractmethod
 
 
+class ListenerType(Enum):
+
+    Callable = 'callable'
+    ChannelGroup = 'channel_group'
+
+
 class TaskDispatcher(ABC):
     def __init__(self):
         self.listeners = defaultdict(list)
@@ -12,7 +18,7 @@ class TaskDispatcher(ABC):
         pass
 
     @abstractmethod
-    async def subscribe(self, task_spec, listener):
+    async def subscribe(self, task_spec, listener, listner_type: ListnerType):
         pass
 
     @abstractmethod
@@ -38,17 +44,31 @@ class RedisTaskDispatcher(TaskDispatcher):
         )
         await self.redis_client.rpush("task_queue", task_json)
 
-    def subscribe(self, task_spec, listener):
+    async def subscribe(self, task_spec, listener, listener_type=ListenerType.Callable):
         if listener not in self.listeners[task_spec]:
-            self.listeners[task_spec].append(listener)
+            self.listeners[task_spec].append([listener, listner_type])
 
     async def notify_listeners(self, message):
 
         task_spec = message["task_spec"]
 
         listeners = self.listeners[task_spec]
-        for listener in listeners:
-            await listener(message)
+
+        for listener, listner_type in listeners:
+            match listner_type:
+                case ListenerType.Callable:
+                    await listener(task_spec, message)
+                case ListenerType.ChannelGroup:
+                    channel_layer = get_channel_layer()
+                    group_name = listener
+                    await channel_layer.group_send(
+                        group_name,
+                        {
+                            'type': 'task_message',
+                            'message': message
+                        }
+                    )
+
 
     async def listen_for_task_updates(self):
         while True:
@@ -76,7 +96,7 @@ class LocalTaskDispatcher(TaskDispatcher):
         await self.task_manager.enqueue_task_command(task_info)
         await self.task_manager.subscribe_all(self.notify_listeners)
 
-    async def subscribe(self, task_spec, listener):
+    async def subscribe(self, task_spec, listener, listner_type=ListenerType.Callable):
         if listener not in self.listeners[task_spec]:
             self.listeners[task_spec].append(listener)
 
