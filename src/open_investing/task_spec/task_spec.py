@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-
-from pydantic import BaseModel
-from typing import Dict, Union, Optional
-from enum import Enum
-from croniter import croniter
-from datetime import datetime, timedelta
+from abc import ABC, abstractmethod
+from typing import Dict, Union
 
 from open_library.extension.croniter_ex import estimate_interval, estimate_timeframe
 from open_library.time.const import TimeUnit
+from pydantic import BaseModel
 
 
 # Base TaskSpec class
@@ -32,3 +29,20 @@ class TaskSpec(BaseModel):
             return estimate_timeframe(self.cron_time, base_time=base_time)
 
         return 0
+
+
+class TaskSpecHandler(ABC):
+    @property
+    @abstractmethod
+    def task_spec_cls(cls):
+        if not hasattr(cls, "task_spec_cls"):
+            raise NotImplementedError(
+                "Subclass must have a class variable 'task_spec_cls'"
+            )
+        if not isinstance(
+            getattr(cls, "task_spec_cls"), TaskSpec
+        ):  # replace 'int' with the expected type
+            raise TypeError("'task_spec_cls' must be an TaskSpec")
+
+    def __init__(self, task_spec: TaskSpec):
+        self.task_spec = task_spec

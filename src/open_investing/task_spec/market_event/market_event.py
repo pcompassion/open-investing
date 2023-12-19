@@ -10,15 +10,16 @@ import itertools
 from abc import ABC
 from open_investing.const.const import EXCHANGE
 from open_investing.store.store import store
+from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 
 
-class MarketEventType(Enum):
+class MarketEventType(str, Enum):
     CANDLE = "candle"
     INDICATOR = "indicator"
     FUTURE_OPTION_CANDLE = "future_option_candle"
 
 
-class MarketEventSourceType(Enum):
+class MarketEventSourceType(str, Enum):
     EXCHANGE = EXCHANGE
 
 
@@ -60,6 +61,10 @@ class MarketEventSpec(TaskSpec):
             )
 
 
-class IMarketEventSource(ABC):
-    def __init__(self, market_event_spec: MarketEventSpec):
-        self.market_event_spec = market_event_spec
+class IMarketEventSource(TaskSpecHandler):
+    def __init__(self, task_spec: MarketEventSpec):
+        super().__init__(task_spec)  # market_event_spec is a TaskSpec
+
+    @property
+    def market_event_spec(self):
+        return self.task_spec  # convenient
