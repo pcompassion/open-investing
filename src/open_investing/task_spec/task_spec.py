@@ -7,6 +7,7 @@ from croniter import croniter
 from datetime import datetime, timedelta
 
 from open_library.extension.croniter_ex import estimate_interval, estimate_timeframe
+from open_library.time.const import TimeUnit
 
 
 # Base TaskSpec class
@@ -25,7 +26,6 @@ class TaskSpec(BaseModel):
             return estimate_interval(self.cron_time, time_unit=time_unit)
 
         return 0
-
 
     def estimated_timeframe(self, base_time=None):
         if self.cron_time:

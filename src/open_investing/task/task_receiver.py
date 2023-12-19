@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import json
+from open_investing.task.task_manager import TaskManager
+
 
 class RedisTaskReceiver:
     def __init__(self, task_manager: TaskManager, channel_name: str, redis_client):
@@ -10,10 +13,13 @@ class RedisTaskReceiver:
 
     async def run(self):
         while True:
-            _, data = self.redis_client.blpop("task_queue")
+            _, raw_data = await self.redis_client.blpop("task_queue")
+
+            data = raw_data.decode("utf-8")
+
             task_info = json.loads(data)
 
-            await self.task_manager.enque_task_command(task_info)
+            await self.task_manager.enqueue_task_command(task_info)
 
     def notify_listners(self, message):
-        self.redis_client.publish(self.channel_name, message)
+        await self.redis_client.publish(self.channel_name, message)
