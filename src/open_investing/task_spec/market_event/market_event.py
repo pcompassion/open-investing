@@ -9,8 +9,10 @@ import itertools
 
 from abc import ABC
 from open_investing.const.const import EXCHANGE
-from open_investing.store.store import store
+
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
+from open_investing.app.task_app import app
+from open_investing.exchange.const.market_type import ApiType
 
 
 class MarketEventType(str, Enum):
@@ -27,6 +29,7 @@ class MarketEventSpec(TaskSpec):
     event_type: MarketEventType
     source_name: str
     source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE
+    api_type: ApiType = ApiType.Stock
 
     def __str__(self):
         return f"{self.event_type} {self.source_type}:{self.source_name} {self.cron_time} {self.data}"
@@ -56,9 +59,13 @@ class MarketEventSpec(TaskSpec):
     def source_manager(self):
         if self.source_type == MarketEventSourceType.EXCHANGE:
             # Adjust this based on how 'store' and 'EXCHANGE' are defined.
-            return store[EXCHANGE].get_exchange(
-                self.source_name, event_type=self.event_type
+
+            return app.exchange_store.get_exchange(
+                self.source_name, exchange_params=self.get_exchange_params()
             )
+
+    def get_exchange_params(self):
+        return dict(api_type=self.api_type)
 
 
 class IMarketEventSource(TaskSpecHandler):

@@ -19,7 +19,6 @@ import logging
 import pendulum
 
 
-from risk_glass.ebest.openapi.settings import ENVIRONMENT, Environment
 from open_investing.exchange.ebest.api_data import EbestApiData
 
 from open_library.logging.logging_filter import WebsocketLoggingFilter
@@ -28,6 +27,7 @@ from open_investing.exchange.ebest.const.const import FieldName, EbestUrl
 
 from open_library.api_client.websocket_client import WebSocketClient
 from open_library.api_client.api_client import ApiClient, ApiResponse
+from open_library.environment.const import Environment
 
 
 logger = logging.getLogger(__name__)
@@ -52,20 +52,27 @@ class EbestApi:
             cls._instances[app_key] = instance
         return cls._instances[app_key]
 
-    def __init__(self, api_key: str, api_secret: str):
+    def __init__(
+        self, api_key: str, api_secret: str, environment: Environment = Environment.DEV
+    ):
         self.api_key: str = api_key
         self.api_secret: str = api_secret
 
         self.url = EbestUrl()
         self.api_client = ApiClient(self.url.auth_url(), api_key, api_secret)
+        self.environment = environment
 
         self.ws_clients: Dict[str, WebSocketClient] = {}
         self.shutdown_event = asyncio.Event()
 
+    def start_token_refresh(self):
+        token_manager = self.api_client.get_token_manager()
+        token_manager.start_refresh_task()
+
     def get_or_create_ws_client(self, tr_type) -> WebSocketClient:
         token_manager = self.api_client.get_token_manager()
         ws_uri: str = ""
-        match ENVIRONMENT:
+        match self.environment:
             case Environment.DEV:
                 ws_uri = "wss://openapi.ebestsec.co.kr:29443/websocket"
             case Environment.PROD:

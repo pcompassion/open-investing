@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
+from enum import Enum
 from abc import ABC, abstractmethod
+import uuid
 
-
-class ListenerType(Enum):
-
-    Callable = 'callable'
-    ChannelGroup = 'channel_group'
+from open_investing.task.const import ListenerType
 
 
 class TaskDispatcher(ABC):
@@ -14,11 +13,11 @@ class TaskDispatcher(ABC):
         self.listeners = defaultdict(list)
 
     @abstractmethod
-    async def dispatch_task(self, command, task_spec):
+    async def dispatch_task(self, task_spec, command):
         pass
 
     @abstractmethod
-    async def subscribe(self, task_spec, listener, listner_type: ListnerType):
+    def subscribe(self, task_spec, listener, listner_type: ListenerType):
         pass
 
     @abstractmethod
@@ -27,63 +26,7 @@ class TaskDispatcher(ABC):
 
     @classmethod
     def create_task_id(cls):
-        return str(uuid.uuid4()
-
-
-class RedisTaskDispatcher(TaskDispatcher):
-    def __init__(self, channel_name, redis_client):
-        super().__init__()
-        self.channel_name = channel_name
-        self.redis_client = redis_client
-
-    async def dispatch_task(self, command, task_spec):
-        task_id = str(uuid.uuid4())
-
-        task_json = json.dumps(
-            {"command": command, "task_spec": task_spec, "task_id": task_id}
-        )
-        await self.redis_client.rpush("task_queue", task_json)
-
-    async def subscribe(self, task_spec, listener, listener_type=ListenerType.Callable):
-        if listener not in self.listeners[task_spec]:
-            self.listeners[task_spec].append([listener, listner_type])
-
-    async def notify_listeners(self, message):
-
-        task_spec = message["task_spec"]
-
-        listeners = self.listeners[task_spec]
-
-        for listener, listner_type in listeners:
-            match listner_type:
-                case ListenerType.Callable:
-                    await listener(task_spec, message)
-                case ListenerType.ChannelGroup:
-                    channel_layer = get_channel_layer()
-                    group_name = listener
-                    await channel_layer.group_send(
-                        group_name,
-                        {
-                            'type': 'task_message',
-                            'message': message
-                        }
-                    )
-
-
-    async def listen_for_task_updates(self):
-        while True:
-            message = await pubsub.get_message(ignore_subscribe_messages=True)
-            if message:
-
-                data = json.loads(message["data"].decode("utf-8"))
-
-                await self.notify_listeners(data)
-
-    async def start_listening(self):
-        self.pubsub = pubsub = await self.redis_client.pubsub()
-
-        await pubsub.subscribe(self.channel_name)
-        asyncio.create_task(self.listen_for_task_updates())
+        return str(uuid.uuid4())
 
 
 class LocalTaskDispatcher(TaskDispatcher):
@@ -91,12 +34,12 @@ class LocalTaskDispatcher(TaskDispatcher):
         super().__init__()
         self.task_manager = task_manager
 
-    async def dispatch_task(self, command, task_spec):
+    async def dispatch_task(self, task_spec, command):
         task_info = {"command": command, "task_spec": task_spec}
         await self.task_manager.enqueue_task_command(task_info)
         await self.task_manager.subscribe_all(self.notify_listeners)
 
-    async def subscribe(self, task_spec, listener, listner_type=ListenerType.Callable):
+    def subscribe(self, task_spec, listener, listner_type=ListenerType.Callable):
         if listener not in self.listeners[task_spec]:
             self.listeners[task_spec].append(listener)
 

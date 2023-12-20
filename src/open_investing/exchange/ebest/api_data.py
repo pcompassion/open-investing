@@ -131,7 +131,7 @@ class EbestApiData:
 
     @classmethod
     def get_field_name(cls, tr_code, name):
-        from risk_glass.ebest.openapi.api_field import EbestApiField
+        from open_investing.exchange.ebest.api_field import EbestApiField
 
         return EbestApiField.get_field_name(name, tr_code)
 

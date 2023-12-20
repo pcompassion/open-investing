@@ -14,6 +14,4 @@ class MarketIndicator(models.Model):
     timeframe = models.DurationField()
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["name", "date"], name="unique_name_date")
-        ]
+        pass
