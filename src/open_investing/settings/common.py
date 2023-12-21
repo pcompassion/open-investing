@@ -141,10 +141,10 @@ redis_config = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "risk_glass",
+        "NAME": "risk_g",
         "USER": "risk_glass",
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
-        "PORT": "5435",
+        "PORT": os.getenv("DB_PORT"),
     }
 }
