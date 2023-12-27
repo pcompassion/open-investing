@@ -29,7 +29,9 @@ class RedisTaskReceiver:
                 task_info = json.loads(data)
 
                 logger.info(
-                    "received task: %s", task_info["task_spec"]["spec_type_name"]
+                    "received task: %s, command: %s",
+                    task_info["task_spec"]["spec_type_name"],
+                    task_info["command"],
                 )
 
                 await self.task_manager.enqueue_task_command(task_info)

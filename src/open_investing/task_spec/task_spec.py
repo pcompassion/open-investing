@@ -12,6 +12,9 @@ from pydantic import BaseModel, root_validator, ValidationError
 class TaskSpec(BaseModel):
     # Common fields for all TaskSpec
 
+    def __hash__(self):
+        return hash((type(self),) + tuple(self.__dict__.values()))
+
     spec_type_name: str = ""
     cron_time: Optional[str]
     data: Dict[str, Union[str, int, float]] = {}

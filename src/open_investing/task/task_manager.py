@@ -10,6 +10,7 @@ from open_library.collections.hashable_dict import Hashabledict
 from open_investing.task_spec.task_spec_handler_registry import (
     TaskSpecHandlerRegistry,
 )
+from open_investing.task_spec.task_spec import TaskSpec
 
 
 class TaskManager:
@@ -21,7 +22,8 @@ class TaskManager:
         self.command_queue = asyncio.Queue()
 
     def subscribe(self, task_spec, listener):
-        task_spec_h = Hashabledict(task_spec)
+        # task_spec_h = Hashabledict(task_spec)
+        task_spec_h = task_spec
 
         if listener not in self.listeners[task_spec_h]:
             self.listeners[task_spec].append(listener)
@@ -32,7 +34,8 @@ class TaskManager:
 
     async def notify_listeners(self, message):
         task_spec = message["task_spec"]
-        task_spec_h = Hashabledict(task_spec)
+        # task_spec_h = Hashabledict(task_spec)
+        task_spec_h = task_spec
 
         listeners = self.listeners[task_spec_h]
 
@@ -42,8 +45,8 @@ class TaskManager:
         for listener in self.broadcast_listeners:
             await listener(message)
 
-    async def start_task(self, task_spec):
-        task_spec_h = Hashabledict(task_spec)
+    async def start_task(self, task_spec: TaskSpec):
+        task_spec_h = task_spec
 
         if task_spec_h not in self.task_spec_handlers:
             task_spec_handler = TaskSpecHandlerRegistry.create_handler_instance(
@@ -57,15 +60,20 @@ class TaskManager:
         self.task_spec_handlers[task_spec_h] = task_spec_handler
         await task_spec_handler.task.start()
 
-    async def stop_task(self, task_spec):
-        task_spec_h = Hashabledict(task_spec)
+    async def stop_task(self, task_spec: TaskSpec):
+        # task_spec_h = Hashabledict(task_spec)
+        task_spec_h = task_spec
 
         task_handler = self.task_spec_handlers.get(task_spec_h)
         if task_handler:
-            task_handler.unsubscribe(self.notify_listeners)
             await task_handler.task.stop()
 
             del self.task_spec_handlers[task_spec_h]
+            task_handler.unsubscribe(self.notify_listeners)
+
+            message = {"task_spec": task_spec, "name": "task-stopped"}
+
+            await self.notify_listeners(message)
 
     async def enqueue_task_command(self, task_info):
         await self.command_queue.put(task_info)
@@ -76,7 +84,7 @@ class TaskManager:
             task_info = await self.command_queue.get()
             task_spec_ = task_info["task_spec"]
 
-            if isinstance(type(task_spec_), dict):
+            if isinstance(task_spec_, dict):
                 task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
             else:
                 task_spec = task_spec_
@@ -86,4 +94,4 @@ class TaskManager:
             if command == "start":
                 await self.start_task(task_spec)
             elif command == "stop":
-                self.stop_task(command["name"])
+                await self.stop_task(task_spec)
