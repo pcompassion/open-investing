@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 from abc import ABC, abstractmethod
-from typing import Dict, Union, Optional, Type
+from typing import Dict, Union, Optional, Type, List
 
 from open_library.extension.croniter_ex import estimate_interval, estimate_timeframe
 from open_library.time.const import TimeUnit
 
 from pydantic import BaseModel, root_validator, ValidationError
+from open_investing.task.task import Task
 
 
 # Base TaskSpec class
 class TaskSpec(BaseModel):
     # Common fields for all TaskSpec
 
+    spec_type_name: str = ""
+    cron_time: str | None = None
+    data: Dict[str, Union[str, int, float]] = {}
+
     def __hash__(self):
         return hash((type(self),) + tuple(self.__dict__.values()))
-
-    spec_type_name: str = ""
-    cron_time: Optional[str]
-    data: Dict[str, Union[str, int, float]] = {}
 
     # @root_validator(pre=True)
     # @classmethod
@@ -45,6 +46,7 @@ class TaskSpecHandler(ABC):
     def __init__(self, task_spec: TaskSpec):
         self.task_spec = task_spec
         self.listeners = []
+        self.tasks: dict[str, Task] = {}
 
     # @classmethod
     # @abstractmethod
@@ -69,3 +71,11 @@ class TaskSpecHandler(ABC):
     async def notify_listeners(self, message):
         for listener in self.listeners:
             await listener(message)
+
+    async def start_tasks(self):
+        for k, task in self.tasks.items():
+            await task.start()
+
+    async def stop_tasks(self):
+        for k, task in self.tasks.items():
+            await task.stop()

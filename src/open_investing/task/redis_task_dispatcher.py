@@ -61,8 +61,8 @@ class RedisTaskDispatcher(TaskDispatcher):
 
         listeners = self.listeners[task_spec_h]
 
-        for listener, listner_type in listeners:
-            match listner_type:
+        for listener, listener_type in listeners:
+            match listener_type:
                 case ListenerType.Callable:
                     await listener(task_spec, message)
                 case ListenerType.ChannelGroup:

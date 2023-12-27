@@ -2,7 +2,7 @@
 
 
 from typing import Dict, Any
-from open_investing.order.models.decision import Decision
+from open_investing.strategy.models.decision import Decision
 
 
 class DecisionManager:
@@ -33,6 +33,3 @@ class DecisionManager:
             .order_by("created_at")
             .alast()
         )
-
-
-decision_manager = DecisionManager()

@@ -19,6 +19,9 @@ class TaskSpecHandlerRegistry:
         cls.task_spec_classes[spec_type_name] = target_cls.task_spec_cls
         cls.task_spec_handler_classes[spec_type_name] = target_cls
 
+    # @classmethod
+    # def (cls, target_cls: Type[TaskSpecHandler]):
+
     @singledispatchmethod
     @classmethod
     def create_handler_instance(cls, task_spec):

@@ -10,3 +10,4 @@ tmp/
 **/logs
 **/.ob-jupyter
 .vscode
+.dir-locals.el

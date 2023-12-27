@@ -7,4 +7,3 @@ from open_investing.task_spec.task_spec import TaskSpec
 
 class TaskCommand(BaseModel):
     command_name: str
-    task_spec: TaskSpec

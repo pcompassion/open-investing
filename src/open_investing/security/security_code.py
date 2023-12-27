@@ -35,23 +35,25 @@ class DerivativeCode:
 
     tz = "Asia/Seoul"
 
-    def __init__(self, derivative_type: DerivativeType, year: int, month: int, s_price: int):
+    def __init__(
+        self, derivative_type: DerivativeType, year: int, month: int, strike_price: int
+    ):
         self.derivative_type = derivative_type
         if type(self.derivative_type) != DerivativeType:
             print("wrong")
 
         self.year = year
         self.month = month
-        self.s_price = s_price
+        self.strike_price = strike_price
 
     @classmethod
-    def from_string(cls, code_str, s_price: Optional[float] = None):
+    def from_string(cls, code_str, strike_price: Optional[float] = None):
         derivative_type = DerivativeType(code_str[:3])
         year_str = code_str[3]
         month_str = code_str[4]
-        if s_price is None:
-            s_price = int(code_str[5:])
-        s_price = float(s_price)
+        if strike_price is None:
+            strike_price = float(code_str[5:])
+        strike_price = float(strike_price)
 
         year = cls.year_from_str(year_str)
 
@@ -61,12 +63,10 @@ class DerivativeCode:
                 month = k
                 break
 
-        return cls(derivative_type, year, month, s_price)
+        return cls(derivative_type, year, month, strike_price)
 
     def __str__(self):
-        return (
-            f"{self.derivative_type.value}{self.year_str}{self.month_str}{int(self.s_price)}"
-        )
+        return f"{self.derivative_type.value}{self.year_str}{self.month_str}{int(self.strike_price)}"
 
     def copy(self):
         return copy.deepcopy(self)
@@ -97,28 +97,33 @@ class DerivativeCode:
     def year_str(self, value):
         self.year = self.year_from_str(value)
 
-    def as_derivative_type_str(self, derivative_type: DerivativeType, s_price: Optional[float] = None):
-        if s_price is None:
-            s_price = self.s_price
-        return f"{derivative_type.value}{self.year_str}{self.month_str}{int(s_price)}"
+    def as_derivative_type_str(
+        self, derivative_type: DerivativeType, strike_price: Optional[float] = None
+    ):
+        if strike_price is None:
+            strike_price = self.strike_price
+        return (
+            f"{derivative_type.value}{self.year_str}{self.month_str}{int(strike_price)}"
+        )
 
-    def clone_as_derivative_type(self, derivative_type: DerivativeType, s_price: Optional[float] = None):
-
-        if s_price is None:
-            s_price = self.s_price
+    def clone_as_derivative_type(
+        self, derivative_type: DerivativeType, strike_price: Optional[float] = None
+    ):
+        if strike_price is None:
+            strike_price = self.strike_price
 
         new_instance = self.copy()
 
         new_instance.derivative_type = derivative_type
-        new_instance.s_price = s_price
+        new_instance.strike_price = strike_price
 
         return new_instance
 
     @classmethod
-    def s_price_from_string(cls, code_str):
+    def strike_price_from_string(cls, code_str):
         code = cls.from_string(code_str)
 
-        return code.s_price
+        return code.strike_price
 
     @property
     def name(self):
@@ -129,9 +134,9 @@ class DerivativeCode:
         return f"{self.derivative_type.value}{self.year_str}{self.month_str}000"
 
     @classmethod
-    def get_name_and_s_price(cls, code_str):
+    def get_name_and_strike_price(cls, code_str):
         code = cls.from_string(code_str)
-        return pd.Series([code.name, int(code.s_price)])
+        return pd.Series([code.name, int(code.strike_price)])
 
     @classmethod
     def get_fields(cls, code_str, field_names):
@@ -140,17 +145,16 @@ class DerivativeCode:
         l = []
 
         for field_name in field_names:
-
             match field_name:
                 case "name":
                     l.append(code.name)
-                case "s_price":
-                    l.append(int(code.s_price))
+                case "strike_price":
+                    l.append(float(code.strike_price))
                 case "expire_date":
                     l.append(code.expire_date)
 
         return pd.Series(l)
-    
+
     @property
     def expire_date(self):
         dt = pendulum.datetime(self.year, self.month, 1, tz=self.tz)

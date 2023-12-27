@@ -17,7 +17,7 @@ class SecurityOption(models.Model):
     security_name = models.CharField(max_length=8, blank=True)
     security_code = models.CharField(max_length=8, blank=True)
 
-    s_price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    strike_price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
     date_time = models.DateTimeField()
     create_time = models.DateTimeField(auto_now_add=True)

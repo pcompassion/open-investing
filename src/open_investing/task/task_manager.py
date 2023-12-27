@@ -52,13 +52,14 @@ class TaskManager:
             task_spec_handler = TaskSpecHandlerRegistry.create_handler_instance(
                 task_spec
             )
+
             task_spec_handler.subscribe(self.notify_listeners)
         else:
             task_spec_handler = self.task_spec_handlers[task_spec_h]
-            await task_spec_handler.task.stop()
+            await task_spec_handler.stop_tasks()
 
         self.task_spec_handlers[task_spec_h] = task_spec_handler
-        await task_spec_handler.task.start()
+        await task_spec_handler.start_tasks()
 
     async def stop_task(self, task_spec: TaskSpec):
         # task_spec_h = Hashabledict(task_spec)
@@ -66,7 +67,7 @@ class TaskManager:
 
         task_handler = self.task_spec_handlers.get(task_spec_h)
         if task_handler:
-            await task_handler.task.stop()
+            await task_handler.stop_tasks()
 
             del self.task_spec_handlers[task_spec_h]
             task_handler.unsubscribe(self.notify_listeners)
