@@ -19,13 +19,24 @@ class RedisTaskReceiver:
         while True:
             _, raw_json = await self.redis_client.blpop("task_queue")
 
-            data = raw_json.decode("utf-8")
+            try:
+                try:
+                    data = raw_json.decode("utf-8")
+                except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
+                    print(f"Failed to decode JSON: {e}")
+                    continue
 
-            task_info = json.loads(data)
+                task_info = json.loads(data)
 
-            logger.info("received task: %s", task_info["task_spec"]["spec_type_name"])
+                logger.info(
+                    "received task: %s", task_info["task_spec"]["spec_type_name"]
+                )
 
-            await self.task_manager.enqueue_task_command(task_info)
+                await self.task_manager.enqueue_task_command(task_info)
+            except Exception as general_exception:
+                logger.exception(
+                    "Failed to enqueue task command: %s", general_exception
+                )
 
     async def notify_listners(self, message):
         task_spec_ = message["task_spec"]

@@ -19,7 +19,6 @@ class TaskManager:
 
         self.task_spec_handlers = {}
         self.command_queue = asyncio.Queue()
-        self.new_command_event = asyncio.Event()
 
     def subscribe(self, task_spec, listener):
         task_spec_h = Hashabledict(task_spec)
@@ -70,25 +69,21 @@ class TaskManager:
 
     async def enqueue_task_command(self, task_info):
         await self.command_queue.put(task_info)
-        self.new_command_event.set()
 
     async def run(self):
         while True:
-            await self.new_command_event.wait()  # Wait until a new command is added
-            self.new_command_event.clear()  # Reset the event
+            # while not self.command_queue.empty():
+            task_info = await self.command_queue.get()
+            task_spec_ = task_info["task_spec"]
 
-            while not self.command_queue.empty():
-                task_info = await self.command_queue.get()
-                task_spec_ = task_info["task_spec"]
+            if isinstance(type(task_spec_), dict):
+                task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
+            else:
+                task_spec = task_spec_
 
-                if isinstance(type(task_spec_), dict):
-                    task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
-                else:
-                    task_spec = task_spec_
+            command = task_info["command"]
 
-                command = task_info["command"]
-
-                if command == "start":
-                    await self.start_task(task_spec)
-                elif command == "stop":
-                    self.stop_task(command["name"])
+            if command == "start":
+                await self.start_task(task_spec)
+            elif command == "stop":
+                self.stop_task(command["name"])

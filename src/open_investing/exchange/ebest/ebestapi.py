@@ -27,7 +27,7 @@ from open_investing.exchange.ebest.const.const import FieldName, EbestUrl
 
 from open_library.api_client.websocket_client import WebSocketClient
 from open_library.api_client.api_client import ApiClient, ApiResponse
-from open_library.environment.const import Environment
+from open_library.environment.const import Env
 
 
 logger = logging.getLogger(__name__)
@@ -52,15 +52,13 @@ class EbestApi:
             cls._instances[app_key] = instance
         return cls._instances[app_key]
 
-    def __init__(
-        self, api_key: str, api_secret: str, environment: Environment = Environment.DEV
-    ):
+    def __init__(self, api_key: str, api_secret: str, env: Env = Env.DEV):
         self.api_key: str = api_key
         self.api_secret: str = api_secret
 
         self.url = EbestUrl()
         self.api_client = ApiClient(self.url.auth_url(), api_key, api_secret)
-        self.environment = environment
+        self.env = env
 
         self.ws_clients: Dict[str, WebSocketClient] = {}
         self.shutdown_event = asyncio.Event()
@@ -72,10 +70,10 @@ class EbestApi:
     def get_or_create_ws_client(self, tr_type) -> WebSocketClient:
         token_manager = self.api_client.get_token_manager()
         ws_uri: str = ""
-        match self.environment:
-            case Environment.DEV:
+        match self.env:
+            case Env.DEV:
                 ws_uri = "wss://openapi.ebestsec.co.kr:29443/websocket"
-            case Environment.PROD:
+            case Env.PROD:
                 ws_uri = "wss://openapi.ebestsec.co.kr:9443/websocket"
 
         if tr_type not in self.ws_clients:

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 import uuid
 
 from open_investing.task.const import ListenerType
+from open_investing.task.task_manager import TaskManager
 
 
 class TaskDispatcher(ABC):
@@ -30,7 +31,7 @@ class TaskDispatcher(ABC):
 
 
 class LocalTaskDispatcher(TaskDispatcher):
-    def __init__(self, task_manager):
+    def __init__(self, task_manager: TaskManager):
         super().__init__()
         self.task_manager = task_manager
 
