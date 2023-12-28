@@ -33,3 +33,6 @@ class DecisionManager:
             .order_by("created_at")
             .alast()
         )
+
+
+decision_manager = DecisionManager()

@@ -3,7 +3,7 @@
 from enum import Enum, auto
 
 
-class DecisionLifeStage(Enum):
+class DecisionLifeStage(str, Enum):
     UNOPENED = "unopened"
     OPENED = "opened"
     STARTED = "started"
