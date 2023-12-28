@@ -7,14 +7,7 @@ from open_investing.exchange.const.market_type import MarketType
 from open_investing.exchange.ebest.api_data import EbestApiData
 
 from open_investing.order.const.order import OrderDirection, OrderPriceType
-
-
-class IndexCode(Enum):
-    Kospi = "kospi"
-    Kospi200 = "kospi200"
-    Krx100 = "krx100"
-    Kosdaq = "kosdaq"
-    Vkospi = "vkospi"
+from open_investing.const.code_name import IndexCode, DerivativeName
 
 
 class EbestApiField:
@@ -46,6 +39,10 @@ class EbestApiField:
         IndexCode.Krx100: "501",
         IndexCode.Kosdaq: "301",
         IndexCode.Vkospi: "205",
+        DerivativeName.MiniFuture: "MF",
+        DerivativeName.MiniOption: "MO",
+        DerivativeName.WeeklyOption: "WO",
+        DerivativeName.Kosdaq150Future: "SF",
     }
 
     @classmethod
@@ -66,6 +63,9 @@ class EbestApiField:
 
     @classmethod
     def get_send_data(cls, tr_code=None, *args, **kwargs):
+        """
+        convert human readable data to api consumable field name and field value
+        """
         res = {}
 
         data_dict = {}
@@ -85,10 +85,12 @@ class EbestApiField:
             field_name = cls.get_field_name(k, tr_code=tr_code)
 
             if field_name:
+                kwargs.pop(k)
+
                 value = cls.field_value_map.get(v, v)
                 res[field_name] = value
 
-        return res
+        return kwargs | res
 
     @classmethod
     def _get_field_name_map(cls, tr_code=None):
@@ -101,6 +103,7 @@ class EbestApiField:
 
         market_type = EbestApiData.get_market_type(tr_code)
 
+        # tr's map -> tr's market_type map -> general map
         fn_map = fn_map | cls.field_name_map[market_type]
         fn_map = fn_map | fn_map_tr
 

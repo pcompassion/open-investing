@@ -50,8 +50,3 @@ class EbestCode:
     upcode: str = "upcode"
 
     dummy: str = "dummy"
-
-
-class FieldName(Enum):
-    SECURITY_CODE = "security_code"
-    INDEX_CODE = "index_code"

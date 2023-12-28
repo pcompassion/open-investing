@@ -11,3 +11,4 @@ tmp/
 **/.ob-jupyter
 .vscode
 .dir-locals.el
+*~

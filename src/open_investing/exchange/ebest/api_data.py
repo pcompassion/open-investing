@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-from open_investing.exchange.ebest.const.const import FieldName
+
+from open_investing.const.code_name import FieldName
+
 from open_investing.exchange.const.market_type import MarketType
 from open_investing.exchange.ebest.const.const import EbestUrl, EbestCode
 
@@ -16,13 +18,15 @@ class EbestApiData:
             },
             "f_page_meta_block_name": "{tr_code}OutBlock",
             "f_data_block_name": "{tr_code}OutBlock1",
+            "request_per_second": 2,
         },
         "t1511": {
             "body": {},
             "field_name_map": {
-                FieldName.INDEX_CODE.value: EbestCode.upcode,
+                FieldName.INDEX_CODE: EbestCode.upcode,
             },
             "api_path": EbestUrl.market_indicator,
+            "request_per_second": 3,
         },
         "t2105": {
             "body": {},
@@ -30,6 +34,7 @@ class EbestApiData:
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
             "api_path": EbestUrl.option_market_data,
+            "request_per_second": 3,
         },
         "t2101": {
             "body": {},
@@ -37,6 +42,7 @@ class EbestApiData:
                 FieldName.SECURITY_CODE: EbestCode.focode,
             },
             "api_path": EbestUrl.option_market_data,
+            "request_per_second": 3,
         },
         "t2209": {
             "body": {"cgubun": "B", "bgubun": 0, "cnt": 900},
@@ -46,9 +52,11 @@ class EbestApiData:
             "f_page_meta_block_name": "{tr_code}OutBlock1",
             "f_data_block_name": "{tr_code}OutBlock1",
             "api_path": EbestUrl.option_chart_data,
+            "request_per_second": 1,
         },
         "t3521": {
             "api_path": EbestUrl.stock_invest_info,
+            "request_per_second": 1,
         },
         "t8429": {
             "body": {"cgubun": "B", "bgubun": 0, "cnt": 900},
@@ -58,6 +66,7 @@ class EbestApiData:
             "f_page_meta_block_name": "{tr_code}OutBlock1",
             "f_data_block_name": "{tr_code}OutBlock1",
             "api_path": EbestUrl.option_chart_data,
+            "request_per_second": 1,
         },
         "t8415": {
             # 선물/옵션챠트(N분)
@@ -78,16 +87,18 @@ class EbestApiData:
             "field_name_map": {
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
+            "request_per_second": 1,
         },
         "t8433": {
-            "field_name_map": {
-                FieldName.SECURITY_CODE: EbestCode.dummy,
+            "body": {
+                "dummy": "",
             },
             "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
         },
         "t8435": {
             "field_name_map": {
-                FieldName.SECURITY_CODE: EbestCode.gubun,
+                FieldName.DERIVATIVE_NAME: EbestCode.gubun,
             },
             "code_field_values": {
                 "MF": "미니선물",
@@ -96,11 +107,13 @@ class EbestApiData:
                 "SF": "코스닥150선물",
             },
             "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
         },
         "t0425": {
             "field_name_map": {
                 FieldName.SECURITY_CODE: EbestCode.expcode,
             },
+            "request_per_second": 1,
         },
         # order
         "CSPAT00601": {
@@ -113,11 +126,13 @@ class EbestApiData:
             },
             "market_type": MarketType.STOCK,
             "f_in_block_name": "{tr_code}InBlock1",
+            "request_per_second": 10,
         },
         "CFOAT00100": {
             "api_path": EbestUrl.option_order,
             "f_data_block_name": "{tr_code}OutBlock1",
             "market_type": MarketType.DERIVATIVE,
+            "request_per_second": 10,
         },
     }
 
