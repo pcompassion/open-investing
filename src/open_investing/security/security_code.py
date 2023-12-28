@@ -12,7 +12,7 @@ class DerivativeType(Enum):
     MFUTURE = "105"
     CALL = "201"
     PUT = "301"
-
+    OPTION =
 
 class DerivativeCode:
     MONTH_MAP = {

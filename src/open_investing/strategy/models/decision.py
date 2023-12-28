@@ -3,6 +3,7 @@
 from django.db import models
 
 import uuid
+from open_investing.strategy.const.decision import DecisionLifeStage
 
 
 class Decision(models.Model):
@@ -16,7 +17,7 @@ class Decision(models.Model):
 
     """
 
-    strategy_id = models.UUIDField()
+    strategy_session_id = models.UUIDField()
     strategy_name = models.CharField(max_length=128)
 
     decision_type = models.CharField(max_length=128)

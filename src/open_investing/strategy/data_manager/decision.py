@@ -9,15 +9,11 @@ class DecisionManager:
     async def open_decision(
         self,
         decision: Decision,
-        strategy_id: str,
-        strategy_name: str,
         decision_type: str,
         decision_params: Dict[str, Any],
         amount: float,
     ):
         await decision.asave(
-            strategy_id=strategy_id,
-            strategy_name=strategy_name,
             decision_type=decision_type,
             decision_params=decision_params,
             amount=amount,
@@ -26,10 +22,10 @@ class DecisionManager:
 
     async def get_last_decision(
         self,
-        strategy_id: str,
+        strategy_name: str,
     ):
         return (
-            await Decision.objects.filter(strategy_id=strategy_id)
+            await Decision.objects.filter(strategy_name=strategy_name)
             .order_by("created_at")
             .alast()
         )

@@ -97,6 +97,7 @@ class EbestApiData:
             "request_per_second": 2,
         },
         "t8435": {
+            # - 최근월 미니선물 2개: t8435에서 종목 마스터 조회후 상위2개 (TR.md 참조)
             "field_name_map": {
                 FieldName.DERIVATIVE_NAME: EbestCode.gubun,
             },

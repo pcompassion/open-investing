@@ -19,8 +19,8 @@ class SecurityOption(models.Model):
 
     strike_price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
-    date_time = models.DateTimeField()
-    create_time = models.DateTimeField(auto_now_add=True)
+    date_at = models.DateTimeField()
+    create_at = models.DateTimeField(auto_now_add=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
@@ -36,10 +36,6 @@ class SecurityOption(models.Model):
             )
         ]
 
-    @classmethod
-    def set_data_interface(cls, new_interface):
-        cls.data_interface = new_interface
-
 
 class SecurityFuture(models.Model):
     # data_interface = DefaultDataInterface()
@@ -47,14 +43,13 @@ class SecurityFuture(models.Model):
     name = models.CharField(max_length=100, blank=True)
     expire_date = models.DateField(blank=True, null=True)
 
-    tr_code = models.CharField(max_length=8, blank=True)
     security_name = models.CharField(max_length=8, blank=True)
     security_code = models.CharField(max_length=8, blank=True)
 
     price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
-    date_time = models.DateTimeField()
-    create_time = models.DateTimeField(auto_now_add=True)
+    date_at = models.DateTimeField()
+    create_at = models.DateTimeField(auto_now_add=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
@@ -70,6 +65,15 @@ class SecurityFuture(models.Model):
             )
         ]
 
-    @classmethod
-    def set_data_interface(cls, new_interface):
-        cls.data_interface = new_interface
+
+class NearbyFuture(moddels.Model):
+    expire_date = models.DateField(blank=True, null=True)
+
+    exchange_api_code = models.CharField(max_length=32, blank=True)
+    exchange_name = models.CharField(max_length=32, blank=True)
+    timeframe = models.DurationField()
+
+    date_at = models.DateTimeField()
+    create_at = models.DateTimeField(auto_now_add=True)
+
+    data = models.JSONField(default=list)
