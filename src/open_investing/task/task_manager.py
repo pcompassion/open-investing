@@ -11,15 +11,17 @@ from open_investing.task_spec.task_spec_handler_registry import (
     TaskSpecHandlerRegistry,
 )
 from open_investing.task_spec.task_spec import TaskSpec
+from open_investing.locator.service_locator import ServiceLocator
 
 
 class TaskManager:
-    def __init__(self):
+    def __init__(self, service_locator: ServiceLocator):
         self.listeners = defaultdict(list)
         self.broadcast_listeners = []
 
         self.task_spec_handlers = {}
         self.command_queue = asyncio.Queue()
+        self.service_locator = service_locator
 
     def subscribe(self, task_spec, listener):
         # task_spec_h = Hashabledict(task_spec)
@@ -52,6 +54,10 @@ class TaskManager:
             task_spec_handler = TaskSpecHandlerRegistry.create_handler_instance(
                 task_spec
             )
+
+            for _, service_key in task_spec.service_keys.items():
+                service = self.service_locator.get_service(service_key)
+                task_spec_handler.set_service(service_key, service)
 
             task_spec_handler.subscribe(self.notify_listeners)
         else:

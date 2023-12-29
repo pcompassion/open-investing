@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+from uuid import uuid4
+from open_investing.task_spec.task_spec import TaskSpec
 import asyncio
 import os
+import importlib
 from open_investing.task.task_manager import TaskManager
 from open_investing.task.task_dispatcher import LocalTaskDispatcher
 from open_investing.task.task_receiver import RedisTaskReceiver
@@ -8,8 +11,9 @@ from open_investing.task.task_receiver import RedisTaskReceiver
 from redis import asyncio as aioredis
 from open_library.environment.environment import Environment
 
-from open_investing.exchange.store import ExchangeStore
 from open_library.app.base_app import BaseApp
+from open_investing.locator.service_locator import ServiceLocator
+from open_investing.exchange.ebest.api_manager import EbestApiManager
 
 
 async def debug_control():
@@ -21,11 +25,10 @@ class App(BaseApp):
     name = "task_app"
 
     def __init__(self):
-        self.exchange_store = ExchangeStore()
-
         self.environment = Environment(env_file=".env.dev")
-        self.task_manager = TaskManager()
 
+        self._service_locator = ServiceLocator()
+        self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
         self.market_event_task_dispatcher = self.task_dispatcher
 
@@ -49,17 +52,45 @@ class App(BaseApp):
         """initialize app, runs before main"""
         self.setup_logging()
         self.setup_django()
-        import risk_glass.startup.startup
 
-        from open_investing.client_adapter.startup import StartupRegistry
+        self.setup_default_service_keys()
+        self.setup_service_manager()
 
-        StartupRegistry.initialize_startup_classes()
+        import_modules = [
+            "risk_glass.market_event",
+            "risk_glass.strategy",
+        ]
 
-    # def setup_strategy(self):
-    #     from open_investing.strategy.strategy_factory import StrategyFactory
-    #     from risk_glass.strategy.dynamic_hedge import DynamicHedgeStrategy
+        for module in import_modules:
+            importlib.import_module(module)
 
-    #     StrategyFactory.register_class(DynamicHedgeStrategy.name, DynamicHedgeStrategy)
+    def setup_default_service_keys(self):
+        from .after_django import NearbyFutureDataManager
+
+        TaskSpec.set_default_service_keys(
+            {
+                "exchange_api_manager": EbestApiManager.service_key,
+                uuid4(): NearbyFutureDataManager.service_key,
+            }
+        )
+
+    def setup_service_manager(self):
+        from .after_django import NearbyFutureDataManager
+
+        service_locator = self._service_locator
+
+        ebest_api_manager = EbestApiManager()
+        ebest_api_manager.initialize(self.environment)
+        service_locator.register_service(
+            ebest_api_manager.service_key, ebest_api_manager
+        )
+
+        nearby_future_manager = NearbyFutureDataManager()
+
+        nearby_future_manager.initialize(self.environment)
+        service_locator.register_service(
+            nearby_future_manager.service_key, nearby_future_manager
+        )
 
     def setup_django(self):
         import django
@@ -75,11 +106,22 @@ class App(BaseApp):
             TaskSpecHandlerRegistry,
         )
 
-        task_spec_dict = {"spec_type_name": "dynamic_hedge"}
+        task_spec_dict = {
+            "spec_type_name": "dynamic_hedge",
+        }
         task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
 
         command = "start"
         await self.task_dispatcher.dispatch_task(task_spec, command)
+
+    def get_service_locator(self):
+        return self._service_locator
+
+    # def setup_strategy(self):
+    #     from open_investing.strategy.strategy_factory import StrategyFactory
+    #     from risk_glass.strategy.dynamic_hedge import DynamicHedgeStrategy
+
+    #     StrategyFactory.register_class(DynamicHedgeStrategy.name, DynamicHedgeStrategy)
 
 
 app = App()

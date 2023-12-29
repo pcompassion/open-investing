@@ -27,45 +27,30 @@ class MarketEventSourceType(str, Enum):
 
 class MarketEventSpec(TaskSpec):
     event_type: MarketEventType
-    source_name: str
-    source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE
-    api_type: ApiType = ApiType.Stock
+    # source_name: str
+    # source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE
 
     def __str__(self):
-        return f"{self.event_type} {self.source_type}:{self.source_name} {self.cron_time} {self.data}"
+        return f"{self.event_type} : {self.cron_time} {self.data}"
 
     def __eq__(self, other):
         if isinstance(other, MarketEventSpec):
             return (
                 self.event_type,
-                self.source_name,
                 self.cron_time,
                 tuple(self.data.items()),
             ) == (
                 other.event_type,
-                other.source_name,
                 other.cron_time,
                 tuple(other.data.items()),
             )
         return NotImplemented
 
     def __hash__(self):
-        attrs_hash = map(hash, (self.event_type, self.source_name, self.cron_time))
-        data_items_hash = map(hash, tuple(self.data.items()))
+        attrs_hash = map(hash, (self.event_type, self.cron_time))
+        data_items_hash = map(hash, tuple(sorted(self.data.items())))
         combined_hashes = itertools.chain(attrs_hash, data_items_hash)
         return functools.reduce(operator.xor, combined_hashes, 0)
-
-    @property
-    def source_manager(self):
-        if self.source_type == MarketEventSourceType.EXCHANGE:
-            # Adjust this based on how 'store' and 'EXCHANGE' are defined.
-
-            return app.exchange_store.get_exchange(
-                self.source_name, exchange_params=self.get_exchange_params()
-            )
-
-    def get_exchange_params(self):
-        return dict(api_type=self.api_type)
 
 
 class IMarketEventSource(TaskSpecHandler):

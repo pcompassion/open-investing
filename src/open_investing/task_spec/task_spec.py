@@ -1,31 +1,27 @@
 #!/usr/bin/env python3
 from abc import ABC, abstractmethod
-from typing import Dict, Union, Optional, Type, List
+from typing import ClassVar, Dict, List, Optional, Type, Union
 
 from open_library.extension.croniter_ex import estimate_interval, estimate_timeframe
 from open_library.time.const import TimeUnit
 
 from pydantic import BaseModel, root_validator, ValidationError
 from open_investing.task.task import Task
+from open_investing.locator.service_locator import ServiceKey
 
 
 # Base TaskSpec class
 class TaskSpec(BaseModel):
-    # Common fields for all TaskSpec
-
     spec_type_name: str = ""
     cron_time: str | None = None
-    data: Dict[str, Union[str, int, float]] = {}
+    data: dict[str, Union[str, int, float]] = {}
+    service_keys: dict[str, ServiceKey] = {}
+
+    # provide default value
+    default_service_keys: ClassVar[dict[str, ServiceKey]] = {}
 
     def __hash__(self):
-        return hash((type(self),) + tuple(self.__dict__.values()))
-
-    # @root_validator(pre=True)
-    # @classmethod
-    # def check_spec_type_name(cls, values):
-    #     if "spec_type_name" not in values:
-    #         raise ValidationError("spec_type_name must be defined")
-    #     return values
+        return hash((type(self),) + tuple(sorted(self.__dict__.items())))
 
     def estimated_interval(self, time_unit: TimeUnit = TimeUnit.SECOND):
         if self.cron_time:
@@ -39,6 +35,25 @@ class TaskSpec(BaseModel):
 
         return 0
 
+    def get_service_key(self, name: str | None = None, **kwargs):
+        service_keys = self.default_service_keys | self.service_keys
+        if name:
+            return service_keys.get(name)
+
+        service_key_dict = kwargs
+
+        lookup_service_key = ServiceKey(**service_key_dict)
+
+        for _, service_key in service_keys.items():
+            if service_key == lookup_service_key:
+                return service_key
+
+        return None
+
+    @classmethod
+    def set_default_service_keys(cls, service_keys):
+        cls.default_service_keys = service_keys
+
 
 class TaskSpecHandler(ABC):
     task_spec_cls: Optional[Type[TaskSpec]] = None
@@ -48,17 +63,7 @@ class TaskSpecHandler(ABC):
         self.listeners = []
         self.tasks: dict[str, Task] = {}
 
-    # @classmethod
-    # @abstractmethod
-    # def task_spec_cls(cls):
-    #     if not hasattr(cls, "task_spec_cls"):
-    #         raise NotImplementedError(
-    #             "Subclass must have a class variable 'task_spec_cls'"
-    #         )
-    #     if not isinstance(
-    #         getattr(cls, "task_spec_cls"), TaskSpec
-    #     ):  # replace 'int' with the expected type
-    #         raise TypeError("'task_spec_cls' must be an TaskSpec")
+        self.services = {}
 
     def subscribe(self, listener):
         if listener not in self.listeners:
@@ -79,3 +84,6 @@ class TaskSpecHandler(ABC):
     async def stop_tasks(self):
         for k, task in self.tasks.items():
             await task.stop()
+
+    def set_service(self, service_key: ServiceKey, service):
+        self.services[service_key] = service

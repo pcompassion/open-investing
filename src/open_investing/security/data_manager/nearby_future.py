@@ -3,11 +3,21 @@ import pendulum
 from datetime import timedelta
 from open_investing.security.security_code import DerivativeCode
 from open_library.collections.dict import instance_to_dict
-from open_investing.security.security_code import DerivativeCode
+
 from open_investing.security.models import NearbyFuture
+from open_investing.locator.service_locator import ServiceKey
 
 
-class NearbyFutureManager:
+class NearbyFutureDataManager:
+    service_key = ServiceKey(
+        service_type="data_manager",
+        service_name="database",
+        params={"model": "NearbyFuture"},
+    )
+
+    def initialize(self, environment):
+        pass
+
     async def create(
         self,
         derivative_codes: list[DerivativeCode],
@@ -52,7 +62,7 @@ class NearbyFutureManager:
 
         if nearby_future:
             return [
-                DerivativeCode(future_code_dict)
+                DerivativeCode(**future_code_dict)
                 for future_code_dict in nearby_future.data
             ]
         return []

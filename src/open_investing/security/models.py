@@ -31,7 +31,7 @@ class SecurityOption(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["security_code", "date_time"],
+                fields=["security_code", "date_at"],
                 name="securityoption_unique_security_code_date_time",
             )
         ]
@@ -60,13 +60,13 @@ class SecurityFuture(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["security_code", "date_time"],
+                fields=["security_code", "date_at"],
                 name="securityfuture_unique_security_code_date_time",
             )
         ]
 
 
-class NearbyFuture(moddels.Model):
+class NearbyFuture(models.Model):
     expire_date = models.DateField(blank=True, null=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)

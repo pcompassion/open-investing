@@ -12,7 +12,7 @@ class DerivativeType(Enum):
     MFUTURE = "105"
     CALL = "201"
     PUT = "301"
-    OPTION =
+
 
 class DerivativeCode:
     MONTH_MAP = {
@@ -159,3 +159,6 @@ class DerivativeCode:
     def expire_date(self):
         dt = pendulum.datetime(self.year, self.month, 1, tz=self.tz)
         return dt.date()
+
+    def to_dict(self):
+        return self.__dict__
