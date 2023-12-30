@@ -51,7 +51,7 @@ class NearbyFutureDataManager:
         )
 
     async def get_nearby_future_codes(
-        self, max_time_diff: timedelta
+        self, max_time_diff: timedelta = timedelta(minutes=5)
     ) -> list[DerivativeCode]:
         now = pendulum.now()
         nearby_future = (

@@ -54,6 +54,9 @@ class TaskSpec(BaseModel):
     def set_default_service_keys(cls, service_keys):
         cls.default_service_keys = service_keys
 
+    def get_service_keys(self):
+        return self.default_service_keys | self.service_keys
+
 
 class TaskSpecHandler(ABC):
     task_spec_cls: Optional[Type[TaskSpec]] = None

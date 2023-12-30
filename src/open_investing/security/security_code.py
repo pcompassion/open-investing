@@ -127,6 +127,8 @@ class DerivativeCode:
 
     @property
     def name(self):
+        if self.derivative_type in [DerivativeType.FUTURE, DerivativeType.MFUTURE]:
+            return self.future_name
         return f"{self.derivative_type.value}{self.year_str}{self.month_str}"
 
     @property

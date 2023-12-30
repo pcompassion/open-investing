@@ -8,13 +8,9 @@ from django.utils import timezone
 # Create your models here.
 
 
-class SecurityOption(models.Model):
-    # data_interface = DefaultDataInterface()
-
-    name = models.CharField(max_length=100, blank=True)
+class Option(models.Model):
     expire_date = models.DateField(blank=True, null=True)
 
-    security_name = models.CharField(max_length=8, blank=True)
     security_code = models.CharField(max_length=8, blank=True)
 
     strike_price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
@@ -37,13 +33,9 @@ class SecurityOption(models.Model):
         ]
 
 
-class SecurityFuture(models.Model):
-    # data_interface = DefaultDataInterface()
-
-    name = models.CharField(max_length=100, blank=True)
+class Future(models.Model):
     expire_date = models.DateField(blank=True, null=True)
 
-    security_name = models.CharField(max_length=8, blank=True)
     security_code = models.CharField(max_length=8, blank=True)
 
     price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)

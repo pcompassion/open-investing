@@ -175,8 +175,8 @@ class EbestApi(ExchangeApi):
     async def get_market_data(
         self,
         tr_code: str,
-        send_data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        send_data: Optional[dict[Any, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         all_page: Optional[bool] = True,
         handler: Optional[Callable[[ApiResponse], Awaitable[None]]] = None,
     ):

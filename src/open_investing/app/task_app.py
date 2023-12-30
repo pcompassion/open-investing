@@ -71,6 +71,7 @@ class App(BaseApp):
             {
                 "exchange_api_manager": EbestApiManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
+                uuid4(): FutureDataManager.service_key,
             }
         )
 

@@ -55,7 +55,7 @@ class TaskManager:
                 task_spec
             )
 
-            for _, service_key in task_spec.service_keys.items():
+            for _, service_key in task_spec.get_service_keys().items():
                 service = self.service_locator.get_service(service_key)
                 task_spec_handler.set_service(service_key, service)
 

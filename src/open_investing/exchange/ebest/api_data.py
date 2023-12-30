@@ -53,6 +53,7 @@ class EbestApiData:
             "f_data_block_name": "{tr_code}OutBlock1",
             "api_path": EbestUrl.option_chart_data,
             "request_per_second": 1,
+            "time_interval": [pendulum.time(8), pendulum.time(16)],
         },
         "t3521": {
             "api_path": EbestUrl.stock_invest_info,
@@ -67,6 +68,7 @@ class EbestApiData:
             "f_data_block_name": "{tr_code}OutBlock1",
             "api_path": EbestUrl.option_chart_data,
             "request_per_second": 1,
+            "time_interval": [pendulum.time(18), pendulum.time(5)],
         },
         "t8415": {
             # 선물/옵션챠트(N분)
@@ -197,3 +199,8 @@ class EbestApiData:
         ).format(tr_code=tr_code)
 
         return block_name
+
+    @classmethod
+    def get(cls, tr_code, name, default=None):
+        api_data = cls.get_api_data(tr_code)
+        return api_data.get(name, default)

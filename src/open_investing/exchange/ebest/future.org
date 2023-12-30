@@ -1,0 +1,13 @@
+#+title: Future
+
+
+too complex
+
+simplify it
+
+
+if now in day_market_interval ,
+fetch using day_market
+
+if now in night_market_interval,
+fetch using night_market
