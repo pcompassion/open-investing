@@ -54,6 +54,22 @@ class TaskSpec(BaseModel):
     def set_default_service_keys(cls, service_keys):
         cls.default_service_keys = service_keys
 
+    @classmethod
+    def get_default_service_key(cls, name: str | None = None, **kwargs):
+        service_keys = cls.default_service_keys
+        if name:
+            return service_keys.get(name)
+
+        service_key_dict = kwargs
+
+        lookup_service_key = ServiceKey(**service_key_dict)
+
+        for _, service_key in service_keys.items():
+            if service_key == lookup_service_key:
+                return service_key
+
+        return None
+
     def get_service_keys(self):
         return self.default_service_keys | self.service_keys
 

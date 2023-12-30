@@ -41,3 +41,8 @@ class FutureDataManager:
         futures_df["id"] = future_ids
 
         return futures_df
+
+    async def last(self, future_code, **params):
+        return await Future.objects.filter(
+            security_code=future_code.name, **params
+        ).alast()

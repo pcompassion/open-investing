@@ -14,6 +14,7 @@ from open_library.environment.environment import Environment
 from open_library.app.base_app import BaseApp
 from open_investing.locator.service_locator import ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
+from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
 
 
 async def debug_control():
@@ -30,24 +31,30 @@ class App(BaseApp):
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
+        self.tasks = []
 
-    async def main(self):
-        from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
-
-        self.init()
+    def setup_base_tasks(self):
+        tasks = self.tasks
 
         task_manager = self.task_manager
-        asyncio.create_task(task_manager.run())
-
-        await self.start_strategies()
+        tasks.append(asyncio.create_task(task_manager.run()))
 
         redis_client = aioredis.from_url(**redis_config["strategy"])
 
         receiver = RedisTaskReceiver(task_manager, STRATEGY_CHANNEL_NAME, redis_client)
-        tasks = [asyncio.create_task(receiver.run())]
+        tasks.append(asyncio.create_task(receiver.run()))
+
+    async def main(self):
+        self.init()
+
+        self.setup_base_tasks()
+
+        await self.start_strategies()
+
         if self.environment.is_dev():
-            tasks.append(asyncio.create_task(debug_control()))
-        await asyncio.gather(*tasks)
+            self.tasks.append(asyncio.create_task(debug_control()))
+
+        await asyncio.gather(*self.tasks)
 
     def init(self):
         """initialize app, runs before main"""
@@ -70,6 +77,7 @@ class App(BaseApp):
             NearbyFutureDataManager,
             FutureDataManager,
             OptionDataManager,
+            MarketIndicatorDataManager,
         )
 
         TaskSpec.set_default_service_keys(
@@ -79,6 +87,7 @@ class App(BaseApp):
                 uuid4(): FutureDataManager.service_key,
                 uuid4(): OptionDataManager.service_key,
                 "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
+                uuid4(): MarketIndicatorDataManager.service_key,
             }
         )
 
@@ -87,6 +96,7 @@ class App(BaseApp):
             NearbyFutureDataManager,
             FutureDataManager,
             OptionDataManager,
+            MarketIndicatorDataManager,
         )
 
         service_locator = self._service_locator
@@ -102,20 +112,24 @@ class App(BaseApp):
         )
 
         nearby_future_manager = NearbyFutureDataManager()
-
         nearby_future_manager.initialize(self.environment)
         service_locator.register_service(
             nearby_future_manager.service_key, nearby_future_manager
         )
-        future_manager = FutureDataManager()
 
+        future_manager = FutureDataManager()
         future_manager.initialize(self.environment)
         service_locator.register_service(future_manager.service_key, future_manager)
 
         option_manager = OptionDataManager()
-
         option_manager.initialize(self.environment)
         service_locator.register_service(option_manager.service_key, option_manager)
+
+        market_indicator_manager = MarketIndicatorDataManager()
+        market_indicator_manager.initialize(self.environment)
+        service_locator.register_service(
+            market_indicator_manager.service_key, market_indicator_manager
+        )
 
     def setup_django(self):
         import django
@@ -142,11 +156,12 @@ class App(BaseApp):
     def get_service_locator(self):
         return self._service_locator
 
+    def get_service(self, service_key):
+        service = self._service_locator.get_service(service_key)
+        return service
+
     # def setup_strategy(self):
     #     from open_investing.strategy.strategy_factory import StrategyFactory
     #     from risk_glass.strategy.dynamic_hedge import DynamicHedgeStrategy
 
     #     StrategyFactory.register_class(DynamicHedgeStrategy.name, DynamicHedgeStrategy)
-
-
-app = App()
