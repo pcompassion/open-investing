@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_investing.locator.service_locator import ServiceKey
 from collections import defaultdict
 from enum import Enum
 from abc import ABC, abstractmethod
@@ -50,6 +51,11 @@ class DummyTaskDispatcher(TaskDispatcher):
 
 
 class LocalTaskDispatcher(TaskDispatcher):
+    service_key = ServiceKey(
+        service_type="task_dispatcher",
+        service_name="local",
+    )
+
     def __init__(self, task_manager: TaskManager):
         super().__init__()
         self.task_manager = task_manager

@@ -24,12 +24,12 @@ class TaskSpecHandlerRegistry:
 
     @singledispatchmethod
     @classmethod
-    def create_handler_instance(cls, task_spec):
+    async def create_handler_instance(cls, task_spec):
         raise NotImplementedError
 
     @create_handler_instance.register(TaskSpec)
     @classmethod
-    def _(cls, task_spec: TaskSpec):
+    async def _(cls, task_spec: TaskSpec):
         task_spec_cls = type(task_spec)
         spec_type_name = task_spec_cls.spec_type_name_classvar
 
@@ -38,14 +38,16 @@ class TaskSpecHandlerRegistry:
 
         task_spec_handler_cls = cls.task_spec_handler_classes[spec_type_name]
 
-        return task_spec_handler_cls(task_spec)
+        handler = task_spec_handler_cls(task_spec)
+        await handler.init()
+        return handler
 
     @create_handler_instance.register(dict)
     @classmethod
-    def _(cls, task_spec: Dict):
+    async def _(cls, task_spec: Dict):
         task_spec_ = cls.create_spec_instance(task_spec)
 
-        return cls.create_handler_instance(task_spec_)
+        return await cls.create_handler_instance(task_spec_)
 
     @classmethod
     def create_spec_instance(cls, task_spec_dict: Dict) -> TaskSpec:

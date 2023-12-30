@@ -20,7 +20,7 @@ class DecisionManager:
             life_stage=DecisionLifeStage.OPENED,
         )
 
-    async def get_last_decision(
+    async def last(
         self,
         strategy_name: str,
     ):

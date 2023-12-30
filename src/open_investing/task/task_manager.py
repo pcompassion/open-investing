@@ -51,7 +51,7 @@ class TaskManager:
         task_spec_h = task_spec
 
         if task_spec_h not in self.task_spec_handlers:
-            task_spec_handler = TaskSpecHandlerRegistry.create_handler_instance(
+            task_spec_handler = await TaskSpecHandlerRegistry.create_handler_instance(
                 task_spec
             )
 

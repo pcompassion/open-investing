@@ -7,7 +7,7 @@ import pandas as pd
 import pendulum
 
 
-class DerivativeType(Enum):
+class DerivativeType(str, Enum):
     FUTURE = "101"
     MFUTURE = "105"
     CALL = "201"
@@ -36,11 +36,17 @@ class DerivativeCode:
     tz = "Asia/Seoul"
 
     def __init__(
-        self, derivative_type: DerivativeType, year: int, month: int, strike_price: int
+        self,
+        derivative_type: DerivativeType | str,
+        year: int,
+        month: int,
+        strike_price: int,
+        **kwargs,
     ):
+        if type(derivative_type) == str:
+            derivative_type = DerivativeType(derivative_type)
+
         self.derivative_type = derivative_type
-        if type(self.derivative_type) != DerivativeType:
-            print("wrong")
 
         self.year = year
         self.month = month
@@ -164,3 +170,9 @@ class DerivativeCode:
 
     def to_dict(self):
         return self.__dict__
+
+    @property
+    def expire_date_str(self):
+        date = self.expire_date
+
+        return date.isoformat()

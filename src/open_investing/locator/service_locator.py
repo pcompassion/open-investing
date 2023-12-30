@@ -36,12 +36,12 @@ class ServiceLocator:
 
     def register_service(self, service_key, service):
         if service_key in self._services:
-            raise Exception(f"service already registered: {key}")
+            raise Exception(f"service already registered: {service_key}")
 
         self._services[service_key] = service
 
     def get_service(self, service_key):
         if service_key not in self._services:
-            raise Exception(f"service not registered: {key}")
+            raise Exception(f"service not registered: {service_key}")
 
         return self._services[service_key]

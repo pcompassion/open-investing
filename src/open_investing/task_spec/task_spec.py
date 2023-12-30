@@ -90,3 +90,6 @@ class TaskSpecHandler(ABC):
 
     def set_service(self, service_key: ServiceKey, service):
         self.services[service_key] = service
+
+    async def init(self):
+        pass

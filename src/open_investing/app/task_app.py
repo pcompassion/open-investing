@@ -30,10 +30,11 @@ class App(BaseApp):
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
-        self.market_event_task_dispatcher = self.task_dispatcher
 
     async def main(self):
-        from risk_glass.settings.task_app import STRATEGY_CHANNEL_NAME, redis_config
+        from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
+
+        self.init()
 
         task_manager = self.task_manager
         asyncio.create_task(task_manager.run())
@@ -65,20 +66,34 @@ class App(BaseApp):
             importlib.import_module(module)
 
     def setup_default_service_keys(self):
-        from .after_django import NearbyFutureDataManager
+        from .after_django import (
+            NearbyFutureDataManager,
+            FutureDataManager,
+            OptionDataManager,
+        )
 
         TaskSpec.set_default_service_keys(
             {
                 "exchange_api_manager": EbestApiManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
+                uuid4(): OptionDataManager.service_key,
+                "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
             }
         )
 
     def setup_service_manager(self):
-        from .after_django import NearbyFutureDataManager
+        from .after_django import (
+            NearbyFutureDataManager,
+            FutureDataManager,
+            OptionDataManager,
+        )
 
         service_locator = self._service_locator
+
+        service_locator.register_service(
+            LocalTaskDispatcher.service_key, self.task_dispatcher
+        )
 
         ebest_api_manager = EbestApiManager()
         ebest_api_manager.initialize(self.environment)
@@ -92,6 +107,15 @@ class App(BaseApp):
         service_locator.register_service(
             nearby_future_manager.service_key, nearby_future_manager
         )
+        future_manager = FutureDataManager()
+
+        future_manager.initialize(self.environment)
+        service_locator.register_service(future_manager.service_key, future_manager)
+
+        option_manager = OptionDataManager()
+
+        option_manager.initialize(self.environment)
+        service_locator.register_service(option_manager.service_key, option_manager)
 
     def setup_django(self):
         import django

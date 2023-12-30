@@ -50,4 +50,7 @@ class RedisTaskReceiver:
 
         message["task_spec"] = task_spec
 
-        await self.redis_client.publish(self.channel_name, json.dumps(message))
+        try:
+            await self.redis_client.publish(self.channel_name, json.dumps(message))
+        except Exception as e:
+            pass
