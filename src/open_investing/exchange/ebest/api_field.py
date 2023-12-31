@@ -7,7 +7,7 @@ from open_investing.exchange.const.market_type import MarketType
 from open_investing.exchange.ebest.api_data import EbestApiData
 
 from open_investing.order.const.order import OrderDirection, OrderPriceType
-from open_investing.const.code_name import IndexCode, DerivativeName
+from open_investing.const.code_name import IndexCode, DerivativeType
 
 
 class EbestApiField:
@@ -39,10 +39,10 @@ class EbestApiField:
         IndexCode.Krx100: "501",
         IndexCode.Kosdaq: "301",
         IndexCode.Vkospi: "205",
-        DerivativeName.MiniFuture: "MF",
-        DerivativeName.MiniOption: "MO",
-        DerivativeName.WeeklyOption: "WO",
-        DerivativeName.Kosdaq150Future: "SF",
+        DerivativeType.MiniFuture: "MF",
+        DerivativeType.MiniOption: "MO",
+        DerivativeType.WeeklyOption: "WO",
+        DerivativeType.Kosdaq150Future: "SF",
     }
 
     @classmethod

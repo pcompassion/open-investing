@@ -25,8 +25,8 @@ async def debug_control():
 class App(TaskApp):
     name = "test_app"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.added_tasks = []
 
     async def main(self):

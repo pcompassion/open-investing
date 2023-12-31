@@ -9,13 +9,14 @@ from django.utils import timezone
 
 
 class Option(models.Model):
-    expire_date = models.DateField(blank=True, null=True)
+    expire_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
-    security_code = models.CharField(max_length=8, blank=True)
+    security_code = models.CharField(max_length=10, db_index=True)
+    derivative_type = models.CharField(max_length=16, db_index=True)
 
     strike_price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
-    date_at = models.DateTimeField()
+    date_at = models.DateTimeField(db_index=True)
     create_at = models.DateTimeField(auto_now_add=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
@@ -34,9 +35,9 @@ class Option(models.Model):
 
 
 class Future(models.Model):
-    expire_date = models.DateField(blank=True, null=True)
+    expire_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
-    security_code = models.CharField(max_length=8, blank=True)
+    security_code = models.CharField(max_length=8, db_index=True)
 
     price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
@@ -59,13 +60,13 @@ class Future(models.Model):
 
 
 class NearbyFuture(models.Model):
-    expire_date = models.DateField(blank=True, null=True)
+    expire_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
     timeframe = models.DurationField()
 
-    date_at = models.DateTimeField()
+    date_at = models.DateTimeField(db_index=True)
     create_at = models.DateTimeField(auto_now_add=True)
 
     data = models.JSONField(default=list)

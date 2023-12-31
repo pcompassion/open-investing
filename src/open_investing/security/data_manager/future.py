@@ -15,7 +15,7 @@ class FutureDataManager:
     service_key = ServiceKey(
         service_type="data_manager",
         service_name="database",
-        params={"model": "Future"},
+        params={"model": "Security.Future"},
     )
 
     def initialize(self, environment):

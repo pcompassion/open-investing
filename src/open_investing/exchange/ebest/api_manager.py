@@ -10,7 +10,7 @@ import pendulum
 from open_library.api_client.api_client import ApiResponse
 from open_investing.const.code_name import FieldName
 
-from open_investing.const.code_name import DerivativeName
+from open_investing.const.code_name import DerivativeType
 
 from open_investing.security.derivative_code import DerivativeCode
 
@@ -18,7 +18,7 @@ from open_investing.exchange.ebest.ebestapi import EbestApi
 from open_investing.exchange.const.market_type import ApiType
 from open_investing.locator.service_locator import ServiceKey
 from open_investing.const.code_name import IndexCode
-from open_investing.security.derivative_code import DerivativeCode, DerivativeType
+from open_investing.security.derivative_code import DerivativeCode, DerivativeTypeCode
 
 from open_investing.config.base import DEFAULT_TIME_FORMAT
 
@@ -57,7 +57,7 @@ class EbestApiManager:
         api_code = "t8435"
 
         api_response = await api.get_market_data(
-            api_code, send_data={FieldName.DERIVATIVE_NAME: DerivativeName.MiniFuture}
+            api_code, send_data={FieldName.DERIVATIVE_NAME: DerivativeType.MiniFuture}
         )
 
         mini_future_codes = [
@@ -187,7 +187,7 @@ class EbestApiManager:
             extra_data = dict(
                 exchange_name=api.name,
                 exchange_api_code=tr_code,
-                expire_date=future_code.expire_date,
+                expire_at=future_code.expire_at,
                 timeframe=timedelta(interval_second),
             )
             futures_df = await future_data_manager.save_futures(
@@ -205,11 +205,11 @@ class EbestApiManager:
 
         df = pd.DataFrame(api_response.data)
 
-        valid_codes = {code.value for code in DerivativeType}
+        valid_codes = {code.value for code in DerivativeTypeCode}
         mask = df["shcode"].str.startswith(tuple(valid_codes), na=False)
         df = df[mask]
 
-        field_names = ["name", "strike_price", "expire_date"]
+        field_names = ["name", "strike_price", "expire_at"]
 
         df[field_names] = df["shcode"].apply(
             lambda x: DerivativeCode.get_fields(x, field_names)
@@ -289,14 +289,12 @@ class EbestApiManager:
         if not len(options_df):
             return options_df
 
-        options_df["datetime"] = options_df["chetime"].apply(
+        options_df["date_at"] = options_df["chetime"].apply(
             lambda x: determine_datetime(x, base_datetime, DEFAULT_TIME_FORMAT)
         )
 
         if start_at:
-            options_df = options_df.loc[options_df["datetime"] > start_at]
-
-        options_df["security_code"] = security_code
+            options_df = options_df.loc[options_df["date_at"] > start_at]
 
         if save:
             if not option_data_manager:
@@ -305,7 +303,10 @@ class EbestApiManager:
             extra_data = dict(
                 exchange_name=api.name,
                 exchange_api_code=tr_code,
-                expire_date=option_code.expire_date,
+                expire_at=option_code.expire_at,
+                strike_price=option_code.strike_price,
+                security_code=security_code,
+                derivative_type=option_code.derivative_type,
                 timeframe=timedelta(interval_second),
             )
             options_df = await option_data_manager.save_options(

@@ -10,11 +10,15 @@ class IndexCode(str, Enum):
     Vkospi = "vkospi"
 
 
-class DerivativeName(str, Enum):
+class DerivativeType(str, Enum):
     MiniFuture = "MiniFuture"
     MiniOption = "MiniOption"
     WeeklyOption = "WeeklyOption"
     Kosdaq150Future = "Kosdaq150Future"
+
+    Future = "Future"
+    Call = "Call"
+    Put = "Put"
 
 
 class FieldName(str, Enum):

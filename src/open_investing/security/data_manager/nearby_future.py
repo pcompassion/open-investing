@@ -13,7 +13,7 @@ class NearbyFutureDataManager:
     service_key = ServiceKey(
         service_type="data_manager",
         service_name="database",
-        params={"model": "NearbyFuture"},
+        params={"model": "Security.NearbyFuture"},
     )
 
     def initialize(self, environment):
@@ -29,7 +29,6 @@ class NearbyFutureDataManager:
                 derivative_code,
                 fields=[
                     "derivative_type",
-                    "expire_date_str",
                     "strike_price",
                     "name",
                     "year",
@@ -40,7 +39,7 @@ class NearbyFutureDataManager:
         ]
 
         derivative_code_dicts = sorted(
-            derivative_code_dicts, key=lambda x: x["expire_date_str"]
+            derivative_code_dicts, key=lambda x: x["expire_at_str"]
         )
 
         await NearbyFuture.objects.acreate(
@@ -61,7 +60,10 @@ class NearbyFutureDataManager:
 
         if nearby_future:
             return [
-                DerivativeCode(**future_code_dict)
+                DerivativeCode(
+                    derivative_type_code=future_code_dict.get("derivative_type"),
+                    **future_code_dict,
+                )
                 for future_code_dict in nearby_future.data
             ]
         return []

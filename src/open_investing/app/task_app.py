@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 from uuid import uuid4
-from open_investing.task_spec.task_spec import TaskSpec
+from pathlib import Path
+
 import asyncio
 import os
 import importlib
 from open_investing.task.task_manager import TaskManager
 from open_investing.task.task_dispatcher import LocalTaskDispatcher
 from open_investing.task.task_receiver import RedisTaskReceiver
-
+from open_investing.task_spec.task_spec import TaskSpec
 from redis import asyncio as aioredis
 from open_library.environment.environment import Environment
 
@@ -25,8 +26,8 @@ async def debug_control():
 class App(BaseApp):
     name = "task_app"
 
-    def __init__(self):
-        self.environment = Environment(env_file=".env.dev")
+    def __init__(self, env_directory=Path(), env_file=".env.dev"):
+        self.environment = Environment(env_directory=env_directory, env_file=env_file)
 
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
