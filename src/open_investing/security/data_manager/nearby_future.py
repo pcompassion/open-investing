@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+import pandas as pd
 import pendulum
+from django.db.models import Window, F, Max
+
 from datetime import timedelta
 from open_investing.security.derivative_code import DerivativeCode
 from open_library.collections.dict import instance_to_dict
@@ -7,6 +10,7 @@ from open_library.collections.dict import instance_to_dict
 from open_investing.security.models import NearbyFuture
 from open_investing.locator.service_locator import ServiceKey
 from open_library.time.datetime import now_local
+from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 
 
 class NearbyFutureDataManager:
@@ -19,51 +23,45 @@ class NearbyFutureDataManager:
     def initialize(self, environment):
         pass
 
-    async def create(
+    async def save_futures(
         self,
-        derivative_codes: list[DerivativeCode],
+        futures_data: ListDataTypeHint,
         extra_data: dict,
     ):
-        derivative_code_dicts = [
-            instance_to_dict(
-                derivative_code,
-                fields=[
-                    "derivative_type",
-                    "strike_price",
-                    "name",
-                    "year",
-                    "month",
-                ],
+        future_ids = []
+
+        future_dicts = await as_list_type(futures_data, data_type=ListDataType.ListDict)
+
+        for future_data in future_dicts:
+            future, created = await NearbyFuture.objects.aget_or_create(
+                **future_data,
+                **extra_data,
             )
-            for derivative_code in derivative_codes
-        ]
+            future_data["id"] = future.id
 
-        derivative_code_dicts = sorted(
-            derivative_code_dicts, key=lambda x: x["expire_at_str"]
-        )
+        if isinstance(futures_data, pd.DataFrame):
+            futures_data["id"] = future_ids
 
-        await NearbyFuture.objects.acreate(
-            data=derivative_code_dicts,
-            date_at=now_local(),
-            **extra_data,
-        )
+        return futures_data
 
-    async def nearby_future_codes(
-        self, max_time_diff: timedelta = timedelta(days=5)
-    ) -> list[DerivativeCode]:
+    async def nearby_futures(
+        self,
+        max_time_diff: timedelta = timedelta(days=5),
+        filter_params: dict | None = None,
+        return_type: ListDataType = ListDataType.Dataframe,
+    ) -> ListDataTypeHint:
+        filter_params = filter_params or {}
         now = now_local()
-        nearby_future = (
-            await NearbyFuture.objects.filter(date_at__gt=now - max_time_diff)
-            .order_by("date_at")
-            .alast()
-        )
 
-        if nearby_future:
-            return [
-                DerivativeCode(
-                    derivative_type_code=future_code_dict.get("derivative_type"),
-                    **future_code_dict,
-                )
-                for future_code_dict in nearby_future.data
-            ]
-        return []
+        future_qs = NearbyFuture.objects.annotate(
+            recent_at=Window(
+                expression=Max("date_at"), partition_by=[F("security_code")]
+            )
+        ).filter(date_at=F("recent_at"))
+
+        filter_params_updated = dict(date_at__gt=now - max_time_diff) | filter_params
+
+        if filter_params_updated:
+            future_qs = future_qs.filter(**filter_params_updated)
+
+        return await as_list_type(future_qs, return_type)

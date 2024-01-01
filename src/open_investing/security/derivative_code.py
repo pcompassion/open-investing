@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
+import datetime
 from enum import Enum, auto
 import calendar
-from pendulum import Time
+from pendulum import time
 from typing import Any, Dict, Optional, Callable, Awaitable
 import copy
 import pandas as pd
 import pendulum
 from open_library.time.calendar import find_nth_weekday_of_month
 from open_investing.const.code_name import DerivativeType
+from open_library.collections.dict import instance_to_dict
+from open_library.time.datetime import combine
 
 
 class DerivativeTypeCode(str, Enum):
@@ -26,6 +29,10 @@ name_to_code_map = {
 
 
 class DerivativeCode:
+    """
+    [[file:~/projects/risk-glass/notes/info/question/2023-11-21.org::*api][파생상품 코드 규칙]]
+    """
+
     MONTH_MAP = {
         1: "1",
         2: "2",
@@ -48,32 +55,45 @@ class DerivativeCode:
 
     def __init__(
         self,
-        derivative_type_code: DerivativeTypeCode | DerivativeType,
-        year: int,
-        month: int,
-        strike_price: float,
-        **kwargs,
+        derivative_type: DerivativeType,
+        expire_at: datetime.datetime,
+        price: float | None = None,
+        strike_price: float | None = None,
     ):
-        if isinstance(derivative_type_code, DerivativeType):
-            derivative_type_code = get_derivative_code_from_type(derivative_type_code)
+        derivative_type_code = self.get_derivative_code_from_type(derivative_type)
 
         self.derivative_type_code = derivative_type_code
-
-        self.year = year
-        self.month = month
-        self.strike_price = strike_price
-
-        derivative_type = self.get_derivative_type_from_code(derivative_type_code)
         self.derivative_type = derivative_type
 
+        if (price is not None) == (strike_price is not None):
+            raise ValueError(
+                "Please provide either price or strike_price, but not both."
+            )
+
+        self.year = expire_at.year
+        self.month = expire_at.month
+        self.expire_at = expire_at
+        self.strike_price = strike_price
+        self.price = price
+
     @classmethod
-    def from_string(cls, code_str, strike_price: Optional[float] = None):
+    def from_string(
+        cls,
+        code_str,
+        price: float | None = None,
+        strike_price: float | None = None,
+    ):
         derivative_type_code = DerivativeTypeCode(code_str[:3])
         year_str = code_str[3]
         month_str = code_str[4]
-        if strike_price is None:
-            strike_price = float(code_str[5:])
-        strike_price = float(strike_price)
+
+        derivative_type = cls.get_derivative_type_from_code(derivative_type_code)
+
+        if derivative_type in [DerivativeType.Call, DerivativeType.Put]:
+            if strike_price is None:
+                strike_price = float(code_str[5:])
+                if int(code_str[-1]) in [2, 7]:
+                    strike_price += 0.5
 
         year = cls.year_from_str(year_str)
 
@@ -86,10 +106,13 @@ class DerivativeCode:
         if month is None:
             raise ValueError(f"Invalid month_str: {month_str}")
 
-        return cls(derivative_type_code, year, month, strike_price)
+        date = find_nth_weekday_of_month(year, month, calendar.THURSDAY, 2)
+        expire_at = combine(date, time(15, 45))
+
+        return cls(derivative_type, expire_at, price, strike_price)
 
     def __str__(self):
-        return f"{self.derivative_type_code}{self.year_str}{self.month_str}{int(self.strike_price)}"
+        return self.security_code
 
     def copy(self):
         return copy.deepcopy(self)
@@ -120,32 +143,6 @@ class DerivativeCode:
     def year_str(self, value):
         self.year = self.year_from_str(value)
 
-    def as_derivative_type_code_str(
-        self,
-        derivative_type_code: DerivativeTypeCode,
-        strike_price: Optional[float] = None,
-    ):
-        if strike_price is None:
-            strike_price = self.strike_price
-        return (
-            f"{derivative_type_code}{self.year_str}{self.month_str}{int(strike_price)}"
-        )
-
-    def clone_as_derivative_type_code(
-        self,
-        derivative_type_code: DerivativeTypeCode,
-        strike_price: Optional[float] = None,
-    ):
-        if strike_price is None:
-            strike_price = self.strike_price
-
-        new_instance = self.copy()
-
-        new_instance.derivative_type_code = derivative_type_code
-        new_instance.strike_price = strike_price
-
-        return new_instance
-
     @classmethod
     def strike_price_from_string(cls, code_str):
         code = cls.from_string(code_str)
@@ -154,16 +151,18 @@ class DerivativeCode:
 
     @property
     def name(self):
-        if self.derivative_type_code in [
-            DerivativeTypeCode.Future,
-            DerivativeTypeCode.MiniFuture,
-        ]:
-            return self.future_name
-        return f"{self.derivative_type_code}{self.year_str}{self.month_str}"
+        return f"{self.derivative_type_code.value}{self.year_str}{self.month_str}"
 
     @property
-    def future_name(self):
-        return f"{self.derivative_type_code}{self.year_str}{self.month_str}000"
+    def security_code(self):
+        price = 0
+        if self.derivative_type_code in [
+            DerivativeTypeCode.Call,
+            DerivativeTypeCode.Put,
+        ]:
+            price = int(self.strike_price)
+
+        return f"{self.name}{price:03}"
 
     @classmethod
     def get_name_and_strike_price(cls, code_str):
@@ -178,27 +177,36 @@ class DerivativeCode:
 
         for field_name in field_names:
             match field_name:
-                case "name":
-                    l.append(code.name)
+                # case "name":
+                #     l.append(code.name)
                 case "strike_price":
                     l.append(float(code.strike_price))
                 case "expire_at":
-                    l.append(code.expire_at)
+                    l.append(code.expire_at_str)
+                case _:
+                    l.append(getattr(code, field_name))
 
         return pd.Series(l)
 
-    @property
-    def expire_at(self):
-        from open_library.time.datetime import combine
-
-        date = find_nth_weekday_of_month(self.year, self.month, calendar.THURSDAY, 2)
-
-        dt = combine(date, Time(15, 45))
-
-        return dt
-
     def to_dict(self):
-        return self.__dict__
+        fields = [
+            "expire_at",
+            "derivative_type",
+            "security_code",
+        ]
+
+        match self.derivative_type:
+            case DerivativeType.Future | DerivativeType.MiniFuture:
+                fields += ["price"]
+            case DerivativeType.Call | DerivativeType.Put:
+                fields += ["strike_price"]
+            case _:
+                pass
+
+        derivative_code = self
+        dict_ = instance_to_dict(derivative_code, fields)
+
+        return dict_
 
     @property
     def expire_at_str(self):

@@ -12,4 +12,7 @@ class DataReturnType(str, Enum):
     List = "list"
 
 
-ReturnTypeHint = Union[QuerySet[Any], list[Any], pd.DataFrame]
+DataReturnTypeHint = Union[QuerySet[Any], list[Any], pd.DataFrame]
+
+
+InputDataTypeHint = list[Any] | pd.DataFrame

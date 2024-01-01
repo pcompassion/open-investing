@@ -9,6 +9,7 @@ from open_library.collections.dict import instance_to_dict
 
 from open_investing.security.models import Future
 from open_investing.locator.service_locator import ServiceKey
+from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 
 
 class FutureDataManager:
@@ -21,28 +22,24 @@ class FutureDataManager:
     def initialize(self, environment):
         pass
 
-    async def last(self, **params):
-        return await Future.objects.filter(**params).order_by("date_at").alast()
+    async def last(self, filter_params: dict | None = None):
+        return await Future.objects.filter(**filter_params).order_by("date_at").alast()
 
-    async def save_futures(self, futures_df: pd.DataFrame, extra_data: dict):
+    async def save_futures(self, futures_data: ListDataTypeHint, extra_data: dict):
         extra_data = extra_data or {}
 
+        future_dicts = await as_list_type(futures_data, data_type=ListDataType.ListDict)
+
         future_ids = []
-        for future_data in futures_df.itertuples():
+        for future_data in future_dicts:
             future, created = await Future.objects.aget_or_create(
-                price=future_data.price,
-                security_code=future_data.security_code,
-                date_at=future_data.datetime,
-                data=serialize_row(future_data),
+                **future_data,
                 **extra_data,
             )
             future_ids.append(future.id)
+            future_data["id"] = future.id
 
-        futures_df["id"] = future_ids
+        if isinstance(futures_data, pd.DataFrame):
+            futures_data["id"] = future_ids
 
-        return futures_df
-
-    async def last(self, future_code, **params):
-        return await Future.objects.filter(
-            security_code=future_code.name, **params
-        ).alast()
+        return futures_data

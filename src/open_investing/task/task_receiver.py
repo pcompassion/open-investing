@@ -13,7 +13,7 @@ class RedisTaskReceiver:
         self.channel_name = channel_name
         self.redis_client = redis_client
 
-        self.task_manager.subscribe_all(self.notify_listners)
+        self.task_manager.subscribe_all(self.notify_listeners)
 
     async def run(self):
         while True:
@@ -40,7 +40,7 @@ class RedisTaskReceiver:
                     "Failed to enqueue task command: %s", general_exception
                 )
 
-    async def notify_listners(self, message):
+    async def notify_listeners(self, message):
         task_spec_ = message["task_spec"]
 
         if isinstance(task_spec_, TaskSpec):
@@ -48,9 +48,11 @@ class RedisTaskReceiver:
         else:
             task_spec = task_spec_
 
-        message["task_spec"] = task_spec
+        message_updated = message | {"task_spec": task_spec}
 
         try:
-            await self.redis_client.publish(self.channel_name, json.dumps(message))
+            await self.redis_client.publish(
+                self.channel_name, json.dumps(message_updated)
+            )
         except Exception as e:
             pass

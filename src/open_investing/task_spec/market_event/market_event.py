@@ -36,10 +36,12 @@ class MarketEventSpec(TaskSpec):
     def __eq__(self, other):
         if isinstance(other, MarketEventSpec):
             return (
+                self.spec_type_name,
                 self.event_type,
                 self.cron_time,
                 tuple(self.data.items()),
             ) == (
+                other.spec_type_name,
                 other.event_type,
                 other.cron_time,
                 tuple(other.data.items()),
@@ -47,7 +49,7 @@ class MarketEventSpec(TaskSpec):
         return NotImplemented
 
     def __hash__(self):
-        attrs_hash = map(hash, (self.event_type, self.cron_time))
+        attrs_hash = map(hash, (self.spec_type_name, self.event_type, self.cron_time))
         data_items_hash = map(hash, tuple(sorted(self.data.items())))
         combined_hashes = itertools.chain(attrs_hash, data_items_hash)
         return functools.reduce(operator.xor, combined_hashes, 0)
