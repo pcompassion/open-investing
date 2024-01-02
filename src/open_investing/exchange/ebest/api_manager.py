@@ -22,9 +22,11 @@ from open_investing.security.derivative_code import DerivativeCode, DerivativeTy
 
 from open_investing.config.base import DEFAULT_TIME_FORMAT
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
+from open_investing.exchange.ebest.mixin.order import OrderMixin
+from open_library.observe.pubsub_broker import PubsubBroker
 
 
-class EbestApiManager:
+class EbestApiManager(OrderMixin):
     service_key = ServiceKey(
         service_type="exchange_api_manager",
         service_name="ebest",
@@ -33,7 +35,7 @@ class EbestApiManager:
     def __init__(self):
         pass
 
-    def initialize(self, environment):
+    async def initialize(self, environment):
         EBEST_APP_KEY = environment.get("EBEST-OPEN-API-APP-KEY")
         EBEST_APP_SECRET = environment.get("EBEST-OPEN-API-SECRET-KEY")
 
@@ -46,6 +48,21 @@ class EbestApiManager:
         self.derivative_api = EbestApi(
             EBEST_APP_KEY_DERIVATIVE, EBEST_APP_SECRET_DERIVATIVE
         )
+
+        await self.stock_api.subscribe(
+            tr_type="1", tr_code="SC1", tr_key="", handler=self.stock_order_listener
+        )
+
+        await self._api.subscribe(
+            tr_type="1",
+            tr_code="C01",
+            tr_key="",
+            handler=self.derivative_order_listener,
+        )
+        self.order_update_broker: PubsubBroker | None = None
+
+    def set_order_update_broker(self, order_update_broker):
+        self.order_update_broker = order_update_broker
 
     async def nearby_mini_futures(
         self,

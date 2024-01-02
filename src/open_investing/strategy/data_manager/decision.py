@@ -3,21 +3,35 @@
 
 from typing import Dict, Any
 from open_investing.strategy.models.decision import Decision
+from open_investing.locator.service_locator import ServiceKey
+from open_investing.strategy.const.decision import DecisionLifeStage
 
 
-class DecisionManager:
-    async def open_decision(
+class DecisionDataManager:
+    service_key = ServiceKey(
+        service_type="data_manager",
+        service_name="database",
+        params={"model": "Strategy.Decision"},
+    )
+
+    async def make_decision(
         self,
         decision: Decision,
-        decision_type: str,
         decision_params: Dict[str, Any],
         amount: float,
     ):
-        await decision.asave(
-            decision_type=decision_type,
-            decision_params=decision_params,
-            amount=amount,
-            life_stage=DecisionLifeStage.OPENED,
+        return await self._save(
+            decision,
+            save_params=dict(
+                decision_params=decision_params,
+                amount=amount,
+                life_stage=DecisionLifeStage.Decided,
+            ),
+        )
+
+    async def set_started(self, decision: Decision):
+        return await self._save(
+            decision, save_params=dict(life_stage=DecisionLifeStage.Started)
         )
 
     async def last(
@@ -30,5 +44,11 @@ class DecisionManager:
             .alast()
         )
 
-
-decision_manager = DecisionManager()
+    async def _save(
+        self,
+        decision: Decision,
+        save_params: Dict[str, Any],
+    ):
+        return await decision.asave(
+            **save_params,
+        )

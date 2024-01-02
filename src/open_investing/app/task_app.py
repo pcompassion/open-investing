@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from open_investing.security.data_manager.decision import DecisionDataManager
+from open_investing.task.task_command import TaskCommand
+from collections import defaultdict
 from uuid import uuid4
 from pathlib import Path
 
@@ -32,6 +35,7 @@ class App(BaseApp):
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
+        self.order_update_broker = OrderUpdateBroker()
         self.tasks = []
 
     def setup_base_tasks(self):
@@ -46,7 +50,7 @@ class App(BaseApp):
         tasks.append(asyncio.create_task(receiver.run()))
 
     async def main(self):
-        self.init()
+        await self.init()
 
         self.setup_base_tasks()
 
@@ -58,12 +62,12 @@ class App(BaseApp):
         await asyncio.gather(*self.tasks)
 
     def init(self):
-        """initialize app, runs before main"""
+        """initialize app"""
         self.setup_logging()
         self.setup_django()
 
         self.setup_default_service_keys()
-        self.setup_service_manager()
+        await self.setup_service_manager()
 
         import_modules = [
             "risk_glass.market_event",
@@ -75,29 +79,38 @@ class App(BaseApp):
 
     def setup_default_service_keys(self):
         from .after_django import (
+            MarketIndicatorDataManager,
             NearbyFutureDataManager,
             FutureDataManager,
             OptionDataManager,
-            MarketIndicatorDataManager,
+            DecisionDataManager,
+            StrategySessionDataManager,
+            OrderDataManager,
         )
 
         TaskSpec.set_default_service_keys(
             {
                 "exchange_api_manager": EbestApiManager.service_key,
+                "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
+                uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
                 uuid4(): OptionDataManager.service_key,
-                "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
-                uuid4(): MarketIndicatorDataManager.service_key,
+                uuid4(): DecisionDataManager.service_key,
+                uuid4(): StrategySessionDataManager.service_key,
+                uuid4(): OrderDataManager.service_key,
             }
         )
 
-    def setup_service_manager(self):
+    async def setup_service_manager(self):
         from .after_django import (
+            MarketIndicatorDataManager,
             NearbyFutureDataManager,
             FutureDataManager,
             OptionDataManager,
-            MarketIndicatorDataManager,
+            DecisionDataManager,
+            StrategySessionDataManager,
+            OrderDataManager,
         )
 
         service_locator = self._service_locator
@@ -107,9 +120,15 @@ class App(BaseApp):
         )
 
         ebest_api_manager = EbestApiManager()
-        ebest_api_manager.initialize(self.environment)
+        await ebest_api_manager.initialize(self.environment)
         service_locator.register_service(
             ebest_api_manager.service_key, ebest_api_manager
+        )
+
+        market_indicator_manager = MarketIndicatorDataManager()
+        market_indicator_manager.initialize(self.environment)
+        service_locator.register_service(
+            market_indicator_manager.service_key, market_indicator_manager
         )
 
         nearby_future_manager = NearbyFutureDataManager()
@@ -126,11 +145,19 @@ class App(BaseApp):
         option_manager.initialize(self.environment)
         service_locator.register_service(option_manager.service_key, option_manager)
 
-        market_indicator_manager = MarketIndicatorDataManager()
-        market_indicator_manager.initialize(self.environment)
+        decision_manager = DecisionDataManager()
+        decision_manager.initialize(self.environment)
+        service_locator.register_service(decision_manager.service_key, decision_manager)
+
+        strategy_session_manager = StrategySessionDataManager()
+        strategy_session_manager.initialize(self.environment)
         service_locator.register_service(
-            market_indicator_manager.service_key, market_indicator_manager
+            strategy_session_manager.service_key, strategy_session_manager
         )
+
+        order_manager = OrderDataManager()
+        order_manager.initialize(self.environment)
+        service_locator.register_service(order_manager.service_key, order_manager)
 
     def setup_django(self):
         import django
@@ -146,13 +173,32 @@ class App(BaseApp):
             TaskSpecHandlerRegistry,
         )
 
-        task_spec_dict = {
-            "spec_type_name": "dynamic_hedge",
-        }
-        task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
+        running_strategies = defaultdict(int)
 
-        command = "start"
-        await self.task_dispatcher.dispatch_task(task_spec, command)
+        strategy_sessions = await strategy_session_manager.open_strategy_sessions()
+
+        for strategy_session in strategy_sessions:
+            strategy_name = strategy_session.strategy_name
+
+            task_spec_dict = {
+                "spec_type_name": strategy_name,
+            }
+            task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
+
+            command = TaskCommand(name="start")
+            await self.task_dispatcher.dispatch_task(task_spec, command)
+
+            running_strategies[strategy_name] += 1
+
+        if "delta_hedge" not in running_strategies:
+            task_spec_dict = {
+                "spec_type_name": "delta_hedge",
+            }
+            task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
+
+            command = TaskCommand(name="start")
+
+            await self.task_dispatcher.dispatch_task(task_spec, command)
 
     def get_service_locator(self):
         return self._service_locator

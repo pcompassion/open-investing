@@ -4,7 +4,10 @@ from enum import Enum, auto
 
 
 class DecisionLifeStage(str, Enum):
-    UNOPENED = "unopened"
-    OPENED = "opened"
-    STARTED = "started"
-    CLOSED = "closed"
+    Undefined = "undefined"
+    Decided = "decided"
+
+    Started = "started"
+    Opened = "opened"
+
+    Closed = "closed"

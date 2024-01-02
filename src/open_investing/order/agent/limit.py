@@ -4,7 +4,7 @@ import asyncio
 from decimal import Decimal, ROUND_HALF_UP
 
 from open_investing.order.const.order import (
-    OrderDirection,
+    OrderSide,
     OrderPriceType,
 )
 
@@ -31,7 +31,7 @@ class LimitOrderAgent:
         security_code: str,
         order_quantity: int,
         price: Decimal,
-        order_direction: OrderDirection,
+        order_side: OrderSide,
         order_price_type: OrderPriceType = OrderPriceType.LIMIT,
     ):
         api = self.api
@@ -44,7 +44,7 @@ class LimitOrderAgent:
             security_code=security_code,
             order_quantity=order_quantity,
             order_price=float(price),
-            order_direction=order_direction,
+            order_direction=order_side,
             order_price_type=order_price_type,
         )
 

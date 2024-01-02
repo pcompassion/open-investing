@@ -10,25 +10,24 @@ class Decision(models.Model):
     """
     collection of orders
     and the execution condition of orders
-
-
     order: {side, type, }
-
 
     """
 
-    strategy_session_id = models.UUIDField()
-    strategy_name = models.CharField(max_length=128)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    decision_type = models.CharField(max_length=128)
+    strategy_session = models.ForeignKey(
+        "strategy.StrategySession", on_delete=models.CASCADE
+    )
+
+    # decision_type = models.CharField(max_length=128)
     decision_params = models.JSONField(default=dict)
-
-    life_stage = models.CharField(max_length=128)
 
     amount = models.FloatField(default=0)
     filled_amount = models.FloatField(default=0)
     remaining_amount = models.FloatField(default=0)
 
+    life_stage = models.CharField(max_length=32, default=DecisionLifeStage.Unstarted)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -37,4 +36,4 @@ class Decision(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.life_stage = DecisionLifeStage.UNOPENED
+        # self.life_stage = DecisionLifeStage.Unopened

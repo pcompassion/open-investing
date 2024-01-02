@@ -6,7 +6,7 @@ from open_investing.exchange.const.market_type import MarketType
 
 from open_investing.exchange.ebest.api_data import EbestApiData
 
-from open_investing.order.const.order import OrderDirection, OrderPriceType
+from open_investing.order.const.order import OrderSide, OrderPriceType
 from open_investing.const.code_name import IndexCode, DerivativeType
 
 
@@ -16,24 +16,24 @@ class EbestApiField:
             "security_code": "IsuNo",
             "order_quantity": "OrdQty",
             "order_price": "OrdPrc",
-            "order_direction": "BnsTpCode",
+            "order_side": "BnsTpCode",
             "order_price_type": "OrdprcPtnCode",
         },
         MarketType.DERIVATIVE: {
             "security_code": "FnoIsuNo",
             "order_quantity": "OrdQty",
             "order_price": "FnoOrdPrc",
-            "order_direction": "BnsTpCode",
+            "order_side": "BnsTpCode",
             "order_price_type": "FnoOrdprcPtnCode",
         },
         MarketType.UNDEFINED: {},
     }
 
     field_value_map = {
-        OrderDirection.SELL: "1",
-        OrderDirection.BUY: "2",
-        OrderPriceType.LIMIT: "00",
-        OrderPriceType.MARKET: "03",
+        OrderSide.SELL: "1",
+        OrderSide.BUY: "2",
+        OrderPriceType.Limit: "00",
+        OrderPriceType.Market: "03",
         IndexCode.Kospi: "001",
         IndexCode.Kospi200: "101",
         IndexCode.Krx100: "501",

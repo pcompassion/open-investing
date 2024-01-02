@@ -98,7 +98,7 @@ class TaskManager:
 
             command = task_info["command"]
 
-            if command == "start":
+            if command.name == "start":
                 await self.start_task(task_spec)
-            elif command == "stop":
+            elif command.name == "stop":
                 await self.stop_task(task_spec)
