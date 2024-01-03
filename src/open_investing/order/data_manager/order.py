@@ -46,7 +46,7 @@ class OrderDataManager:
         else:
             return await CompositeOrder.objects.get(**filter_params)
 
-    async def record_event(self, event_params: dict, order=None):
+    async def handle_filled_event(self, event_params: dict, order=None):
         composite_order = None
         trade = None
 
@@ -54,22 +54,44 @@ class OrderDataManager:
             composite_order = order
             order = None
 
+        fill_quantity = event_params['fill_quantity']
+        fill_price = event_params['fill_price']
+
+        params = dict(
+            order=order,
+            quantity = event_params['fill_quantity']
+            price = event_params['fill_price']
+            date_at = event_params['fill_at']
+        )
+        trade = await Trade.objects.acreate(**params)
+
+        order.update_fill(fill_quantity, fill_price)
+
+        composite_order = order.composite_order
+
+        if composite_order:
+            self.handle_filled_event_for_composite_order(event_params, order composite_order)
+
+    async def handle_filled_event_for_composite_order(self, event_params: dict, order, composite_order):
+
+        pass
+
+    async def handle_event(self, event_params: dict, order=None):
+
         event_name = event_params['event_name']
         match event_name:
-            fill_quantity = event_params['fill_quantity']
-            fill_price = event_params['fill_price']
+
             case OrderEventName.Filled:
-                params = dict(
-                    order=order,
-                    quantity = event_params['fill_quantity']
-                    price = event_params['fill_price']
-                    date_at = event_params['fill_at']
-                )
-                trade = await Trade.objects.acreate(**params)
-                
-                order.update_fill(fill_quantity, fill_price)
+                self.handle_filled_event(event_params, order)
+
+
             case _:
                 pass
+
+        await self.record_event(event_params, order=order)
+
+    async def record_event(self, event_params: dict, order=None):
+
 
         order_event = await OrderEvent.objects.acreate(
             order=order,
