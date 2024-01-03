@@ -59,10 +59,10 @@ class EbestApiManager(OrderMixin):
             tr_key="",
             handler=self.derivative_order_listener,
         )
-        self.order_update_broker: PubsubBroker | None = None
+        self.order_exchange_event_broker: PubsubBroker | None = None
 
-    def set_order_update_broker(self, order_update_broker):
-        self.order_update_broker = order_update_broker
+    def set_order_exchange_event_broker(self, order_exchange_event_broker):
+        self.order_exchange_event_broker = order_exchange_event_broker
 
     async def nearby_mini_futures(
         self,

@@ -23,9 +23,9 @@ class Decision(models.Model):
     # decision_type = models.CharField(max_length=128)
     decision_params = models.JSONField(default=dict)
 
-    amount = models.FloatField(default=0)
-    filled_amount = models.FloatField(default=0)
-    remaining_amount = models.FloatField(default=0)
+    quantity = models.FloatField(default=0)
+    filled_quantity = models.FloatField(default=0)
+    remaining_quantity = models.FloatField(default=0)
 
     life_stage = models.CharField(max_length=32, default=DecisionLifeStage.Unstarted)
     created_at = models.DateTimeField(auto_now_add=True)

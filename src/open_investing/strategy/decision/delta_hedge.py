@@ -48,11 +48,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
             await decision_manager.set_started(decision)
 
-            
-            
-
-        
-
     async def run(self):
         while True:
             # while not self.command_queue.empty():

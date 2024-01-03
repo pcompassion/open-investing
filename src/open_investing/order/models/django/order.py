@@ -10,7 +10,6 @@ class Order(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order_type = models.CharField(max_length=32)
 
     exchange_order_id = models.CharField(max_length=255, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
@@ -31,35 +30,21 @@ class Order(models.Model):
     quantity = models.FloatField(default=0)
     filled_quantity = models.FloatField(default=0)
 
-    average_fill_price = models.FloatField(default=0)
-    total_cost = models.FloatField(default=0)
-
     data = models.JSONField(default=dict)
 
-    def update_fill(self, fill_quantity, fill_price):
-        # Update total cost and filled quantity
-        new_cost = fill_quantity * fill_price
-        self.total_cost += new_cost
-        self.filled_quantity += fill_quantity
 
-        # Update average fill price
-        if self.filled_quantity > 0:
-            self.average_fill_price = self.total_cost / self.filled_quantity
+class CompositeOrder(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    def calculate_roi(self, current_price):
-        """
-        Calculates the return on investment (ROI) based on the current price.
-        """
+    created_at = models.DateTimeField(auto_now_add=True)
 
-        if self.filled_quantity == 0:
-            return 0  # If nothing has been filled, ROI is 0
+    order_type = models.CharField(max_length=32)
+    data = models.JSONField(default=dict)
 
-        invested = self.average_fill_price * self.filled_quantity
-        current_value = current_price * self.filled_quantity
-        return (current_value - invested) / invested
+    quantity = models.FloatField(default=0)
+    filled_quantity = models.FloatField(default=0)
 
-    def is_filled(self):
-        return filled_quantity >= quantity
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class Trade(models.Model):
@@ -71,7 +56,7 @@ class Trade(models.Model):
     price = models.FloatField()
 
 
-class OrderEvent(models.Model):
+class OrderEvent(moels.Model):
 
     """
     placed

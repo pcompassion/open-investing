@@ -19,6 +19,7 @@ from open_library.app.base_app import BaseApp
 from open_investing.locator.service_locator import ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
+from open_investing.order.order_event_broker import OrderExchangeEventBroker
 
 
 async def debug_control():
@@ -35,7 +36,7 @@ class App(BaseApp):
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
-        self.order_update_broker = OrderUpdateBroker()
+        self.order_exchange_event_broker = OrderExchangeEventBroker()
         self.tasks = []
 
     def setup_base_tasks(self):
@@ -92,6 +93,7 @@ class App(BaseApp):
             {
                 "exchange_api_manager": EbestApiManager.service_key,
                 "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
+                "order_exchange_event_broker": OrderExchangeEventBroker.service_key,
                 uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
@@ -123,6 +125,11 @@ class App(BaseApp):
         await ebest_api_manager.initialize(self.environment)
         service_locator.register_service(
             ebest_api_manager.service_key, ebest_api_manager
+        )
+
+        order_exchange_event_broker = OrderExchangeEventBroker()
+        service_locator.register_service(
+            order_exchange_event_broker.service_key, order_exchange_event_broker
         )
 
         market_indicator_manager = MarketIndicatorDataManager()

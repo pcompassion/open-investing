@@ -18,13 +18,13 @@ class DecisionDataManager:
         self,
         decision: Decision,
         decision_params: Dict[str, Any],
-        amount: float,
+        quantity: float,
     ):
         return await self._save(
             decision,
             save_params=dict(
                 decision_params=decision_params,
-                amount=amount,
+                quantity=quantity,
                 life_stage=DecisionLifeStage.Decided,
             ),
         )
