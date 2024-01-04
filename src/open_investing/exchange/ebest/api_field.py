@@ -26,12 +26,15 @@ class EbestApiField:
             "order_side": "BnsTpCode",
             "order_price_type": "FnoOrdprcPtnCode",
         },
-        MarketType.UNDEFINED: {},
+        MarketType.UNDEFINED: {
+            "cancel_quantity": "CancQty",
+            "exchange_order_id": "OrgOrdNo",
+        },
     }
 
     field_value_map = {
-        OrderSide.SELL: "1",
-        OrderSide.BUY: "2",
+        OrderSide.Sell: "1",
+        OrderSide.Buy: "2",
         OrderPriceType.Limit: "00",
         OrderPriceType.Market: "03",
         IndexCode.Kospi: "001",

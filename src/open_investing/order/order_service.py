@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+from open_library.observe.pubsub_broker import PubsubBroker
+from open_investing.order.models.order import OrderEvent
+from open_investing.locator.service_locator import ServiceKey
+import asyncio
+
+from open_library.time.datetime import now_local
+from open_investing.order.const.order import OrderEventName
+
 
 class OrderService:
     # https://chat.openai.com/c/ae7e132e-9005-441c-b0a1-6490b31cb938
@@ -14,57 +22,51 @@ class OrderService:
 
     """
 
-    def __init__(self, order_data_manager, api_manager):
+    service_key = ServiceKey(
+        service_type="service",
+        service_name="order_service",
+    )
+
+    def __init__(self):
+        self.order_data_manager = None
+        self.api_manager = None
+        self.order_event_broker = None
+        self.order_event_queue = asyncio.Queue()
+        self.order_event_task = None
+
+    async def initialize(self):
+        self.order_event_task = asyncio.create_task(self.run_order_event())
+
+    def set_order_data_manager(self, order_data_manager):
         self.order_data_manager = order_data_manager
-        self.api_manager = api_manager
 
-    async def _open_order(self, order):
-        order_data_manager = self.order_data_manager
-        api_manager = self.api_manager
+    def set_order_event_broker(self, order_event_broker: PubsubBroker):
+        self.order_event_broker = order_event_broker
 
-        await order_data_manager.record_event(
-            event_params=dict(
-                event_name=OrderEventType.OpenRequest,
-                date_at=local_now(),
-            ),
-            order=order,
-        )
-
-        order_event_broker.subscribe(order.id, self.enqueue_order_event)
-
-        exchange_order_id, _ = await api_manager.market_order(
-            order, data_manager=order_data_manager
-        )
-
-        order = await order_data_manager.save(
-            order, save_params=dict(exchange_order_id=exchange_order_id)
-        )
-
-    async def open_order(self, order):
-        asyncio.create_task(self._open_order(order))
+    def set_exchange_manager(self, exchange_manager):
+        self.exchange_manager = exchange_manager
 
     async def on_order_event(self, order_info):
-        order_exchange_event = order_info["order_exchange_event"]
+        order_data_manager = self.order_data_manager
+        order_event_broker = self.order_event_broker
+
+        order_event = order_info["order_event"]
 
         order = order_info["order"]
 
-        event_name = order_exchange_event.name
+        event_name = order_event.name
 
         match event_name:
-            case OrderEventName.Filled:
-                order_manager.handle_filled_event(
-                    order_exchange_event.data, order=order
+            case OrderEventName.ExchangeFilled:
+                await order_data_manager.handle_filled_event(
+                    order_event.data, order=order
                 )
                 order_event = OrderEvent(
                     name=OrderEventName.Filled,
-                    data=dict(
-                        fill_quantity=data["chevol"],
-                        fill_price=data["cheprice"],
-                        date_at=combine(data["chedate"], data["chetime"]),
-                    ),
+                    data=order_event.data,
                 )
 
-                order_event_broker.enqueue_message(
+                await order_event_broker.enqueue_message(
                     order.id,
                     dict(order_event=order_event, order=order),
                 )
@@ -83,3 +85,80 @@ class OrderService:
             order_event = await self.order_event_queue.get()
 
             await self.on_order_event(order_event)
+
+    async def _open_order(self, order, exchange_manager):
+        order_data_manager = self.order_data_manager
+        exchange_manager = self.exchange_manager
+        order_event_broker = self.order_event_broker
+
+        await order_data_manager.record_event(  # type: ignore
+            event_params=dict(
+                event_name=OrderEventName.ExchangeOpenRequest,
+                date_at=now_local(),
+            ),
+            order=order,
+        )
+
+        order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
+
+        exchange_order_id, _ = await exchange_manager.market_order(
+            order, data_manager=order_data_manager
+        )
+
+        order = await order_data_manager.save(  # type: ignore
+            order, save_params=dict(exchange_order_id=exchange_order_id)
+        )
+
+    async def open_order(self, order, exchange_manager):
+        asyncio.create_task(self._open_order(order, exchange_manager))
+
+    async def _cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
+        order_data_manager = self.order_data_manager
+        exchange_manager = self.exchange_manager
+        order_event_broker = self.order_event_broker
+
+        await order_data_manager.record_event(  # type: ignore
+            event_params=dict(
+                event_name=OrderEventName.ExchangeCancelRequest,
+                date_at=now_local(),
+                cancel_quantity=cancel_quantity,
+            ),
+            order=order,
+        )
+
+        order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
+
+        cancel_order_result, _ = await exchange_manager.cancel_order_quantity(
+            order, cancel_quantity
+        )
+
+        cancelled_quantity = cancel_order_result["cancelled_quantity"]
+
+        event_name = OrderEventName.ExchangeCancelFailure
+        next_event_name = OrderEventName.CancelFailure
+        if cancelled_quantity > 0:
+            event_name = OrderEventName.ExchangeCancelSuccess
+            next_event_name = OrderEventName.CancelSuccess
+
+        event_params = dict(
+            event_name=event_name, date_at=now_local(), **cancel_order_result
+        )
+        await order_data_manager.record_event(
+            event_params=event_params,
+            order=order,
+        )
+
+        order_event = OrderEvent(
+            name=next_event_name,
+            data=event_params,
+        )
+
+        await order_event_broker.enqueue_message(
+            order.id,
+            dict(order_event=order_event, order=order),
+        )
+
+    async def cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
+        asyncio.create_task(
+            self._cancel_order_quantity(order, exchange_manager, cancel_quantity)
+        )

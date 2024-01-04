@@ -21,8 +21,8 @@ SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)
 
 
 class OrderSide(Enum):
-    BUY = "buy"
-    SELL = "sell"
+    Buy = "buy"
+    Sell = "sell"
 
 
 class OrderPriceType(Enum):
@@ -30,19 +30,27 @@ class OrderPriceType(Enum):
     Market = "market"
 
 
-class OrderExchangeEventName(str, Enum):
-    Filled = "filled"
-    Cancelled = "cancelled"
-
-
 class OrderCommandName(str, Enum):
     Open = "open"
+    Cancel = "cancel"
+    CancelRemaining = "cancel_remaining"
+    Close = "close"
+
+    Start = "start"
 
 
-class OrderOtherEventName(str, Enum):
-    ExchangePlaceRequest = "exchange_place_request"
-    ExchangePlaceSuccess = "exchange_place_success"
-    ExchangePlaceFailure = "exchange_place_failure"
+class OrderEventName(str, Enum):
+    ExchangeOpenRequest = "exchange.open_request"  # place request
+    ExchangeOpenSuccess = "exchange.open_success"  # place success
+    ExchangeOpenFailure = "exchange.open_failure"
 
+    ExchangeCancelRequest = "exchange.cancel_request"  # cancel request
+    ExchangeCancelSuccess = "exchange.cancel_success"  # cancel success
+    ExchangeCancelFailure = "exchange.cancel_failure"
 
-OrderEventName = Enum("OrderEventName", {**OrderExchangeEventName, **OrderCommandName})
+    ExchangeFilled = "exchange.filled"  # exchange notification for fill
+    ExchangeCancelled = "exchange.cancelled"  # exchange notification for cancel
+
+    Filled = "filled"  # order fill is recorded in db
+    CancelSuccess = "cancel_success"  # order cancel is recorded in db
+    CancelFailure = "cancel_failure"  # order cancel is recorded in db

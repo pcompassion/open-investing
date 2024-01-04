@@ -33,7 +33,8 @@ class EbestApiManager(OrderMixin):
     )
 
     def __init__(self):
-        pass
+        self.order_event_broker: PubsubBroker | None = None
+        self.order_data_manager = None
 
     async def initialize(self, environment):
         EBEST_APP_KEY = environment.get("EBEST-OPEN-API-APP-KEY")
@@ -53,16 +54,18 @@ class EbestApiManager(OrderMixin):
             tr_type="1", tr_code="SC1", tr_key="", handler=self.stock_order_listener
         )
 
-        await self._api.subscribe(
+        await self.derivative_api.subscribe(
             tr_type="1",
             tr_code="C01",
             tr_key="",
             handler=self.derivative_order_listener,
         )
-        self.order_exchange_event_broker: PubsubBroker | None = None
 
-    def set_order_exchange_event_broker(self, order_exchange_event_broker):
-        self.order_exchange_event_broker = order_exchange_event_broker
+    def set_order_event_broker(self, order_event_broker):
+        self.order_event_broker = order_event_broker
+
+    def set_order_data_manager(self, order_data_manager):
+        self.order_data_manager = order_data_manager
 
     async def nearby_mini_futures(
         self,

@@ -16,10 +16,11 @@ from redis import asyncio as aioredis
 from open_library.environment.environment import Environment
 
 from open_library.app.base_app import BaseApp
-from open_investing.locator.service_locator import ServiceLocator
+from open_investing.locator.service_locator import ServiceKey, ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
-from open_investing.order.order_event_broker import OrderExchangeEventBroker
+from open_investing.order.order_event_broker import OrderEventBroker
+from open_investing.order.order_service import OrderService
 
 
 async def debug_control():
@@ -36,7 +37,7 @@ class App(BaseApp):
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
-        self.order_exchange_event_broker = OrderExchangeEventBroker()
+
         self.tasks = []
 
     def setup_base_tasks(self):
@@ -62,7 +63,7 @@ class App(BaseApp):
 
         await asyncio.gather(*self.tasks)
 
-    def init(self):
+    async def init(self):
         """initialize app"""
         self.setup_logging()
         self.setup_django()
@@ -93,7 +94,9 @@ class App(BaseApp):
             {
                 "exchange_api_manager": EbestApiManager.service_key,
                 "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
-                "order_exchange_event_broker": OrderExchangeEventBroker.service_key,
+                "order_task_dispatcher": LocalTaskDispatcher.service_key,
+                "decision_task_dispatcher": LocalTaskDispatcher.service_key,
+                "order_event_broker": OrderEventBroker.service_key,
                 uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
@@ -127,44 +130,63 @@ class App(BaseApp):
             ebest_api_manager.service_key, ebest_api_manager
         )
 
-        order_exchange_event_broker = OrderExchangeEventBroker()
+        order_event_broker = OrderEventBroker()
         service_locator.register_service(
-            order_exchange_event_broker.service_key, order_exchange_event_broker
+            order_event_broker.service_key, order_event_broker
         )
 
-        market_indicator_manager = MarketIndicatorDataManager()
-        market_indicator_manager.initialize(self.environment)
+        market_indicator_data_manager = MarketIndicatorDataManager()
+        market_indicator_data_manager.initialize(self.environment)
         service_locator.register_service(
-            market_indicator_manager.service_key, market_indicator_manager
+            market_indicator_data_manager.service_key, market_indicator_data_manager
         )
 
-        nearby_future_manager = NearbyFutureDataManager()
-        nearby_future_manager.initialize(self.environment)
+        nearby_future_data_manager = NearbyFutureDataManager()
+        nearby_future_data_manager.initialize(self.environment)
         service_locator.register_service(
-            nearby_future_manager.service_key, nearby_future_manager
+            nearby_future_data_manager.service_key, nearby_future_data_manager
         )
 
-        future_manager = FutureDataManager()
-        future_manager.initialize(self.environment)
-        service_locator.register_service(future_manager.service_key, future_manager)
-
-        option_manager = OptionDataManager()
-        option_manager.initialize(self.environment)
-        service_locator.register_service(option_manager.service_key, option_manager)
-
-        decision_manager = DecisionDataManager()
-        decision_manager.initialize(self.environment)
-        service_locator.register_service(decision_manager.service_key, decision_manager)
-
-        strategy_session_manager = StrategySessionDataManager()
-        strategy_session_manager.initialize(self.environment)
+        future_data_manager = FutureDataManager()
+        future_data_manager.initialize(self.environment)
         service_locator.register_service(
-            strategy_session_manager.service_key, strategy_session_manager
+            future_data_manager.service_key, future_data_manager
         )
 
-        order_manager = OrderDataManager()
-        order_manager.initialize(self.environment)
-        service_locator.register_service(order_manager.service_key, order_manager)
+        option_data_manager = OptionDataManager()
+        option_data_manager.initialize(self.environment)
+        service_locator.register_service(
+            option_data_manager.service_key, option_data_manager
+        )
+
+        decision_data_manager = DecisionDataManager()
+        decision_data_manager.initialize(self.environment)
+        service_locator.register_service(
+            decision_data_manager.service_key, decision_data_manager
+        )
+
+        strategy_session_data_manager = StrategySessionDataManager()
+        strategy_session_data_manager.initialize(self.environment)
+        service_locator.register_service(
+            strategy_session_data_manager.service_key, strategy_session_data_manager
+        )
+
+        order_data_manager = OrderDataManager()
+        order_data_manager.initialize(self.environment)
+        service_locator.register_service(
+            order_data_manager.service_key, order_data_manager
+        )
+
+        ebest_api_manager.set_order_event_broker(order_event_broker)
+        ebest_api_manager.set_order_data_manager(order_data_manager)
+
+        order_service = OrderService()
+        await order_service.initialize()
+        service_locator.register_service(order_service.service_key, order_service)
+
+        order_service.set_order_event_broker(order_event_broker)
+        order_service.set_order_data_manager(order_data_manager)
+        order_service.set_order_data_manager(order_data_manager)
 
     def setup_django(self):
         import django
@@ -182,7 +204,14 @@ class App(BaseApp):
 
         running_strategies = defaultdict(int)
 
-        strategy_sessions = await strategy_session_manager.open_strategy_sessions()
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Strategy.StrategySession"},
+        )
+        strategy_session_data_manager = self.get_service(service_key)
+
+        strategy_sessions = await strategy_session_data_manager.open_strategy_sessions()
 
         for strategy_session in strategy_sessions:
             strategy_name = strategy_session.strategy_name
@@ -213,9 +242,3 @@ class App(BaseApp):
     def get_service(self, service_key):
         service = self._service_locator.get_service(service_key)
         return service
-
-    # def setup_strategy(self):
-    #     from open_investing.strategy.strategy_factory import StrategyFactory
-    #     from risk_glass.strategy.dynamic_hedge import DynamicHedgeStrategy
-
-    #     StrategyFactory.register_class(DynamicHedgeStrategy.name, DynamicHedgeStrategy)

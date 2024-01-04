@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-from typing import Any
-from typing import ClassVar, Type
-from pydantic import BaseModel
-from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
-from open_investing.task.task_command import TaskCommand
+from open_investing.task.task import Task
+import asyncio
+from typing import ClassVar, Type, cast
+
 from open_investing.order.const.order import OrderCommandName
+from open_investing.task.task_command import TaskCommand, SubCommand
+from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
+from open_investing.locator.service_locator import ServiceKey
 
 
 class OrderSpec(TaskSpec):
@@ -16,6 +18,8 @@ class OrderSpec(TaskSpec):
 
     # non hashed
     decision_id: str
+    order_id: str
+    parent_order_id: str
 
     security_code: str
     quantity: float
@@ -27,7 +31,7 @@ class OrderSpec(TaskSpec):
         return attrs_hash
 
 
-class OrderCommand(TaskCommand):
+class OrderCommand(SubCommand):
     name: OrderCommandName
 
 
@@ -40,24 +44,26 @@ class OrderAgent(TaskSpecHandler):
         self.command_queue = asyncio.Queue()
         self.order_event_queue = asyncio.Queue()
 
-        service_key = self.task_spec.get_service_key(name="order_event_broker")
-        self.order_event_broker = self.services[service_key]
+        self.tasks = dict(
+            run_order_command=Task("run_order_command", self.run_order_command),
+            run_order_event=Task("run_order_event", self.run_order_event),
+        )
 
     @property
-    def order_spec(self):
-        return self.task_spec
+    def order_spec(self) -> OrderSpec:
+        return cast(OrderSpec, self.task_spec)
 
     @property
     def name(self):
         return self.task_spec_cls.spec_type_name_classvar
 
-    async def on_order_command(order_info):
+    async def on_order_command(self, order_info):
         pass
 
-    async def on_order_event(order_event):
+    async def on_order_event(self, order_event):
         pass
 
-    async def run_command(self):
+    async def run_order_command(self):
         while True:
             order_info = await self.command_queue.get()
 
@@ -72,5 +78,56 @@ class OrderAgent(TaskSpecHandler):
     async def enqueue_order_command(self, order_info):
         await self.command_queue.put(order_info)
 
+    enqueue_command = enqueue_order_command
+
     async def enqueue_order_event(self, order_event):
         await self.order_event_queue.put(order_event)
+
+    @property
+    def order_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Order.Order"},
+        )
+        order_data_manager = self.services[service_key]
+        return order_data_manager
+
+    @property
+    def order_event_broker(self):
+        service_key = ServiceKey(
+            service_type="pubsub_broker",
+            service_name="order_event_broker",
+        )
+
+        return self.services[service_key]
+
+    @property
+    def order_service(self):
+        service_key = ServiceKey(
+            service_type="service",
+            service_name="order_service",
+        )
+
+        return self.services[service_key]
+
+    @property
+    def exchange_manager(self):
+        service_key = self.task_spec.get_service_key(name="exchange_api_manager")
+        return self.services[service_key]
+
+    @property
+    def order_task_dispatcher(self):
+        service_key = self.task_spec.get_service_key(name="order_task_dispatcher")
+        return self.services[service_key]
+
+    @property
+    def base_spec_dict(self):
+        from open_library.collections.dict import instance_to_dict
+
+        spec_dict = instance_to_dict(
+            self.order_spec, ["strategy_name", "strategy_session_id", "decision_id"]
+        )
+
+        spec_dict["parent_order_id"] = self.order_spec.order_id
+        return spec_dict

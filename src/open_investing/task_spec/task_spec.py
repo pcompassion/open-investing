@@ -12,6 +12,8 @@ from open_investing.locator.service_locator import ServiceKey
 
 # Base TaskSpec class
 class TaskSpec(BaseModel):
+    spec_type_name_classvar: ClassVar[str]
+
     spec_type_name: str = ""
     cron_time: str | None = None
     data: dict[str, Union[str, int, float]] = {}

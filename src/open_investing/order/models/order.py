@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import uuid
 from django.db import models
 
 
@@ -13,9 +14,6 @@ class Order(models.Model):
     order_type = models.CharField(max_length=32)
 
     exchange_order_id = models.CharField(max_length=255, blank=True)
-    exchange_name = models.CharField(max_length=32, blank=True)
-    exchange_api_code = models.CharField(max_length=32, blank=True)
-
     security_code = models.CharField(max_length=32, blank=True)
     side = models.CharField(max_length=32, blank=True)
 
@@ -24,8 +22,15 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     date_at = models.DateTimeField(null=True)
 
-    composite_order = models.ForeignKey(
+    parent_order = models.ForeignKey(
         "CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
+    )
+    strategy_session = models.ForeignKey(
+        "strategy.StrategySession", on_delete=models.CASCADE, blank=True, null=True
+    )
+
+    decision = models.ForeignKey(
+        "strategy.Decision", on_delete=models.CASCADE, blank=True, null=True
     )
 
     quantity = models.FloatField(default=0)
@@ -33,6 +38,9 @@ class Order(models.Model):
 
     average_fill_price = models.FloatField(default=0)
     total_cost = models.FloatField(default=0)
+
+    exchange_name = models.CharField(max_length=32, blank=True)
+    exchange_api_code = models.CharField(max_length=32, blank=True)
 
     data = models.JSONField(default=dict)
 
@@ -59,7 +67,10 @@ class Order(models.Model):
         return (current_value - invested) / invested
 
     def is_filled(self):
-        return filled_quantity >= quantity
+        return self.filled_quantity >= self.quantity
+
+    def subtract_quantity(self, quantity):
+        self.quantity -= quantity
 
 
 class Trade(models.Model):
@@ -74,14 +85,18 @@ class Trade(models.Model):
 class OrderEvent(models.Model):
 
     """
-    placed
+
+    exchange.place_request
+    exchange.place_success / failure
+
+    exchange.filled
+    exchange.cancelled
+
     filled
-    modified
-    cancelled
     """
 
     order = models.ForeignKey("Order", on_delete=models.CASCADE, blank=True, null=True)
-    composite_order = models.ForeignKey(
+    parent_order = models.ForeignKey(
         "CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
     trade = models.ForeignKey("Trade", on_delete=models.CASCADE, blank=True, null=True)

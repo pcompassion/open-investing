@@ -137,6 +137,12 @@ class EbestApiData:
             "market_type": MarketType.DERIVATIVE,
             "request_per_second": 10,
         },
+        "CFOAT00300": {
+            "api_path": EbestUrl.option_order,
+            "market_type": MarketType.DERIVATIVE,
+            "f_data_block_name": "{tr_code}OutBlock1",
+            "request_per_second": 10,
+        },
     }
 
     @classmethod
