@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from open_investing.order.const.order import SINGLE_ORDER_TYPES
-from open_investing.order.models.order import Order, Trade, OrderEvent
+from open_investing.order.models.order import Order, Trade, OrderEventEntry
 from open_investing.order.const.order import OrderEventName
 from open_investing.order.models.composite.composite import CompositeOrder
 from open_investing.locator.service_locator import ServiceKey
@@ -101,7 +101,8 @@ class OrderDataManager:
 
         match composite_order.order_type:
             case OrderType.BestMarketIceberg:
-                composite_order.update(fill_quantity, fill_price)
+                composite_order.update_fill(fill_quantity, fill_price)
+                # decision = composite_order.decision
             case _:
                 pass
 
@@ -138,7 +139,7 @@ class OrderDataManager:
             composite_order = order
             order = None
 
-        order_event = await OrderEvent.objects.acreate(
+        order_event = await OrderEventEntry.objects.acreate(
             order=order,
             composite_order=composite_order,
             trade=trade,

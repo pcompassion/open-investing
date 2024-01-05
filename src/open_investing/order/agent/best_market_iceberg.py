@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from uuid import uuid4
 from open_investing.task.task_command import SubCommand, TaskCommand
 import logging
 from open_investing.order.const.order import OrderCommandName, OrderEventName, OrderSide, OrderType
@@ -7,7 +8,8 @@ from open_investing.locator.service_locator import ServiceKey
 from typing import ClassVar
 
 from open_investing.order.models.order import Order
-from open_investing.task_spec.order.order import OrderAgent, OrderCommand, OrderSpec
+from open_investing.task_spec.order.order import OrderAgent, OrderCommand, OrderSpec, OrderTaskCommand
+
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +86,10 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                 "security_code": security_code,
             }
 
-
-            command_dict = dict(name=OrderCommandName.Open)
-
-            command = OrderCommand(**command_dict)
+            command = OrderTaskCommand(
+                name="command",
+                order_command=OrderCommand(name=OrderCommandName.Open)
+            )
 
             order_task_dispatcher = self.order_task_dispatcher
             await order_task_dispatcher.dispatch_task(order_spec_dict, command)
@@ -98,9 +100,9 @@ class BestMarketIcebergOrderAgent(OrderAgent):
 
             if filled_quantity_new < quantity_partial:
 
-                command = TaskCommand(
+                command = OrderTaskCommand(
                     name="command",
-                    sub_command=SubCommand(name=OrderCommandName.Start)
+                    order_command=OrderCommand(name=OrderCommandName.Start)
                 )
 
                 cancel_event = asyncio.Event()

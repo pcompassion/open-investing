@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 
+from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from typing import Dict, Any
 from open_investing.strategy.models.decision import Decision
 from open_investing.locator.service_locator import ServiceKey
 from open_investing.strategy.const.decision import DecisionLifeStage
+from open_library.collections.dict import to_jsonable_python
 
 
 class DecisionDataManager:
@@ -44,11 +46,32 @@ class DecisionDataManager:
             .alast()
         )
 
+    async def ongoing_decisions(
+        self,
+        strategy_session_id: str,
+        field_names: list | None = None,
+        return_type: ListDataType = ListDataType.List,
+    ) -> ListDataTypeHint:
+        filter_params = dict(
+            life_stage__in=[
+                DecisionLifeStage.Decided,
+                DecisionLifeStage.Started,
+                DecisionLifeStage.Opened,
+            ]
+        )
+
+        qs = Decision.objects.filter(
+            strategy_session_id=strategy_session_id, **filter_params
+        ).order_by("created_at")
+
+        return await as_list_type(qs, return_type, field_names)
+
     async def _save(
         self,
         decision: Decision,
         save_params: Dict[str, Any],
     ):
-        return await decision.asave(
-            **save_params,
-        )
+        params = to_jsonable_python(save_params)
+        for field, value in params.items():
+            setattr(decision, field, value)
+        return await decision.asave()

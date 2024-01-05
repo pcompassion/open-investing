@@ -197,7 +197,7 @@ class EbestApi(ExchangeApi):
             required_sec = 1.0 / api_data.get("request_per_second", 1.0)
 
             if self.env == Env.DEV:
-                required_sec *= 2
+                required_sec *= 5
 
             if elapsed < required_sec:
                 await asyncio.sleep(required_sec - elapsed)

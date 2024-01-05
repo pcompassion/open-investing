@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.task_spec.order.order import OrderCommand, OrderTaskCommand
 from open_investing.task.task_command import SubCommand, TaskCommand
 from open_investing.order.const.order import OrderCommandName
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
@@ -13,9 +14,10 @@ class DeltaHedgeDecisionSpec(DecisionSpec):
     spec_type_name_classvar: ClassVar[str] = "decision.delta_hedge"
     spec_type_name: str = spec_type_name_classvar
 
-    security_code_leader: str
-    security_code_follower: str
+    leader_security_code: str
+    follower_security_code: str
     leader_follower_ratio: float
+    leader_quantity: float
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -45,10 +47,13 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 spec_type_name="order.best_market_iceberg",
                 time_interval_second=10,
                 split=5,
+                # for test
+                security_code=self.decision_spec.leader_security_code,
+                quantity=self.decision_spec.leader_quantity,
             )
 
-            order_command = TaskCommand(
-                name="command", sub_command=SubCommand(name=OrderCommandName.Open)
+            order_command = OrderTaskCommand(
+                name="command", order_command=OrderCommand(name=OrderCommandName.Open)
             )
 
             await order_task_dispatcher.dispatch_task(order_spec_dict, order_command)

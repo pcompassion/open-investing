@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 
+from uuid import UUID
 import asyncio
 from open_investing.locator.service_locator import ServiceKey
-from typing import Any
+from typing import Any, cast
 from typing import ClassVar, Type
 from pydantic import BaseModel
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
-from open_investing.task.task_command import TaskCommand
+from open_investing.task.task_command import SubCommand, TaskCommand
+from open_investing.strategy.const.decision import DecisionCommandName
 
 
 class DecisionSpec(TaskSpec):
     spec_type_name_classvar: ClassVar[str]
 
     strategy_name: str
-    strategy_session_id: str
+    strategy_session_id: UUID
 
-    decision_id: str
+    decision_id: UUID
 
     def __hash__(self):
         attrs_hash = map(
@@ -24,8 +26,12 @@ class DecisionSpec(TaskSpec):
         return attrs_hash
 
 
-class DecisionCommand(TaskCommand):
-    name: str
+class DecisionCommand(SubCommand):
+    name: DecisionCommandName
+
+
+class DecisionTaskCommand(TaskCommand):
+    decision_command: DecisionCommand
 
 
 class DecisionHandler(TaskSpecHandler):
@@ -37,8 +43,8 @@ class DecisionHandler(TaskSpecHandler):
         self.command_queue = asyncio.Queue()
 
     @property
-    def decision_spec(self):
-        return self.task_spec
+    def decision_spec(self) -> DecisionSpec:
+        return cast(DecisionSpec, self.task_spec)
 
     @property
     def name(self):

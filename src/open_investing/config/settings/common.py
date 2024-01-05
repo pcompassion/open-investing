@@ -50,6 +50,7 @@ INSTALLED_APPS += [
     # "open_investing.order.apps.OrderConfig",
     "open_investing.strategy.apps.StrategyConfig",
     "open_investing.indicator.apps.IndicatorConfig",
+    "open_investing.order.apps.OrderConfig",
 ]
 
 # need to run first

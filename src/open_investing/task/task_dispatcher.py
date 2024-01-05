@@ -62,8 +62,8 @@ class LocalTaskDispatcher(TaskDispatcher):
 
     async def dispatch_task(self, task_spec: TaskSpec, command):
         task_info = {"command": command, "task_spec": task_spec}
-        await self.task_manager.enqueue_task_command(task_info)
         self.task_manager.subscribe_all(self.notify_listeners)
+        await self.task_manager.enqueue_task_command(task_info)
 
     def subscribe(
         self, task_spec: TaskSpec, listener, listener_type=ListenerType.Callable

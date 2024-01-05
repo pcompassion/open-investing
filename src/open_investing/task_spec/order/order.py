@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from uuid import UUID
 from open_investing.task.task import Task
 import asyncio
 from typing import ClassVar, Type, cast
@@ -14,7 +15,7 @@ class OrderSpec(TaskSpec):
     spec_type_name_classvar: ClassVar[str]
 
     strategy_name: str
-    strategy_session_id: str
+    strategy_session_id: UUID
 
     # non hashed
     decision_id: str
@@ -33,6 +34,10 @@ class OrderSpec(TaskSpec):
 
 class OrderCommand(SubCommand):
     name: OrderCommandName
+
+
+class OrderTaskCommand(TaskCommand):
+    order_command: OrderCommand
 
 
 class OrderAgent(TaskSpecHandler):

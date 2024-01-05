@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from open_library.observe.pubsub_broker import PubsubBroker
-from open_investing.order.models.order import OrderEvent
+from open_investing.order.order_event_broker import OrderEvent
+
 from open_investing.locator.service_locator import ServiceKey
 import asyncio
 
@@ -18,7 +19,6 @@ class OrderService:
     order execution response: api_manager -> pubsub -> service
     service does bookeeping: handle_filled_event
     after bookeeping, send event about update
-
 
     """
 
@@ -91,7 +91,7 @@ class OrderService:
         exchange_manager = self.exchange_manager
         order_event_broker = self.order_event_broker
 
-        await order_data_manager.record_event(  # type: ignore
+        await order_data_manager.record_event(
             event_params=dict(
                 event_name=OrderEventName.ExchangeOpenRequest,
                 date_at=now_local(),
@@ -101,11 +101,9 @@ class OrderService:
 
         order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
 
-        exchange_order_id, _ = await exchange_manager.market_order(
-            order, data_manager=order_data_manager
-        )
+        exchange_order_id, _ = await exchange_manager.market_order(order)
 
-        order = await order_data_manager.save(  # type: ignore
+        order = await order_data_manager.save(
             order, save_params=dict(exchange_order_id=exchange_order_id)
         )
 
@@ -117,7 +115,7 @@ class OrderService:
         exchange_manager = self.exchange_manager
         order_event_broker = self.order_event_broker
 
-        await order_data_manager.record_event(  # type: ignore
+        await order_data_manager.record_event(
             event_params=dict(
                 event_name=OrderEventName.ExchangeCancelRequest,
                 date_at=now_local(),

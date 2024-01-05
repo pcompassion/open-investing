@@ -19,9 +19,6 @@ class TaskSpecHandlerRegistry:
         cls.task_spec_classes[spec_type_name] = target_cls.task_spec_cls
         cls.task_spec_handler_classes[spec_type_name] = target_cls
 
-    # @classmethod
-    # def (cls, target_cls: Type[TaskSpecHandler]):
-
     @singledispatchmethod
     @classmethod
     async def create_handler_instance(cls, task_spec):
@@ -39,7 +36,6 @@ class TaskSpecHandlerRegistry:
         task_spec_handler_cls = cls.task_spec_handler_classes[spec_type_name]
 
         handler = task_spec_handler_cls(task_spec)
-        await handler.init()
         return handler
 
     @create_handler_instance.register(dict)

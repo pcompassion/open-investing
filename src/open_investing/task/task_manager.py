@@ -57,6 +57,10 @@ class TaskManager:
             for _, service_key in task_spec.get_service_keys().items():
                 service = self.service_locator.get_service(service_key)
                 task_spec_handler.set_service(service_key, service)
+
+            await task_spec_handler.init()
+            task_spec_handler.subscribe(self.notify_listeners)
+
         else:
             task_spec_handler = self.task_spec_handlers[task_spec]
 

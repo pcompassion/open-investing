@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from open_investing.order.models.order import Order, OrderEvent
+from open_investing.order.order_event_broker import OrderEvent
 from open_investing.order.const.order import OrderEventName, OrderPriceType, OrderSide
 from open_investing.exchange.ebest.api_field import EbestApiField
 from open_library.time.datetime import combine
@@ -9,17 +9,15 @@ from open_library.collections.dict import rename_keys
 
 
 class OrderMixin:
-    async def market_order(
-        self,
-        security_code: str,
-        quantity: float,
-        side: OrderSide,
-        order: Order,
-    ):
+    async def market_order(self, order):
         order_price_type = OrderPriceType.Market
 
         # tr_code = "CSPAT00601"
         tr_code = "CFOAT00100"
+
+        security_code = order.security_code
+        quantity = order.quantity
+        side = order.side
 
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
@@ -67,7 +65,7 @@ class OrderMixin:
         self,
         security_code: str,
         cancel_quantity: float,
-        order: Order,
+        order,
     ):
         tr_code = "CFOAT00300"
 

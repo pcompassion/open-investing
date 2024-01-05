@@ -11,4 +11,3 @@ class SubCommand(BaseModel):
 
 class TaskCommand(BaseModel):
     name: str
-    sub_command: SubCommand | None = None

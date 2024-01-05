@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from open_investing.security.data_manager.decision import DecisionDataManager
+
 from open_investing.task.task_command import TaskCommand
 from collections import defaultdict
 from uuid import uuid4
@@ -21,6 +21,7 @@ from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
 from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
+from open_investing.task.const import TaskCommandName
 
 
 async def debug_control():
@@ -160,19 +161,19 @@ class App(BaseApp):
         )
 
         decision_data_manager = DecisionDataManager()
-        decision_data_manager.initialize(self.environment)
+        # decision_data_manager.initialize(self.environment)
         service_locator.register_service(
             decision_data_manager.service_key, decision_data_manager
         )
 
         strategy_session_data_manager = StrategySessionDataManager()
-        strategy_session_data_manager.initialize(self.environment)
+        # strategy_session_data_manager.initialize(self.environment)
         service_locator.register_service(
             strategy_session_data_manager.service_key, strategy_session_data_manager
         )
 
         order_data_manager = OrderDataManager()
-        order_data_manager.initialize(self.environment)
+        # order_data_manager.initialize(self.environment)
         service_locator.register_service(
             order_data_manager.service_key, order_data_manager
         )
@@ -211,28 +212,32 @@ class App(BaseApp):
         )
         strategy_session_data_manager = self.get_service(service_key)
 
-        strategy_sessions = await strategy_session_data_manager.open_strategy_sessions()
+        strategy_sessions = (
+            await strategy_session_data_manager.ongoing_strategy_sessions()
+        )
 
         for strategy_session in strategy_sessions:
             strategy_name = strategy_session.strategy_name
 
             task_spec_dict = {
                 "spec_type_name": strategy_name,
+                "strategy_session_id": strategy_session.strategy_session_id,
             }
             task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
 
-            command = TaskCommand(name="start")
+            command = TaskCommand(name=TaskCommandName.Start)
             await self.task_dispatcher.dispatch_task(task_spec, command)
 
             running_strategies[strategy_name] += 1
 
         if "delta_hedge" not in running_strategies:
             task_spec_dict = {
-                "spec_type_name": "delta_hedge",
+                "spec_type_name": "strategy.delta_hedge",
+                "strategy_session_id": uuid4(),
             }
             task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
 
-            command = TaskCommand(name="start")
+            command = TaskCommand(name=TaskCommandName.Start)
 
             await self.task_dispatcher.dispatch_task(task_spec, command)
 

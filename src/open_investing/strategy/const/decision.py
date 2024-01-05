@@ -11,3 +11,12 @@ class DecisionLifeStage(str, Enum):
     Opened = "opened"
 
     Closed = "closed"
+
+
+class DecisionCommandName(str, Enum):
+    Open = "open"
+    Cancel = "cancel"
+    CancelRemaining = "cancel_remaining"
+    Close = "close"
+
+    Start = "start"

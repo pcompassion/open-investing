@@ -25,7 +25,6 @@ class Decision(models.Model):
 
     quantity = models.FloatField(default=0)
     filled_quantity = models.FloatField(default=0)
-    remaining_quantity = models.FloatField(default=0)
 
     life_stage = models.CharField(max_length=32, default=DecisionLifeStage.Undefined)
     created_at = models.DateTimeField(auto_now_add=True)

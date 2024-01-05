@@ -5,6 +5,9 @@ from typing import Union, Optional, Callable
 from open_library.asynch.util import wrap_func_in_coro
 from open_library.asynch.cron import crontab, CronEx
 from typing import Coroutine, Any, Awaitable
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Task:
@@ -44,7 +47,11 @@ class Task:
         try:
             await self.coro
         except asyncio.CancelledError:
-            pass  # Handle task cancellation
+            logger.info(f"{self.name} task cancelled")
+            # Handle task cancellation
+        except Exception as general_exception:
+            logger.exception(f"{self.name} task exception: {general_exception}")
+
         finally:
             self.running = False
 

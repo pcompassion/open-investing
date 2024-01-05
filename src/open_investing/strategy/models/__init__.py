@@ -1,1 +1,2 @@
-from .decision import Decision
+from . import decision
+from . import strategy

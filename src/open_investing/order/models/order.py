@@ -23,7 +23,7 @@ class Order(models.Model):
     date_at = models.DateTimeField(null=True)
 
     parent_order = models.ForeignKey(
-        "CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
+        "order.CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
     strategy_session = models.ForeignKey(
         "strategy.StrategySession", on_delete=models.CASCADE, blank=True, null=True
@@ -82,7 +82,7 @@ class Trade(models.Model):
     price = models.FloatField()
 
 
-class OrderEvent(models.Model):
+class OrderEventEntry(models.Model):
 
     """
 
@@ -95,9 +95,11 @@ class OrderEvent(models.Model):
     filled
     """
 
-    order = models.ForeignKey("Order", on_delete=models.CASCADE, blank=True, null=True)
+    order = models.ForeignKey(
+        "order.Order", on_delete=models.CASCADE, blank=True, null=True
+    )
     parent_order = models.ForeignKey(
-        "CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
+        "order.CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
     trade = models.ForeignKey("Trade", on_delete=models.CASCADE, blank=True, null=True)
 

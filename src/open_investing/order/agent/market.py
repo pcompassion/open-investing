@@ -31,12 +31,12 @@ class MarketOrderAgent(OrderAgent):
 
         order_data_manager = self.order_data_manager
         exchange_manager = self.exchange_manager
-
+        order = None
         if order_id:
             order = await order_data_manager.get(
                 filter_params=dict(id=order_id, order_type=self.order_type)
             )
-        else:
+         if not order:
             order = order_data_manager.prepare_order(
                 params=dict(
                     quantity=order_spec.quantity,
