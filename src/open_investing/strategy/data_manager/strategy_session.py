@@ -5,6 +5,7 @@ from typing import Dict, Any
 from open_investing.locator.service_locator import ServiceKey
 from open_investing.strategy.models.strategy import StrategySession
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
+from open_library.collections.dict import to_jsonable_python
 
 
 class StrategySessionDataManager:
@@ -35,8 +36,17 @@ class StrategySessionDataManager:
         return await as_list_type(qs, return_type)
 
     async def prepare_strategy_session(self, params: dict):
+        params_updated = to_jsonable_python(params)
+
         strategy_session = StrategySession(
-            **params,
+            **params_updated,
         )
 
         return await strategy_session.asave()
+
+    async def get(self, filter_params: dict | None):
+        filter_params = filter_params or {}
+
+        filter_params_updated = to_jsonable_python(filter_params)
+
+        return await StrategySession.objects.filter(**filter_params_updated).afirst()

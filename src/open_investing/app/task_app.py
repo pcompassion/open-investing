@@ -221,7 +221,7 @@ class App(BaseApp):
 
             task_spec_dict = {
                 "spec_type_name": strategy_name,
-                "strategy_session_id": strategy_session.strategy_session_id,
+                "strategy_session_id": strategy_session.id,
             }
             task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
 
