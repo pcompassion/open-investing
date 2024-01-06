@@ -102,7 +102,7 @@ class OrderService:
 
         order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
 
-        exchange_order_id, _ = await exchange_manager.market_order(order)
+        exchange_order_id, _ = await exchange_manager.open_order(order)
 
         await order_data_manager.save(
             order, save_params=dict(exchange_order_id=exchange_order_id)

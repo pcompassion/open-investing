@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrderMixin:
-    async def market_order(self, order):
+    async def open_order(self, order):
         security_code = order.security_code
 
         tr_code = None
@@ -26,7 +26,7 @@ class OrderMixin:
             tr_code = "CSPAT00601"
             api = self.derivative_api
 
-        order_price_type = OrderPriceType.Market
+        order_price_type = order.order_price_type
 
         security_code = order.security_code
         quantity = order.quantity
@@ -40,7 +40,13 @@ class OrderMixin:
             order_price_type=order_price_type,
         )
 
-        api_response = await api.order_action(
+        match order_price_type:
+            case OrderPriceType.Market:
+                pass
+            case OrderPriceType.Limit:
+                send_data.update(dict(price=order.price))
+
+        api_response = await api.open_order(
             tr_code, send_data=send_data, default_data_type=dict
         )
 
@@ -105,7 +111,7 @@ class OrderMixin:
 
         api = self.derivative_api
 
-        api_response = await api.order_action(tr_code, send_data=send_data)
+        api_response = await api.open_order(tr_code, send_data=send_data)
 
         result = rename_keys(
             api_response.data,

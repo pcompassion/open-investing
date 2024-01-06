@@ -24,6 +24,8 @@ from open_investing.config.base import DEFAULT_TIME_FORMAT
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_investing.exchange.ebest.mixin.order import OrderMixin
 from open_library.observe.pubsub_broker import PubsubBroker
+import logger
+logger = logging.getLogger(__name__)
 
 
 class EbestApiManager(OrderMixin):
@@ -495,3 +497,26 @@ class EbestApiManager(OrderMixin):
         result = await as_list_type(options_df, return_type)
 
         return result, api_response
+
+    async def subscribe_quote(self, security_code: str):
+        derivative_code = DerivativeCode.from_string(security_code)
+
+        api = self.stock_api
+
+        tr_code = None
+
+        match derivative_code.derivative_type:
+            case DerivativeType.Future:
+                tr_code = "FH0"
+            case DerivativeType.Call:
+            case DerivativeType.Put:
+                tr_code = "OH0"
+            case _:
+                pass
+
+        await api.subscribe(
+            tr_type="3", tr_code=tr_code, tr_key=security_code, handler=self.quote_listener
+        )
+
+    async def quote_listener(self, message):
+        logger.info(f"quote_listener {message}")

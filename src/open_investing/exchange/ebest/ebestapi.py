@@ -265,7 +265,7 @@ class EbestApi(ExchangeApi):
 
         return api_response
 
-    async def order_action(
+    async def open_order(
         self,
         tr_code: str,
         headers: Optional[Dict[str, Any]] = None,

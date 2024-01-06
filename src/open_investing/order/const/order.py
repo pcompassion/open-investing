@@ -12,9 +12,7 @@ class OrderType(str, Enum):
     Limit = "limit"
 
     BestMarketIceberg = "best_market_iceberg"
-
-    BestLimit = "best_limit"
-    BestLimitLeg = "best_limit_leg"
+    BestLimitIceberg = "best_limit_iceberg"
 
 
 SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)

@@ -1,76 +1,82 @@
 #!/usr/bin/env python3
-
-import asyncio
-from decimal import Decimal, ROUND_HALF_UP
-
+from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
+from open_investing.locator.service_locator import ServiceKey
 from open_investing.order.const.order import (
-    OrderSide,
+    OrderEventName,
+    OrderCommandName,
     OrderPriceType,
+    OrderSide,
+    OrderType,
 )
+from typing import ClassVar
+from open_investing.task_spec.order.order import OrderSpec, OrderAgent
+import logging
+logger = logging.getLogger(__name__)
 
 
-
-class LimitOrderAgent:
-    def __init__(self, api_instance=None):
-        self.order_details = None
-        self.api = api_instance
-
-    async def run(self):
-        while self.is_active:
-            # Create a snapshot at the start of each iteration
-            current_order_details = self.shared_order_details.copy()
-
-            # Use current_order_details throughout this iteration
-            # ...
-
-            await asyncio.sleep(1)  # Non-blocking wait
-
-    async def place_order(
-        self,
-        tr_code,
-        security_code: str,
-        order_quantity: int,
-        price: Decimal,
-        order_side: OrderSide,
-        order_price_type: OrderPriceType = OrderPriceType.LIMIT,
-    ):
-        api = self.api
-        price = Decimal(str(price))
-        price = price.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+class LimitOrderSpec(OrderSpec):
+    spec_type_name_classvar: ClassVar[str] = "order.limit_order"
+    spec_type_name: str = spec_type_name_classvar
 
 
-        send_data = api.get_send_data(
-            tr_code=tr_code,
-            security_code=security_code,
-            order_quantity=order_quantity,
-            order_price=float(price),
-            order_direction=order_side,
-            order_price_type=order_price_type,
-        )
+@TaskSpecHandlerRegistry.register_class
+class LimitOrderAgent(OrderAgent):
+    task_spec_cls = LimitOrderSpec
 
-        api_response = await api.order_action(
-            tr_code,
-            body_block=send_data,
-        )
+    order_type = OrderType.Limit
+    order_price_type = OrderPriceType.Limit
 
-        return api_response
+    def __init__(self, order_spec):
+        super().__init__(order_spec)
 
+    async def on_order_command(self, order_info):
+        order_spec = order_info["task_spec"]
+        order_id = order_spec.order_id
 
-    def update_order_details(self, new_details):
-        # Update the shared_order_details directly
-        self.shared_order_details = new_details.copy()
+        order_data_manager = self.order_data_manager
+        exchange_manager = self.exchange_manager
+        order = None
+        if order_id:
+            order = await order_data_manager.get(
+                filter_params=dict(id=order_id, order_type=self.order_type)
+            )
+        if not order:
+            order = await order_data_manager.prepare_order(
+                params=dict(
+                    quantity=order_spec.quantity,
+                    order_type=self.order_type,
+                    security_code=order_spec.security_code,
+                    side=OrderSide.Buy,
+                    parent_order_id=order_spec.parent_order_id,
+                    order_price_type=self.order_price_type,
+                    price=order_spec.price,
+                )
+            )
 
-# Usage
-async def main():
-    initial_order_details = # ...
-    order_task = AsyncOrderTask(initial_order_details)
-    task = asyncio.create_task(order_task.run())
+        command = order_info["command"]
 
-    # Other tasks
-    # ...
+        match command.name:
+            case OrderCommandName.Open:
+                order_event_broker = self.order_event_broker
 
-    # Update order details without awaiting
-    new_order_details = # ...
-    order_task.update_order_details(new_order_details)
+                order_event_broker.subscribe(order.id, self.enqueue_order_event)
 
-asyncio.run(main())
+                await self.order_service.open_order(order, exchange_manager)
+            case OrderCommandName.CancelRemaining:
+                await self.order_service.cancel_remaining_order(order, exchange_manager)
+
+    async def on_order_event(self, order_info):
+        order_event = order_info["order_event"]
+        logger.info(f"on_order_event: {order_event}")
+        order = order_info["order"]
+
+        event_name = order_event.name
+
+        match event_name:
+            case OrderEventName.Filled:
+
+                # check if filled,
+            case _:
+                pass
+
+        pass

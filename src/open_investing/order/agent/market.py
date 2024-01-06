@@ -10,6 +10,8 @@ from open_investing.order.const.order import (
 )
 from typing import ClassVar
 from open_investing.task_spec.order.order import OrderSpec, OrderAgent
+import logging
+logger = logging.getLogger(__name__)
 
 
 class MarketOrderSpec(OrderSpec):
@@ -64,14 +66,14 @@ class MarketOrderAgent(OrderAgent):
 
     async def on_order_event(self, order_info):
         order_event = order_info["order_event"]
-
+        logger.info(f"on_order_event: {order_event}")
         order = order_info["order"]
 
         event_name = order_event.name
 
         match event_name:
             case OrderEventName.Filled:
-                self.order_data_manager.record_event(order_event.data, order=order)
+
                 # check if filled,
             case _:
                 pass
