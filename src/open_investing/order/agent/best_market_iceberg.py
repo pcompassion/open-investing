@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from uuid import uuid4
 from open_investing.task.task_command import SubCommand, TaskCommand
 import logging
@@ -22,6 +23,7 @@ class BestMarketIcebergOrderSpec(OrderSpec):
     split: int
 
 
+@TaskSpecHandlerRegistry.register_class
 class BestMarketIcebergOrderAgent(OrderAgent):
     task_spec_cls = BestMarketIcebergOrderSpec
 

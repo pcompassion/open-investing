@@ -12,6 +12,8 @@ from open_investing.security.models import Option
 from open_investing.locator.service_locator import ServiceKey
 from django.db.models import Window, F, Max
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
+from open_library.extension.django.orm import get_model_field_names
+from open_library.collections.dict import filter_dict
 
 
 class OptionDataManager:
@@ -27,23 +29,26 @@ class OptionDataManager:
     async def last(self, **params):
         return await Option.objects.filter(**params).order_by("date_at").alast()
 
-    async def save_options(self, options_data: ListDataTypeHint, extra_data: dict):
+    async def save_options(
+        self, options_data: ListDataTypeHint, extra_data: dict, field_names=list[str]
+    ):
         extra_data = extra_data or {}
 
         option_dicts = await as_list_type(options_data, data_type=ListDataType.ListDict)
+        field_names = field_names or get_model_field_names(Option)
 
         option_ids = []
 
         for option_data in option_dicts:
             option, created = await Option.objects.aget_or_create(
-                **option_data,
+                **filter_dict(option_data, field_names),
                 **extra_data,
             )
             option_ids.append(option.id)
             option_data["id"] = option.id
 
         if isinstance(options_data, pd.DataFrame):
-            options_data["id"] = option_ids
+            options_data.loc[:, "id"] = option_ids
 
         return options_data
 

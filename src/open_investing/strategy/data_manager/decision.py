@@ -46,6 +46,9 @@ class DecisionDataManager:
             .alast()
         )
 
+    async def get(self, filter_params: dict):
+        return await Decision.objects.aget(**filter_params)
+
     async def ongoing_decisions(
         self,
         strategy_session_id: str,

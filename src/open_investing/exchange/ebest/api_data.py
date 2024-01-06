@@ -44,6 +44,14 @@ class EbestApiData:
             "api_path": EbestUrl.option_market_data,
             "request_per_second": 3,
         },
+        "t2301": {
+            "body": {
+                "gubun": "G",
+            },
+            "f_data_block_name": "{tr_code}OutBlock1",
+            "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
+        },
         "t2209": {
             "body": {"cgubun": "B", "bgubun": 0, "cnt": 900},
             "field_name_map": {
@@ -90,6 +98,13 @@ class EbestApiData:
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
             "request_per_second": 1,
+        },
+        "t8432": {
+            "body": {
+                "dummy": "",
+            },
+            "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
         },
         "t8433": {
             "body": {

@@ -77,12 +77,13 @@ class TaskSpec(BaseModel):
 
 
 class TaskSpecHandler(ABC):
-    task_spec_cls: Optional[Type[TaskSpec]] = None
+    task_spec_cls: Type[TaskSpec]
 
     def __init__(self, task_spec: TaskSpec):
         self.task_spec = task_spec
         self.listeners = []
         self.tasks: dict[str, Task] = {}
+        self.running = False
 
         self.services = {}
 
@@ -101,13 +102,20 @@ class TaskSpecHandler(ABC):
     async def start_tasks(self):
         for k, task in self.tasks.items():
             await task.start()
+        self.running = True
 
     async def stop_tasks(self):
-        for k, task in self.tasks.items():
-            await task.stop()
+        self.running = False
 
     def set_service(self, service_key: ServiceKey, service):
         self.services[service_key] = service
 
     async def init(self):
         pass
+
+    @property
+    def name(self) -> str:
+        return self.task_spec_cls.spec_type_name_classvar
+
+    def is_running(self) -> bool:
+        return self.running

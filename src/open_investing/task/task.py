@@ -11,10 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class Task:
-    def __init__(self, name, func: Callable, cron_time=None):
+    def __init__(
+        self, name, func_or_coroutine: Union[Callable, Awaitable], cron_time=None
+    ):
         self.name = name
 
-        coro: Awaitable[Any] = wrap_func_in_coro(func)
+        coro: Awaitable[Any] = wrap_func_in_coro(func_or_coroutine)
         self.coro = coro
         self.task: Optional[Union[asyncio.Task, CronEx]] = None
         self.running = False
@@ -46,8 +48,8 @@ class Task:
     async def run(self):
         try:
             await self.coro
-        except asyncio.CancelledError:
-            logger.info(f"{self.name} task cancelled")
+        except asyncio.CancelledError as e:
+            logger.info(f"{self.name} task cancelled: {e}")
             # Handle task cancellation
         except Exception as general_exception:
             logger.exception(f"{self.name} task exception: {general_exception}")

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import operator
+import functools
 from uuid import UUID
 from open_investing.task.task import Task
 import asyncio
 from typing import ClassVar, Type, cast
+from typing import Generic, TypeVar
 
 from open_investing.order.const.order import OrderCommandName
 from open_investing.task.task_command import TaskCommand, SubCommand
@@ -29,7 +32,7 @@ class OrderSpec(TaskSpec):
         attrs_hash = map(
             hash, (self.spec_type_name, self.strategy_name, self.strategy_session_id)
         )
-        return attrs_hash
+        return functools.reduce(operator.xor, attrs_hash, 0)
 
 
 class OrderCommand(SubCommand):
@@ -39,8 +42,15 @@ class OrderCommand(SubCommand):
 class OrderTaskCommand(TaskCommand):
     order_command: OrderCommand
 
+    @property
+    def sub_command(self) -> OrderCommand:
+        return self.order_command
 
-class OrderAgent(TaskSpecHandler):
+
+T = TypeVar("T", bound=OrderSpec)
+
+
+class OrderAgent(Generic[T], TaskSpecHandler):
     task_spec_cls: Type[OrderSpec]
 
     def __init__(self, order_spec: OrderSpec):
@@ -55,8 +65,8 @@ class OrderAgent(TaskSpecHandler):
         )
 
     @property
-    def order_spec(self) -> OrderSpec:
-        return cast(OrderSpec, self.task_spec)
+    def order_spec(self) -> T:
+        return cast(T, self.task_spec)
 
     @property
     def name(self):

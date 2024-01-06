@@ -29,5 +29,5 @@ class App(TaskApp):
         super().__init__(*args, **kwargs)
         self.added_tasks = []
 
-    async def main(self):
-        self.setup_base_tasks()
+    async def init(self):
+        await super().init()

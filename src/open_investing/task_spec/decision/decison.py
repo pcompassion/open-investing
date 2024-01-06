@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import operator
+import functools
 from uuid import UUID
 import asyncio
 from open_investing.locator.service_locator import ServiceKey
@@ -9,6 +11,7 @@ from pydantic import BaseModel
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 from open_investing.task.task_command import SubCommand, TaskCommand
 from open_investing.strategy.const.decision import DecisionCommandName
+from typing import Generic, TypeVar
 
 
 class DecisionSpec(TaskSpec):
@@ -23,7 +26,7 @@ class DecisionSpec(TaskSpec):
         attrs_hash = map(
             hash, (self.spec_type_name, self.strategy_name, self.strategy_session_id)
         )
-        return attrs_hash
+        return functools.reduce(operator.xor, attrs_hash, 0)
 
 
 class DecisionCommand(SubCommand):
@@ -33,8 +36,15 @@ class DecisionCommand(SubCommand):
 class DecisionTaskCommand(TaskCommand):
     decision_command: DecisionCommand
 
+    @property
+    def sub_command(self) -> DecisionCommand:
+        return self.decision_command
 
-class DecisionHandler(TaskSpecHandler):
+
+T = TypeVar("T", bound=DecisionSpec)
+
+
+class DecisionHandler(Generic[T], TaskSpecHandler):
     task_spec_cls: Type[DecisionSpec]
 
     def __init__(self, decision_spec: DecisionSpec):
@@ -43,8 +53,8 @@ class DecisionHandler(TaskSpecHandler):
         self.command_queue = asyncio.Queue()
 
     @property
-    def decision_spec(self) -> DecisionSpec:
-        return cast(DecisionSpec, self.task_spec)
+    def decision_spec(self) -> T:
+        return cast(T, self.task_spec)
 
     @property
     def name(self):

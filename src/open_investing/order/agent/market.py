@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from open_investing.locator.service_locator import ServiceKey
 from open_investing.order.const.order import (
     OrderEventName,
@@ -16,6 +17,7 @@ class MarketOrderSpec(OrderSpec):
     spec_type_name: str = spec_type_name_classvar
 
 
+@TaskSpecHandlerRegistry.register_class
 class MarketOrderAgent(OrderAgent):
     task_spec_cls = MarketOrderSpec
 
@@ -36,7 +38,7 @@ class MarketOrderAgent(OrderAgent):
             order = await order_data_manager.get(
                 filter_params=dict(id=order_id, order_type=self.order_type)
             )
-         if not order:
+        if not order:
             order = order_data_manager.prepare_order(
                 params=dict(
                     quantity=order_spec.quantity,

@@ -6,6 +6,9 @@ from open_investing.order.const.order import OrderEventName, OrderPriceType, Ord
 from open_investing.exchange.ebest.api_field import EbestApiField
 from open_library.time.datetime import combine
 from open_library.collections.dict import rename_keys
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderMixin:
@@ -36,30 +39,42 @@ class OrderMixin:
         return exchange_order_id, api_response
 
     async def stock_order_listener(self, data):
-        print("stock_order_listener", data)
+        logger.info(f"stock_order_listener {data}")
 
-        security_code = data["shtnIsuNo"]
+        tr_cd = data["tr_cd"]
+        match tr_cd:
+            case None:
+                pass
+            case _:
+                security_code = data["shtnIsuNo"]
+                logger.info(f"order ack security_code: {security_code}")
 
     async def derivative_order_listener(self, data):
-        print("stock_order_listener", data)
+        logger.info(f"derivative_order_listener {data}")
+        tr_cd = data["tr_cd"]
+        match tr_cd:
+            case None:
+                pass
+            case _:
+                security_code = data["expcode"]
+                exchange_order_id = data["ordno"]
 
-        security_code = data["expcode"]
-        exchange_order_id = data["ordno"]
+                order = await order_data_manager.get(
+                    exchange_order_id=exchange_order_id
+                )
 
-        order = await order_data_manager.get(exchange_order_id=exchange_order_id)
+                order_event = OrderEvent(
+                    name=OrderEventName.ExchangeFilled,
+                    data=dict(
+                        fill_quantity=data["chevol"],
+                        fill_price=data["cheprice"],
+                        date_at=combine(data["chedate"], data["chetime"]),
+                    ),
+                )
 
-        order_event = OrderEvent(
-            name=OrderEventName.ExchangeFilled,
-            data=dict(
-                fill_quantity=data["chevol"],
-                fill_price=data["cheprice"],
-                date_at=combine(data["chedate"], data["chetime"]),
-            ),
-        )
-
-        order_event_broker.enqueue_message(
-            order.id, dict(order_event=order_event, order=order)
-        )
+                order_event_broker.enqueue_message(
+                    order.id, dict(order_event=order_event, order=order)
+                )
 
     async def cancel_order_quantity(
         self,

@@ -65,11 +65,6 @@ class DerivativeCode:
         self.derivative_type_code = derivative_type_code
         self.derivative_type = derivative_type
 
-        if (price is not None) == (strike_price is not None):
-            raise ValueError(
-                "Please provide either price or strike_price, but not both."
-            )
-
         self.year = expire_at.year
         self.month = expire_at.month
         self.expire_at = expire_at

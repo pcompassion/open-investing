@@ -25,7 +25,6 @@ class StrategySessionDataManager:
         qs = StrategySession.objects.filter(
             life_stage__in=[
                 StrategyLifeStage.Opened,
-                StrategyLifeStage.Unstarted,
                 StrategyLifeStage.Started,
             ]
         )

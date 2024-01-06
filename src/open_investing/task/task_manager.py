@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_investing.task.task_command import TaskCommand
 from collections import defaultdict
 import asyncio
 from typing import Union, Dict
@@ -12,6 +13,9 @@ from open_investing.task_spec.task_spec_handler_registry import (
 )
 from open_investing.task_spec.task_spec import TaskSpec
 from open_investing.locator.service_locator import ServiceLocator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskManager:
@@ -66,31 +70,30 @@ class TaskManager:
 
         return task_spec_handler, created
 
-    async def start_task(self, task_spec: TaskSpec):
+    async def start_task(self, task_spec: TaskSpec, task_command: TaskCommand):
+        logger.info(f"Starting task: {task_spec.spec_type_name}")
         task_spec_handler, created = await self._init_task_spec_handler(task_spec)
 
-        if not created:
+        if not task_spec_handler.is_running():
+            await task_spec_handler.start_tasks()
+        return task_spec_handler, created
+
+    async def stop_task(self, task_spec: TaskSpec, task_command: TaskCommand):
+        task_spec_handler = self.task_spec_handlers.get(task_spec)
+        if task_spec_handler:
             await task_spec_handler.stop_tasks()
 
-        await task_spec_handler.start_tasks()
+            del self.task_spec_handlers[task_spec]
+            task_spec_handler.unsubscribe(self.notify_listeners)
 
-    async def stop_task(self, task_spec: TaskSpec):
-        # task_spec_h = Hashabledict(task_spec)
-        task_spec_h = task_spec
-
-        task_handler = self.task_spec_handlers.get(task_spec_h)
-        if task_handler:
-            await task_handler.stop_tasks()
-
-            del self.task_spec_handlers[task_spec_h]
-            task_handler.unsubscribe(self.notify_listeners)
-
-            message = {"task_spec": task_spec, "command": dict(name="task-stopped")}
-
-            await self.notify_listeners(message)
+            if task_spec_handler.is_running():
+                await task_spec_handler.stop_tasks()
 
     async def command_task(self, task_spec: TaskSpec, command):
-        task_spec_handler, _ = await self._init_task_spec_handler(task_spec)
+        task_spec_handler, created = await self._init_task_spec_handler(task_spec)
+
+        if not task_spec_handler.is_running():
+            await task_spec_handler.start_tasks()
         task_info = {"task_spec": task_spec, "command": command}
 
         await task_spec_handler.enqueue_command(task_info)
@@ -112,8 +115,8 @@ class TaskManager:
             command = task_info["command"]
 
             if command.name == "start":
-                await self.start_task(task_spec)
+                await self.start_task(task_spec, command)
             elif command.name == "stop":
-                await self.stop_task(task_spec)
+                await self.stop_task(task_spec, command)
             elif command.name == "command":
                 await self.command_task(task_spec, command.sub_command)

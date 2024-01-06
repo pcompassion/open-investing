@@ -47,7 +47,7 @@ class OrderDataManager:
         order_type = filter_params["order_type"]
 
         if order_type in SINGLE_ORDER_TYPES:
-            return await Order.get(**filter_params)
+            return await Order.orbjects.get(**filter_params)
         else:
             return await CompositeOrder.objects.get(**filter_params)
 

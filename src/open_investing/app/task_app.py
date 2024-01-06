@@ -75,6 +75,7 @@ class App(BaseApp):
         import_modules = [
             "risk_glass.market_event",
             "risk_glass.strategy",
+            "open_investing.order.agent",
         ]
 
         for module in import_modules:

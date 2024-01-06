@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from open_investing.task.task import Task
+from open_investing.strategy.const.decision import DecisionCommandName
 from open_investing.task_spec.order.order import OrderCommand, OrderTaskCommand
 from open_investing.task.task_command import SubCommand, TaskCommand
 from open_investing.order.const.order import OrderCommandName
@@ -29,6 +31,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
         self.open_decisions: list[Decision] = []
 
+        self.tasks = dict(
+            run_strategy=Task("run_decision", self.run_decision()),
+        )
+
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
         order_task_dispatcher = self.order_task_dispatcher
@@ -36,11 +42,13 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         decision_id = decision_spec.decision_id
 
         decision_data_manager = self.decision_data_manager
-        decision: Decision = await decision_data_manager.get(id=decision_id)
+        decision: Decision = await decision_data_manager.get(
+            filter_params=dict(id=decision_id)
+        )
 
         command = decision_info["command"]
 
-        if command.name == "start":
+        if command.name == DecisionCommandName.Start:
             await decision_data_manager.set_started(decision)
 
             order_spec_dict = self.base_spec_dict | dict(
@@ -57,8 +65,9 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             )
 
             await order_task_dispatcher.dispatch_task(order_spec_dict, order_command)
+            print("hello")
 
-    async def run(self):
+    async def run_decision(self):
         while True:
             # while not self.command_queue.empty():
             decision_info = await self.command_queue.get()

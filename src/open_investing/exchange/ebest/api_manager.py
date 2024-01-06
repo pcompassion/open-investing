@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from datetime import timedelta
-from typing import Tuple
+from typing import Any, Tuple
 from open_library.time.datetime import determine_datetime, now_local
 from open_investing.exchange.ebest.api_field import EbestApiField
 import pandas as pd
@@ -60,6 +60,16 @@ class EbestApiManager(OrderMixin):
             tr_key="",
             handler=self.derivative_order_listener,
         )
+
+    async def get_market_data(
+        self,
+        tr_code: str,
+        send_data: dict[Any, Any] | None = None,
+        headers: dict[str, Any] | None = None,
+    ):
+        api = self.stock_api
+
+        return await api.get_market_data(tr_code, send_data=send_data, headers=headers)
 
     def set_order_event_broker(self, order_event_broker):
         self.order_event_broker = order_event_broker
@@ -243,7 +253,7 @@ class EbestApiManager(OrderMixin):
 
         return result, api_response
 
-    async def option_list(
+    async def option_list_8433(
         self,
         return_type: ListDataType = ListDataType.Dataframe,
     ):
@@ -270,6 +280,113 @@ class EbestApiManager(OrderMixin):
         df[field_names] = df["shcode"].apply(
             lambda x: DerivativeCode.get_fields(x, field_names)
         )
+        result = await as_list_type(df, return_type)
+
+        return result, api_response
+
+    async def future_list(
+        self,
+        interval_second: int,
+        future_data_manager=None,
+        return_type: ListDataType = ListDataType.Dataframe,
+        save=True,
+    ):
+        api = self.stock_api
+        tr_code = "t8432"
+        api_response = await api.get_market_data(tr_code)
+
+        if api_response is None:
+            return pd.DataFrame(), api_response
+
+        df = pd.DataFrame(api_response.data)
+
+        valid_codes = {code.value for code in DerivativeTypeCode}
+        mask = df["shcode"].str.startswith(tuple(valid_codes), na=False)
+        df = df[mask]
+
+        df["price"] = df["recprice"]
+
+        infered_field_names = [
+            "expire_at",
+            "security_code",
+            "derivative_type",
+        ]
+
+        df[infered_field_names] = df["shcode"].apply(
+            lambda x: DerivativeCode.get_fields(x, infered_field_names)
+        )
+
+        mask = df["derivative_type"].isin([DerivativeType.Future])
+        df = df[mask]
+
+        field_names = ["expire_at", "security_code", "price"]
+
+        if save:
+            if not future_data_manager:
+                raise ValueError("future_data_manager is None")
+
+            extra_data = dict(
+                exchange_name=api.name,
+                exchange_api_code=tr_code,
+                timeframe=timedelta(interval_second),
+                date_at=now_local(),
+            )
+            df = await future_data_manager.save_futures(
+                df, extra_data=extra_data, field_names=field_names
+            )
+
+        result = await as_list_type(df, return_type)
+
+        return result, api_response
+
+    async def option_list(
+        self,
+        interval_second: int,
+        option_data_manager=None,
+        return_type: ListDataType = ListDataType.Dataframe,
+        save=True,
+    ):
+        api = self.stock_api
+        tr_code = "t2301"
+        api_response = await api.get_market_data(tr_code)
+
+        if api_response is None:
+            return pd.DataFrame(), api_response
+
+        df = pd.DataFrame(api_response.data)
+
+        valid_codes = {code.value for code in DerivativeTypeCode}
+        mask = df["optcode"].str.startswith(tuple(valid_codes), na=False)
+        df = df[mask]
+
+        infered_field_names = [
+            "strike_price",
+            "expire_at",
+            "security_code",
+            "derivative_type",
+        ]
+
+        df[infered_field_names] = df["optcode"].apply(
+            lambda x: DerivativeCode.get_fields(x, infered_field_names)
+        )
+
+        mask = df["derivative_type"].isin([DerivativeType.Call, DerivativeType.Put])
+        df = df[mask]
+
+        field_names = infered_field_names + ["price"]
+
+        if save:
+            if not option_data_manager:
+                raise ValueError("option_data_manager is None")
+
+            extra_data = dict(
+                exchange_name=api.name,
+                exchange_api_code=tr_code,
+                timeframe=timedelta(interval_second),
+                date_at=now_local(),
+            )
+            df = await option_data_manager.save_options(df, extra_data=extra_data)
+
         result = await as_list_type(df, return_type)
 
         return result, api_response
