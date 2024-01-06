@@ -39,13 +39,13 @@ class MarketOrderAgent(OrderAgent):
                 filter_params=dict(id=order_id, order_type=self.order_type)
             )
         if not order:
-            order = order_data_manager.prepare_order(
+            order = await order_data_manager.prepare_order(
                 params=dict(
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
                     side=OrderSide.Buy,
-                    compsoite_order_id=order_spec.composite_order_id,
+                    parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,
                 )
             )

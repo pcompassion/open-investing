@@ -33,6 +33,7 @@ class OrderService:
         self.order_event_broker = None
         self.order_event_queue = asyncio.Queue()
         self.order_event_task = None
+        self.exchange_manager = None
 
     async def initialize(self):
         self.order_event_task = asyncio.create_task(self.run_order_event())
@@ -103,7 +104,7 @@ class OrderService:
 
         exchange_order_id, _ = await exchange_manager.market_order(order)
 
-        order = await order_data_manager.save(
+        await order_data_manager.save(
             order, save_params=dict(exchange_order_id=exchange_order_id)
         )
 

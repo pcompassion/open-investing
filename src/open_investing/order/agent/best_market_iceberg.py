@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
+import math
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from uuid import uuid4
 from open_investing.task.task_command import SubCommand, TaskCommand
 import logging
-from open_investing.order.const.order import OrderCommandName, OrderEventName, OrderSide, OrderType
+from open_investing.order.const.order import (
+    OrderCommandName,
+    OrderEventName,
+    OrderSide,
+    OrderType,
+)
 import asyncio
 from open_investing.locator.service_locator import ServiceKey
 from typing import ClassVar
 
 from open_investing.order.models.order import Order
-from open_investing.task_spec.order.order import OrderAgent, OrderCommand, OrderSpec, OrderTaskCommand
+from open_investing.task_spec.order.order import (
+    OrderAgent,
+    OrderCommand,
+    OrderSpec,
+    OrderTaskCommand,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -56,10 +67,12 @@ class BestMarketIcebergOrderAgent(OrderAgent):
         super().__init__(order_spec)
 
         self.cancel_events = {}
+        self.run_order_task = None
 
     async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
-
         order_data_manager = self.order_data_manager
+        order_event_broker = self.order_event_broker
+
         composite_order = order
         time_interval_second = order_spec.time_interval_second
         split = order_spec.split
@@ -76,21 +89,28 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                 if command == "STOP":
                     break
 
-            quantity_partial = min(quantity / split, quantity - filled_quantity)
+            remaining_quantity = quantity - filled_quantity
+            quantity_partial = min(quantity / split, remaining_quantity)
+            # TODO: stock seems to only allows integer
+            quantity_partial = math.ceil(quantity_partial)
+            if quantity_partial == 0:
+                quantity_partial = remaining_quantity
 
             order_id = uuid4()
             orders[order_id] = None
+            order_event_broker.subscribe(order_id, self.enqueue_order_event)
 
             order_spec_dict = self.base_spec_dict | {
                 "spec_type_name": "order.market_order",
-                "quantity": quantity_partial,
+                # "quantity": quantity_partial,
+                # TODO: quantity type
+                "quantity": int(quantity_partial),
                 "order_id": order_id,
                 "security_code": security_code,
             }
 
             command = OrderTaskCommand(
-                name="command",
-                order_command=OrderCommand(name=OrderCommandName.Open)
+                name="command", order_command=OrderCommand(name=OrderCommandName.Open)
             )
 
             order_task_dispatcher = self.order_task_dispatcher
@@ -101,10 +121,9 @@ class BestMarketIcebergOrderAgent(OrderAgent):
             filled_quantity_new = order.filled_quantity
 
             if filled_quantity_new < quantity_partial:
-
                 command = OrderTaskCommand(
                     name="command",
-                    order_command=OrderCommand(name=OrderCommandName.Start)
+                    order_command=OrderCommand(name=OrderCommandName.Start),
                 )
 
                 cancel_event = asyncio.Event()
@@ -120,17 +139,18 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                     "security_code": security_code,
                 }
 
-                await order_task_dispatcher.dispatch_task(cancel_order_spec_dict, command)
+                await order_task_dispatcher.dispatch_task(
+                    cancel_order_spec_dict, command
+                )
 
                 try:
                     await asyncio.wait_for(cancel_event.wait(), timeout=10)
                 except asyncio.TimeoutError:
                     logger.warning(f"cancel order timed out {order_id}")
 
-
     async def on_order_event(self, order_info):
-
         order_event = order_info["order_event"]
+        logger.info(f"on_order_event: {order_event}")
 
         order = order_info["order"]
 
@@ -153,11 +173,10 @@ class BestMarketIcebergOrderAgent(OrderAgent):
 
         pass
 
-
     async def on_order_command(self, order_info):
         order_spec = order_info["task_spec"]
 
-        strategy_session_id = order_spec.strategy_sesssion_id
+        strategy_session_id = order_spec.strategy_session_id
         decision_id = order_spec.decision_id
 
         order_id = order_spec.order_id
@@ -170,13 +189,13 @@ class BestMarketIcebergOrderAgent(OrderAgent):
             )
 
         if order is None:
-            order = order_data_manager.prepare_order(
+            order = await order_data_manager.prepare_order(
                 params=dict(
                     id=order_id,
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     strategy_session_id=strategy_session_id,
-                    decision_id=decision_id
+                    decision_id=decision_id,
                     data=dict(
                         security_code=order_spec.security_code,
                         side=OrderSide.Buy,
@@ -190,12 +209,11 @@ class BestMarketIcebergOrderAgent(OrderAgent):
         command = order_info["command"]
 
         if command.name == OrderCommandName.Open:
-            if self.run_order_loop:
-                logger.warning("already running order loop")
+            if self.run_order_task:
+                logger.warning("already running order task")
                 return
 
             command_queue = asyncio.Queue()
-            self.run_order_loop = asyncio.create_task(
+            self.run_order_task = asyncio.create_task(
                 self.run_order(order_spec, order, command_queue)
             )
-

@@ -51,13 +51,15 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         if command.name == DecisionCommandName.Start:
             await decision_data_manager.set_started(decision)
 
+            # for test
             order_spec_dict = self.base_spec_dict | dict(
                 spec_type_name="order.best_market_iceberg",
                 time_interval_second=10,
                 split=5,
-                # for test
                 security_code=self.decision_spec.leader_security_code,
                 quantity=self.decision_spec.leader_quantity,
+                order_id=None,
+                parent_order_id=None,
             )
 
             order_command = OrderTaskCommand(
@@ -65,7 +67,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             )
 
             await order_task_dispatcher.dispatch_task(order_spec_dict, order_command)
-            print("hello")
 
     async def run_decision(self):
         while True:

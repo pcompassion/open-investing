@@ -12,6 +12,7 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order_type = models.CharField(max_length=32)
+    order_price_type = models.CharField(max_length=32)
 
     exchange_order_id = models.CharField(max_length=255, blank=True)
     security_code = models.CharField(max_length=32, blank=True)
@@ -98,7 +99,7 @@ class OrderEventEntry(models.Model):
     order = models.ForeignKey(
         "order.Order", on_delete=models.CASCADE, blank=True, null=True
     )
-    parent_order = models.ForeignKey(
+    composite_order = models.ForeignKey(
         "order.CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
     trade = models.ForeignKey("Trade", on_delete=models.CASCADE, blank=True, null=True)

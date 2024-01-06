@@ -20,12 +20,12 @@ class OrderType(str, Enum):
 SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)
 
 
-class OrderSide(Enum):
+class OrderSide(str, Enum):
     Buy = "buy"
     Sell = "sell"
 
 
-class OrderPriceType(Enum):
+class OrderPriceType(str, Enum):
     Limit = "limit"
     Market = "market"
 

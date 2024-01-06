@@ -76,6 +76,7 @@ class App(BaseApp):
             "risk_glass.market_event",
             "risk_glass.strategy",
             "open_investing.order.agent",
+            "open_investing.strategy.decision",
         ]
 
         for module in import_modules:
@@ -99,6 +100,7 @@ class App(BaseApp):
                 "order_task_dispatcher": LocalTaskDispatcher.service_key,
                 "decision_task_dispatcher": LocalTaskDispatcher.service_key,
                 "order_event_broker": OrderEventBroker.service_key,
+                "order_service": OrderService.service_key,
                 uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
@@ -189,6 +191,7 @@ class App(BaseApp):
         order_service.set_order_event_broker(order_event_broker)
         order_service.set_order_data_manager(order_data_manager)
         order_service.set_order_data_manager(order_data_manager)
+        order_service.set_exchange_manager(ebest_api_manager)
 
     def setup_django(self):
         import django

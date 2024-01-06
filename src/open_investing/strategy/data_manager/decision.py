@@ -22,7 +22,7 @@ class DecisionDataManager:
         decision_params: Dict[str, Any],
         quantity: float,
     ):
-        return await self._save(
+        await self._save(
             decision,
             save_params=dict(
                 decision_params=decision_params,
@@ -30,11 +30,13 @@ class DecisionDataManager:
                 life_stage=DecisionLifeStage.Decided,
             ),
         )
+        return decision
 
     async def set_started(self, decision: Decision):
-        return await self._save(
+        await self._save(
             decision, save_params=dict(life_stage=DecisionLifeStage.Started)
         )
+        return decision
 
     async def last(
         self,
@@ -77,4 +79,4 @@ class DecisionDataManager:
         params = to_jsonable_python(save_params)
         for field, value in params.items():
             setattr(decision, field, value)
-        return await decision.asave()
+        await decision.asave()

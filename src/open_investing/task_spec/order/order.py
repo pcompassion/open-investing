@@ -21,9 +21,9 @@ class OrderSpec(TaskSpec):
     strategy_session_id: UUID
 
     # non hashed
-    decision_id: str
-    order_id: str
-    parent_order_id: str
+    decision_id: UUID
+    order_id: UUID | None
+    parent_order_id: str | None
 
     security_code: str
     quantity: float
@@ -60,8 +60,8 @@ class OrderAgent(Generic[T], TaskSpecHandler):
         self.order_event_queue = asyncio.Queue()
 
         self.tasks = dict(
-            run_order_command=Task("run_order_command", self.run_order_command),
-            run_order_event=Task("run_order_event", self.run_order_event),
+            run_order_command=Task("run_order_command", self.run_order_command()),
+            run_order_event=Task("run_order_event", self.run_order_event()),
         )
 
     @property

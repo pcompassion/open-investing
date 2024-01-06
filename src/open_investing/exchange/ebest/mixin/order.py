@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from open_investing.security.derivative_code import DerivativeCode
 from open_investing.order.order_event_broker import OrderEvent
 from open_investing.order.const.order import OrderEventName, OrderPriceType, OrderSide
 from open_investing.exchange.ebest.api_field import EbestApiField
@@ -13,10 +14,19 @@ logger = logging.getLogger(__name__)
 
 class OrderMixin:
     async def market_order(self, order):
-        order_price_type = OrderPriceType.Market
+        security_code = order.security_code
 
-        # tr_code = "CSPAT00601"
-        tr_code = "CFOAT00100"
+        tr_code = None
+        api = None
+        try:
+            derivative_code = DerivativeCode.from_string(security_code)
+            tr_code = "CFOAT00100"
+            api = self.stock_api
+        except ValueError:
+            tr_code = "CSPAT00601"
+            api = self.derivative_api
+
+        order_price_type = OrderPriceType.Market
 
         security_code = order.security_code
         quantity = order.quantity
@@ -25,23 +35,24 @@ class OrderMixin:
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
             security_code=security_code,
-            order_quantity=quantity,
+            order_quantity=int(quantity),
             order_side=side,
             order_price_type=order_price_type,
         )
 
-        api = self.derivative_api
+        api_response = await api.order_action(
+            tr_code, send_data=send_data, default_data_type=dict
+        )
 
-        api_response = await api.order_action(tr_code, send_data=send_data)
-
-        exchange_order_id = api_response.data["ordno"]
+        exchange_order_id = api_response.data.get("ordno")
 
         return exchange_order_id, api_response
 
-    async def stock_order_listener(self, data):
-        logger.info(f"stock_order_listener {data}")
-
-        tr_cd = data["tr_cd"]
+    async def stock_order_listener(self, message):
+        logger.info(f"stock_order_listener {message}")
+        return
+        tr_cd = message["header"]["tr_cd"]
+        data = message.get("body")
         match tr_cd:
             case None:
                 pass
@@ -49,9 +60,10 @@ class OrderMixin:
                 security_code = data["shtnIsuNo"]
                 logger.info(f"order ack security_code: {security_code}")
 
-    async def derivative_order_listener(self, data):
-        logger.info(f"derivative_order_listener {data}")
-        tr_cd = data["tr_cd"]
+    async def derivative_order_listener(self, message):
+        logger.info(f"derivative_order_listener {message}")
+        tr_cd = message["header"]["tr_cd"]
+        data = message.get("body")
         match tr_cd:
             case None:
                 pass

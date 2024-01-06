@@ -179,6 +179,7 @@ class EbestApi(ExchangeApi):
         headers: Optional[dict[str, Any]] = None,
         all_page: Optional[bool] = True,
         handler: Optional[Callable[[ApiResponse], Awaitable[None]]] = None,
+        default_data_type=list,
     ):
         body_header = self._get_body_header(tr_code, headers, send_data)
 
@@ -226,11 +227,15 @@ class EbestApi(ExchangeApi):
                 raw_data=data,
                 data_field_name=data_block_name,
                 error_code=rsp_cd,
+                default_data_type=default_data_type,
             )
 
         out_block_data = data.get(data_block_name, None)
         api_response = ApiResponse(
-            success=True, raw_data=data, data_field_name=data_block_name
+            success=True,
+            raw_data=data,
+            data_field_name=data_block_name,
+            default_data_type=default_data_type,
         )
 
         if all_page:
@@ -265,8 +270,11 @@ class EbestApi(ExchangeApi):
         tr_code: str,
         headers: Optional[Dict[str, Any]] = None,
         send_data: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ):
-        return await self.get_market_data(tr_code, headers=headers, send_data=send_data)
+        return await self.get_market_data(
+            tr_code, headers=headers, send_data=send_data, **kwargs
+        )
 
     @staticmethod
     def _dict_to_key(d) -> tuple:

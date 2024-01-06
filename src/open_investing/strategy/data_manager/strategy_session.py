@@ -48,4 +48,7 @@ class StrategySessionDataManager:
 
         filter_params_updated = to_jsonable_python(filter_params)
 
-        return await StrategySession.objects.filter(**filter_params_updated).afirst()
+        try:
+            return await StrategySession.objects.aget(**filter_params_updated)
+        except StrategySession.DoesNotExist:
+            return None
