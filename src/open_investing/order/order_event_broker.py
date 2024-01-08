@@ -8,14 +8,17 @@ from open_library.observe.pubsub_broker import PubsubBroker
 from pydantic import BaseModel
 
 
-class OrderEvent(BaseModel):
-    name: OrderEventName
-
-    data: dict[str, Any] | None = None
-
-
 class OrderEventBroker(PubsubBroker):
-    service_key = ServiceKey(
-        service_type="pubsub_broker",
-        service_name="order_event_broker",
-    )
+    service_keys = [
+        ServiceKey(
+            service_type="pubsub_broker",
+            service_name="order_event_broker",
+        ),
+        ServiceKey(
+            service_type="pubsub_broker",
+            service_name="quote_event_broker",
+        ),
+    ]
+
+
+# reuse as QuoteEventBroker

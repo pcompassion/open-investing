@@ -109,9 +109,13 @@ class EbestApi(ExchangeApi):
         header = response.get("header", {})
         tr_cd = header.get("tr_cd", None)
         tr_key = header.get("tr_key", "")
+        body = {}
         if tr_cd:
-            return self._topic_body(tr_cd, tr_key)
-        return None
+            body = self._topic_body(tr_cd, tr_key)
+
+        topic_key = self._dict_to_key(body)
+
+        return topic_key
 
     async def _get_page_data(
         self,

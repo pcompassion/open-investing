@@ -65,7 +65,7 @@ class MarketOrderAgent(OrderAgent):
                 await self.order_service.cancel_remaining_order(order, exchange_manager)
 
     async def on_order_event(self, order_info):
-        order_event = order_info["order_event"]
+        order_event = order_info["event"]
         logger.info(f"on_order_event: {order_event}")
         order = order_info["order"]
 

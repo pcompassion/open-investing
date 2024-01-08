@@ -26,7 +26,6 @@ from open_investing.exchange.ebest.mixin.order import OrderMixin
 from open_library.observe.pubsub_broker import PubsubBroker
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +38,7 @@ class EbestApiManager(OrderMixin):
     def __init__(self):
         self.order_event_broker: PubsubBroker | None = None
         self.order_data_manager = None
+        self.subscription_manager = SubscriptionManager()
 
     async def initialize(self, environment):
         EBEST_APP_KEY = environment.get("EBEST-OPEN-API-APP-KEY")
@@ -501,8 +501,9 @@ class EbestApiManager(OrderMixin):
         return result, api_response
 
     async def subscribe_quote(
-        self, security_code: str, listner, listener_type=ListenerType.Callable
+        self, event_spec: QuoteEventSpec, listener_spec: ListenerSpec
     ):
+        security_code = event_spec.security_code
         derivative_code = DerivativeCode.from_string(security_code)
 
         api = self.stock_api
@@ -518,6 +519,8 @@ class EbestApiManager(OrderMixin):
             case _:
                 pass
 
+        self.subscription_manager.subscribe(event_spec, listener_spec)
+
         await api.subscribe(
             tr_type="3",
             tr_code=tr_code,
@@ -527,3 +530,9 @@ class EbestApiManager(OrderMixin):
 
     async def quote_listener(self, message):
         logger.info(f"quote_listener {message}")
+
+        security_code = message["header"]["tr_key"]
+
+        quote_event = QuoteEventSpec(security_code=security_code, data=message["body"])
+
+        self.subscription_manager.pubish(quote_event)

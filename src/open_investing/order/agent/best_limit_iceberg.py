@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from open_library.observe.listener_spec import ListenerSpec
+from open_investing.event_spec.event_spec import QuoteEventSpec
 import math
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from uuid import uuid4
@@ -11,7 +13,7 @@ from open_investing.order.const.order import (
     OrderType,
 )
 import asyncio
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from typing import ClassVar
 
 from open_investing.order.models.order import Order
@@ -21,6 +23,10 @@ from open_investing.task_spec.order.order import (
     OrderSpec,
     OrderTaskCommand,
 )
+from open_investing.task.task import Task
+from open_investing.event_spec.event_spec import EventSpec, QuoteEventSpec
+from open_library.observe.listener_spec import ListenerSpec
+from open_library.observe.const import ListenerType
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +67,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.cancel_events = {}
         self.run_order_task = None
+
+        self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
     async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
         order_data_manager = self.order_data_manager
@@ -142,7 +150,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     logger.warning(f"cancel order timed out {order_id}")
 
     async def on_order_event(self, order_info):
-        order_event = order_info["order_event"]
+        order_event = order_info["event"]
         logger.info(f"on_order_event: {order_event}")
 
         order = order_info["order"]
@@ -206,12 +214,32 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 logger.warning("already running order task")
                 return
 
+            quote_event_spec = QuoteEventSpec(security_code=order_spec.security_code)
+            listener_spec = ListenerSpec(
+                listener_type=ListenerType.Callable,
+                listener_or_name=self.on_quote_event,
+            )
+
+            await self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
+
+            listener_spec = ListenerSpec(
+                service_key=ServiceKey(
+                    service_type="pubsub_broker",
+                    service_name="quote_event_broker",
+                ),
+                listener_type=ListenerType.Service,
+                listener_or_name="enqueue_message",
+            )
+
+            await quote_service.subscribe_quote(quote_event_spec, listener_spec)
+
             command_queue = asyncio.Queue()
             self.run_order_task = asyncio.create_task(
                 self.run_order(order_spec, order, command_queue)
             )
 
-    async def get_market_price(self, security_code):
-        price = None
+    async def on_quote_event(self, event_info):
+        event = event_info["event"]
+        logger.info(f"on_quote_event: {event}")
 
         return price

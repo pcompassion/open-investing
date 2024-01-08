@@ -45,7 +45,7 @@ class CancelRemainingOrderAgent(OrderAgent):
                 pass
 
     async def on_order_event(self, order_info):
-        order_event = order_info["order_event"]
+        order_event = order_info["event"]
         order = order_info["order"]
 
         event_name = order_event.name

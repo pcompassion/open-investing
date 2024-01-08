@@ -149,7 +149,7 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                     logger.warning(f"cancel order timed out {order_id}")
 
     async def on_order_event(self, order_info):
-        order_event = order_info["order_event"]
+        order_event = order_info["event"]
         logger.info(f"on_order_event: {order_event}")
 
         order = order_info["order"]

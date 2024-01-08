@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from enum import Enum, auto
+from itertools import chain
 
 
 class IndexCode(str, Enum):
@@ -8,6 +9,10 @@ class IndexCode(str, Enum):
     Krx100 = "krx100"
     Kosdaq = "kosdaq"
     Vkospi = "vkospi"
+
+
+class BaseType(str, Enum):
+    Stock = "Stock"
 
 
 class DerivativeType(str, Enum):
@@ -19,6 +24,15 @@ class DerivativeType(str, Enum):
     Future = "Future"
     Call = "Call"
     Put = "Put"
+
+
+class SecurityType(str, Enum):
+    # https://stackoverflow.com/a/46080827
+    cls = vars()
+
+    for member in chain(list(BaseType), list(DerivativeType)):
+        cls[member.name] = member.value
+    del member, cls
 
 
 class FieldName(str, Enum):

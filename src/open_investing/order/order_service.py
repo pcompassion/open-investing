@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 from open_library.observe.pubsub_broker import PubsubBroker
-from open_investing.order.order_event_broker import OrderEvent
+from open_investing.event_spec.event_spec import OrderEventSpec
 
 from open_library.locator.service_locator import ServiceKey
 import asyncio
 
 from open_library.time.datetime import now_local
 from open_investing.order.const.order import OrderEventName
+from open_library.observe.subscription_manager import SubscriptionManager
 
 
 class OrderService:
@@ -51,7 +52,7 @@ class OrderService:
         order_data_manager = self.order_data_manager
         order_event_broker = self.order_event_broker
 
-        order_event = order_info["order_event"]
+        order_event = order_info["event"]
 
         order = order_info["order"]
 
@@ -62,14 +63,14 @@ class OrderService:
                 await order_data_manager.handle_filled_event(
                     order_event.data, order=order
                 )
-                order_event = OrderEvent(
+                order_event = OrderEventSpec(
+                    order_id=order.id,
                     name=OrderEventName.Filled,
                     data=order_event.data,
                 )
 
                 await order_event_broker.enqueue_message(
-                    order.id,
-                    dict(order_event=order_event, order=order),
+                    dict(event=order_event, order=order),
                 )
 
                 # check if filled,
@@ -147,14 +148,14 @@ class OrderService:
             order=order,
         )
 
-        order_event = OrderEvent(
+        order_event = OrderEventSpec(
+            order_id=order.id,
             name=next_event_name,
             data=event_params,
         )
 
         await order_event_broker.enqueue_message(
-            order.id,
-            dict(order_event=order_event, order=order),
+            dict(event=order_event, order=order),
         )
 
     async def cancel_order_quantity(self, order, exchange_manager, cancel_quantity):

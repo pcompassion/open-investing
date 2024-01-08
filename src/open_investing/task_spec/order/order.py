@@ -59,6 +59,7 @@ class OrderAgent(Generic[T], TaskSpecHandler):
 
         self.command_queue = asyncio.Queue()
         self.order_event_queue = asyncio.Queue()
+        self.quote_event_queue = asyncio.Queue()
 
         self.tasks = dict(
             run_order_command=Task("run_order_command", self.run_order_command()),
@@ -76,14 +77,19 @@ class OrderAgent(Generic[T], TaskSpecHandler):
     async def on_order_command(self, order_info):
         pass
 
-    async def on_order_event(self, order_event):
-        pass
-
     async def run_order_command(self):
         while True:
             order_info = await self.command_queue.get()
 
             await self.on_order_command(order_info)
+
+    async def enqueue_order_command(self, order_info):
+        await self.command_queue.put(order_info)
+
+    enqueue_command = enqueue_order_command
+
+    async def on_order_event(self, order_event):
+        pass
 
     async def run_order_event(self):
         while True:
@@ -91,13 +97,20 @@ class OrderAgent(Generic[T], TaskSpecHandler):
 
             await self.on_order_event(order_event)
 
-    async def enqueue_order_command(self, order_info):
-        await self.command_queue.put(order_info)
-
-    enqueue_command = enqueue_order_command
-
     async def enqueue_order_event(self, order_event):
         await self.order_event_queue.put(order_event)
+
+    async def on_quote_event(self, quote_event):
+        pass
+
+    async def run_quote_event(self):
+        while True:
+            quote_event = await self.quote_event_queue.get()
+
+            await self.on_quote_event(quote_event)
+
+    async def enqueue_quote_event(self, event):
+        await self.quote_event_queue.put(event)
 
     @property
     def order_data_manager(self):
@@ -114,6 +127,15 @@ class OrderAgent(Generic[T], TaskSpecHandler):
         service_key = ServiceKey(
             service_type="pubsub_broker",
             service_name="order_event_broker",
+        )
+
+        return self.services[service_key]
+
+    @property
+    def quote_event_broker(self):
+        service_key = ServiceKey(
+            service_type="pubsub_broker",
+            service_name="quote_event_broker",
         )
 
         return self.services[service_key]

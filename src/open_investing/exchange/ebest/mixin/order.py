@@ -2,7 +2,8 @@
 
 
 from open_investing.security.derivative_code import DerivativeCode
-from open_investing.order.order_event_broker import OrderEvent
+
+from open_investing.event_spec.event_spec import OrderEventSpec
 from open_investing.order.const.order import OrderEventName, OrderPriceType, OrderSide
 from open_investing.exchange.ebest.api_field import EbestApiField
 from open_library.time.datetime import combine
@@ -81,7 +82,7 @@ class OrderMixin:
                     exchange_order_id=exchange_order_id
                 )
 
-                order_event = OrderEvent(
+                order_event = OrderEventSpec(
                     name=OrderEventName.ExchangeFilled,
                     data=dict(
                         fill_quantity=data["chevol"],

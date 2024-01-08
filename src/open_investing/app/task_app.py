@@ -22,6 +22,7 @@ from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
 from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
+from open_investing.security.quote_service import QuoteService
 
 
 async def debug_control():
@@ -135,9 +136,8 @@ class App(BaseApp):
         )
 
         order_event_broker = OrderEventBroker()
-        service_locator.register_service(
-            order_event_broker.service_key, order_event_broker
-        )
+        for service_key in order_event_broker.service_keys:
+            service_locator.register_service(service_key, order_event_broker)
 
         market_indicator_data_manager = MarketIndicatorDataManager()
         market_indicator_data_manager.initialize(self.environment)
@@ -190,8 +190,13 @@ class App(BaseApp):
 
         order_service.set_order_event_broker(order_event_broker)
         order_service.set_order_data_manager(order_data_manager)
-        order_service.set_order_data_manager(order_data_manager)
         order_service.set_exchange_manager(ebest_api_manager)
+
+        quote_service = QuoteService()
+        await quote_service.initialize()
+        quote_service.set_exchange_manager(ebest_api_manager)
+
+        service_locator.register_service(quote_service.service_key, quote_service)
 
     def setup_django(self):
         import django
