@@ -28,6 +28,7 @@ from open_investing.event_spec.event_spec import EventSpec, QuoteEventSpec
 from open_library.observe.listener_spec import ListenerSpec
 from open_library.observe.const import ListenerType
 
+from open_library.time_tracker.time_data_tracker import TimeDataTracker
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class BestLimitIcebergOrderSpec(OrderSpec):
     spec_type_name_classvar: ClassVar[str] = "order.best_limit_iceberg"
     spec_type_name: str = spec_type_name_classvar
 
-    max_tick: int
+    max_tick_diff: int
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -70,13 +71,14 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
+        self.time_data_tracker = TimeDataTracker()
+
     async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
         order_data_manager = self.order_data_manager
         order_event_broker = self.order_event_broker
 
         composite_order = order
-        time_interval_second = order_spec.time_interval_second
-        split = order_spec.split
+        max_tick_diff = order_spec.max_tick_diff
         security_code = order_spec.security_code
         quantity = order_spec.quantity
 
@@ -91,23 +93,32 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     break
 
             remaining_quantity = quantity - filled_quantity
-            quantity_partial = min(quantity / split, remaining_quantity)
-            # TODO: stock seems to only allows integer
-            quantity_partial = math.ceil(quantity_partial)
-            if quantity_partial == 0:
-                quantity_partial = remaining_quantity
+
+            try:
+                recent_quote = await self.time_data_tracker.wait_for_valid_data()
+                price = recent_quote["price"]
+            except TimeoutError as e:
+                print(e)
 
             order_id = uuid4()
             orders[order_id] = None
-            order_event_broker.subscribe(order_id, self.enqueue_order_event)
+
+            order_event_spec = OrderEventSpec(order_id=order_id)
+            listener_spec = ListenerSpec(
+                listener_type=ListenerType.Callable,
+                listener_or_name=self.enqueue_order_event,
+            )
+
+            self.order_event_broker.subscribe(order_event_spec, listener_spec)
 
             order_spec_dict = self.base_spec_dict | {
                 "spec_type_name": "order.limit_order",
                 # "quantity": quantity_partial,
                 # TODO: quantity type
-                "quantity": int(quantity_partial),
+                "quantity": int(remaining_quantity),
                 "order_id": order_id,
                 "security_code": security_code,
+                "price": price,
             }
 
             command = OrderTaskCommand(
@@ -217,7 +228,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             quote_event_spec = QuoteEventSpec(security_code=order_spec.security_code)
             listener_spec = ListenerSpec(
                 listener_type=ListenerType.Callable,
-                listener_or_name=self.on_quote_event,
+                listener_or_name=self.enqueue_quote_event,
             )
 
             await self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
@@ -242,4 +253,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         event = event_info["event"]
         logger.info(f"on_quote_event: {event}")
 
-        return price
+        # price = event.data.get('price')
+
+        time_data_tracker = self.time_data_tracker
+
+        data = event.data
+
+        date_at = data["date_at"]
+
+        time_data_tracker.add_data(event.data, date_at)

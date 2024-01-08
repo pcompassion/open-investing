@@ -29,6 +29,6 @@ class OrderEventSpec(EventSpec):
     spec_type_name: str = "order"
 
     order_id: str
-    name: OrderEventName
+    name: OrderEventName | None = None
 
     data: dict[str, Any] | None = None

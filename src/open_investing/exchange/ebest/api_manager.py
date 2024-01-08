@@ -25,6 +25,8 @@ from open_library.data.conversion import as_list_type, ListDataType, ListDataTyp
 from open_investing.exchange.ebest.mixin.order import OrderMixin
 from open_library.observe.pubsub_broker import PubsubBroker
 import logging
+from open_library.time.datetime import combine, time_from_format
+from open_investing.config.base import DEFAULT_TIME_FORMAT
 
 logger = logging.getLogger(__name__)
 
@@ -533,6 +535,13 @@ class EbestApiManager(OrderMixin):
 
         security_code = message["header"]["tr_key"]
 
-        quote_event = QuoteEventSpec(security_code=security_code, data=message["body"])
+        data = message["body"]
+
+        time = time_from_format(data["hotime"], time_format=DEFAULT_TIME_FORMAT)
+        date_at = combine(now_local().date(), time)
+
+        data["date_at"] = date_at
+
+        quote_event = QuoteEventSpec(security_code=security_code, data=data)
 
         self.subscription_manager.pubish(quote_event)
