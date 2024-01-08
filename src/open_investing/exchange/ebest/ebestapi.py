@@ -98,11 +98,20 @@ class EbestApi(ExchangeApi):
             case Env.PROD:
                 ws_uri = "wss://openapi.ebestsec.co.kr:9443/websocket"
 
-        if tr_type not in self.ws_clients:
-            headers = {"tr_type": tr_type}
-            self.ws_clients[tr_type] = WebSocketClient(ws_uri, headers, token_manager)
+        # headers = {"tr_type": tr_type}
+        if not self.ws_client:
+            self.ws_client = WebSocketClient(
+                ws_uri, token_manager, self.topic_extractor
+            )
+        return self.ws_client
 
-        return self.ws_clients[tr_type]
+    def topic_extractor(self, response):
+        header = response.get("header", {})
+        tr_cd = header.get("tr_cd", None)
+        tr_key = header.get("tr_key", "")
+        if tr_cd:
+            return self._topic_body(tr_cd, tr_key)
+        return None
 
     async def _get_page_data(
         self,
@@ -294,16 +303,25 @@ class EbestApi(ExchangeApi):
     ):
         ws_client = self.get_or_create_ws_client(tr_type)
         body = self._topic_body(tr_code, tr_key)
+
+        header = {"tr_type": tr_type}
         topic_key = self._dict_to_key(body)
 
-        await ws_client.subscribe(body, topic_key, handler=handler)
+        await ws_client.subscribe(topic_key, handler, body, header)
 
-    async def unsubscribe(self, tr_type: str, tr_code: str, tr_key: str):
+    async def unsubscribe(
+        self,
+        tr_type: str,
+        tr_code: str,
+        tr_key: str,
+        handler: Callable[[str], Awaitable[None]],
+    ):
         ws_client = self.get_or_create_ws_client(tr_type)
         body = self._topic_body(tr_code, tr_key)
+        header = {"tr_type": tr_type}
         topic_key = self._dict_to_key(body)
 
-        await ws_client.unsubscribe(topic_key)
+        await ws_client.unsubscribe(topic_key, handler, body, header)
 
     async def shutdown(self):
         logger.info("shutdown")
