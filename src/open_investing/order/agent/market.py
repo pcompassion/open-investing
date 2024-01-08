@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import (
     OrderEventName,
     OrderCommandName,

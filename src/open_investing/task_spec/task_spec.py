@@ -7,7 +7,7 @@ from open_library.time.const import TimeUnit
 
 from pydantic import BaseModel, root_validator, ValidationError
 from open_investing.task.task import Task
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 
 
 # Base TaskSpec class

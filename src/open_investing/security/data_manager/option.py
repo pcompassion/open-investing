@@ -9,7 +9,7 @@ from open_investing.security.derivative_code import DerivativeCode
 from open_library.collections.dict import instance_to_dict
 
 from open_investing.security.models import Option
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from django.db.models import Window, F, Max
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_library.extension.django.orm import get_model_field_names

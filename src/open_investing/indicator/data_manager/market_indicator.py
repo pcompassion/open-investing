@@ -4,7 +4,7 @@ from open_library.time.datetime import now_local
 from open_investing.indicator.models import MarketIndicator
 import pendulum
 from datetime import timedelta
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 
 
 class MarketIndicatorDataManager:

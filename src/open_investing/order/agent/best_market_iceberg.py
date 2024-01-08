@@ -11,7 +11,7 @@ from open_investing.order.const.order import (
     OrderType,
 )
 import asyncio
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from typing import ClassVar
 
 from open_investing.order.models.order import Order

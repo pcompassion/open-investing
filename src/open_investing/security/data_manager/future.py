@@ -8,7 +8,7 @@ from open_investing.security.derivative_code import DerivativeCode
 from open_library.collections.dict import instance_to_dict
 
 from open_investing.security.models import Future
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_library.collections.dict import filter_dict
 

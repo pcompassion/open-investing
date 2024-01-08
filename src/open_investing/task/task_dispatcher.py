@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from collections import defaultdict
 from enum import Enum
 from abc import ABC, abstractmethod

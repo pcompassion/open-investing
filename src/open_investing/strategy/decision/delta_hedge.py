@@ -7,7 +7,7 @@ from open_investing.order.const.order import OrderCommandName
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 import asyncio
 from open_investing.strategy.models.decision import Decision
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from typing import ClassVar
 from open_investing.task_spec.decision.decison import DecisionSpec, DecisionHandler
 

@@ -4,7 +4,7 @@
 from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from typing import Dict, Any
 from open_investing.strategy.models.decision import Decision
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_investing.strategy.const.decision import DecisionLifeStage
 from open_library.collections.dict import to_jsonable_python
 

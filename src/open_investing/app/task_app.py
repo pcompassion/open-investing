@@ -16,7 +16,7 @@ from redis import asyncio as aioredis
 from open_library.environment.environment import Environment
 
 from open_library.app.base_app import BaseApp
-from open_investing.locator.service_locator import ServiceKey, ServiceLocator
+from open_library.locator.service_locator import ServiceKey, ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
 from open_investing.order.order_event_broker import OrderEventBroker

@@ -4,7 +4,7 @@ import operator
 import functools
 from uuid import UUID
 import asyncio
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from typing import Any, cast
 from typing import ClassVar, Type
 from pydantic import BaseModel

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import OrderEventName
 from open_library.observe.pubsub_broker import PubsubBroker
 from pydantic import BaseModel

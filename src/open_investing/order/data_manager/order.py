@@ -6,7 +6,7 @@ from open_investing.order.const.order import SINGLE_ORDER_TYPES
 from open_investing.order.models.order import Order, Trade, OrderEventEntry
 from open_investing.order.const.order import OrderEventName
 from open_investing.order.models.composite.composite import CompositeOrder
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import OrderType
 
 from open_library.collections.dict import to_jsonable_python

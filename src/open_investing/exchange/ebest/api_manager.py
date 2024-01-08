@@ -16,7 +16,7 @@ from open_investing.security.derivative_code import DerivativeCode
 
 from open_investing.exchange.ebest.ebestapi import EbestApi
 from open_investing.exchange.const.market_type import ApiType
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 from open_investing.const.code_name import IndexCode
 from open_investing.security.derivative_code import DerivativeCode, DerivativeTypeCode
 

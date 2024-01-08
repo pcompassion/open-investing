@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from typing import cast
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 import functools
 import operator
 import itertools

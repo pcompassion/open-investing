@@ -12,7 +12,7 @@ from open_investing.task_spec.task_spec_handler_registry import (
     TaskSpecHandlerRegistry,
 )
 from open_investing.task_spec.task_spec import TaskSpec
-from open_investing.locator.service_locator import ServiceLocator
+from open_library.locator.service_locator import ServiceLocator
 import logging
 
 logger = logging.getLogger(__name__)

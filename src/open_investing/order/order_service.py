@@ -3,7 +3,7 @@
 from open_library.observe.pubsub_broker import PubsubBroker
 from open_investing.order.order_event_broker import OrderEvent
 
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 import asyncio
 
 from open_library.time.datetime import now_local

@@ -11,7 +11,7 @@ from typing import Generic, TypeVar
 from open_investing.order.const.order import OrderCommandName
 from open_investing.task.task_command import TaskCommand, SubCommand
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
-from open_investing.locator.service_locator import ServiceKey
+from open_library.locator.service_locator import ServiceKey
 
 
 class OrderSpec(TaskSpec):
