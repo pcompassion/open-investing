@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from open_library.observe.const import ListenerType
+from open_library.observe.listener_spec import ListenerSpec
+from open_investing.event_spec.event_spec import OrderEventSpec
 import math
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from uuid import uuid4
@@ -98,7 +101,14 @@ class BestMarketIcebergOrderAgent(OrderAgent):
 
             order_id = uuid4()
             orders[order_id] = None
-            order_event_broker.subscribe(order_id, self.enqueue_order_event)
+
+            order_event_spec = OrderEventSpec(order_id=order_id)
+            listener_spec = ListenerSpec(
+                listener_type=ListenerType.Callable,
+                listener_or_name=self.enqueue_order_event,
+            )
+
+            order_event_broker.subscribe(order_event_spec, listener_spec)
 
             order_spec_dict = self.base_spec_dict | {
                 "spec_type_name": "order.market_order",

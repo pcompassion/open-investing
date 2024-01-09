@@ -75,3 +75,19 @@ class NearbyFuture(models.Model):
     create_at = models.DateTimeField(auto_now_add=True)
 
     data = models.JSONField(default=list)
+
+
+class Quote(models.Model):
+    security_code = models.CharField(max_length=8, db_index=True)
+    date_at = models.DateTimeField(db_index=True)
+    create_at = models.DateTimeField(auto_now_add=True)
+
+    data = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["security_code", "date_at"],
+                name="securityquote_unique_security_code_date_time",
+            )
+        ]

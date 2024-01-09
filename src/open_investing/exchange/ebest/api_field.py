@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import re
 from enum import Enum, auto
 
 from open_investing.exchange.const.market_type import MarketType
@@ -31,6 +31,14 @@ class EbestApiField:
             "exchange_order_id": "OrgOrdNo",
         },
     }
+
+    regex_rules = [
+        (re.compile(r"^bidho(\d+)$"), r"bid_price_\1"),
+        (re.compile(r"^bidrem(\d+)$"), r"bid_volume_\1"),
+        (re.compile(r"^offerho(\d+)$"), r"ask_price_\1"),
+        (re.compile(r"^offerrem(\d+)$"), r"offer_volume_\1")
+        # Add more regex rules as needed
+    ]
 
     field_value_map = {
         OrderSide.Sell: "1",
@@ -92,6 +100,34 @@ class EbestApiField:
 
                 value = cls.field_value_map.get(v, v)
                 res[field_name] = value
+
+        return kwargs | res
+
+    @classmethod
+    def get_response_data(cls, tr_code=None, **kwargs):
+        res = {}
+
+        data_dict = {}
+        if kwargs:
+            data_dict.update(kwargs)
+
+        for k, v in data_dict.items():
+            field_name = cls.get_field_name(k, tr_code=tr_code)
+
+            if field_name:
+                kwargs.pop(k)
+
+                value = cls.field_value_map.get(v, v)
+                res[field_name] = value
+
+            else:
+                new_key = k
+                for pattern, replacement in cls.regex_rules:
+                    match = pattern.match(k)
+                    if match:
+                        new_key = pattern.sub(replacement, k)
+                        break
+                res[new_key] = v
 
         return kwargs | res
 

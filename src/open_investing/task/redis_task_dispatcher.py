@@ -8,7 +8,10 @@ from channels.layers import get_channel_layer
 from open_library.collections.dict import hashable_json
 from open_library.collections.hashable_dict import Hashabledict
 from open_investing.task_spec.task_spec import TaskSpec
-from open_investing.task.const import ListenerType
+
+from open_library.observe.const import ListenerType
+
+
 from open_investing.task.task_dispatcher import TaskDispatcher
 
 logger = logging.getLogger(__name__)

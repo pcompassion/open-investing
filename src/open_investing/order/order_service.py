@@ -9,6 +9,9 @@ import asyncio
 from open_library.time.datetime import now_local
 from open_investing.order.const.order import OrderEventName
 from open_library.observe.subscription_manager import SubscriptionManager
+from open_investing.event_spec.event_spec import OrderEventSpec
+from open_library.observe.listener_spec import ListenerSpec
+from open_library.observe.const import ListenerType
 
 
 class OrderService:
@@ -101,7 +104,13 @@ class OrderService:
             order=order,
         )
 
-        order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
+        order_event_spec = OrderEventSpec(order_id=order.id)
+        listener_spec = ListenerSpec(
+            listener_type=ListenerType.Callable,
+            listener_or_name=self.enqueue_order_event,
+        )
+
+        order_event_broker.subscribe(order_event_spec, listener_spec)  # type: ignore
 
         exchange_order_id, _ = await exchange_manager.open_order(order)
 

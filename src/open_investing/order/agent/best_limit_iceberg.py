@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from open_library.observe.listener_spec import ListenerSpec
-from open_investing.event_spec.event_spec import QuoteEventSpec
+from open_investing.event_spec.event_spec import OrderEventSpec, QuoteEventSpec
 import math
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from uuid import uuid4
@@ -38,6 +38,7 @@ class BestLimitIcebergOrderSpec(OrderSpec):
     spec_type_name: str = spec_type_name_classvar
 
     max_tick_diff: int
+    tick_size: float
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -72,33 +73,80 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
         self.time_data_tracker = TimeDataTracker()
+        self.quote = None
+        self.composite_order = None
+        self.filled_quantity = None
 
     async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
         order_data_manager = self.order_data_manager
         order_event_broker = self.order_event_broker
 
-        composite_order = order
+        self.composite_order = order
         max_tick_diff = order_spec.max_tick_diff
         security_code = order_spec.security_code
         quantity = order_spec.quantity
 
-        filled_quantity = order.filled_quantity
+        self.filled_quantity = order.filled_quantity
 
         orders = dict()
+        order_id = None
+        order_event_spec = None
+        listener_spec = None
 
-        while filled_quantity < quantity:
+        while self.filled_quantity < quantity:
             if not command_queue.empty():
                 command = await command_queue.get()
                 if command == "STOP":
                     break
 
-            remaining_quantity = quantity - filled_quantity
-
             try:
                 recent_quote = await self.time_data_tracker.wait_for_valid_data()
-                price = recent_quote["price"]
+                price = recent_quote.bid_price_1
             except TimeoutError as e:
                 print(e)
+                raise e
+                # shouldn't happen
+
+            remaining_quantity = quantity - self.filled_quantity
+
+            if self.quote is not None:
+                price_diff = price - self.quote.bid_price_1
+
+                tick_diff = math.floor(price_diff / order_spec.tick_size)
+
+                if tick_diff > max_tick_diff:
+                    self.quote = recent_quote
+
+                    command = OrderTaskCommand(
+                        name="command",
+                        order_command=OrderCommand(name=OrderCommandName.Start),
+                    )
+
+                    cancel_event = asyncio.Event()
+
+                    self.cancel_events[order_id] = cancel_event
+
+                    cancel_order_spec_dict = self.base_spec_dict | {
+                        "spec_type_name": "order.cancel_remaining",
+                        "cancel_quantity": remaining_quantity,
+                        "order_id": order_id,
+                        "security_code": security_code,
+                    }
+
+                    await order_task_dispatcher.dispatch_task(
+                        cancel_order_spec_dict, command
+                    )
+
+                    try:
+                        await asyncio.wait_for(cancel_event.wait(), timeout=10)
+                        self.order_event_broker.unsubscribe(
+                            order_event_spec, listener_spec
+                        )
+
+                    except asyncio.TimeoutError:
+                        logger.warning(f"cancel order timed out {order_id}")
+
+            remaining_quantity = quantity - self.filled_quantity
 
             order_id = uuid4()
             orders[order_id] = None
@@ -128,49 +176,23 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             order_task_dispatcher = self.order_task_dispatcher
             await order_task_dispatcher.dispatch_task(order_spec_dict, command)
 
-            await asyncio.sleep(time_interval_second)
-            order = await order_data_manager.get(filter_params=dict(id=order_id))
-            filled_quantity_new = order.filled_quantity
-
-            if filled_quantity_new < quantity_partial:
-                command = OrderTaskCommand(
-                    name="command",
-                    order_command=OrderCommand(name=OrderCommandName.Start),
-                )
-
-                cancel_event = asyncio.Event()
-
-                self.cancel_events[order_id] = cancel_event
-
-                remaining_quantity = quantity_partial - filled_quantity_new
-
-                cancel_order_spec_dict = self.base_spec_dict | {
-                    "spec_type_name": "order.cancel_remaining",
-                    "cancel_quantity": remaining_quantity,
-                    "order_id": order_id,
-                    "security_code": security_code,
-                }
-
-                await order_task_dispatcher.dispatch_task(
-                    cancel_order_spec_dict, command
-                )
-
-                try:
-                    await asyncio.wait_for(cancel_event.wait(), timeout=10)
-                except asyncio.TimeoutError:
-                    logger.warning(f"cancel order timed out {order_id}")
-
     async def on_order_event(self, order_info):
-        order_event = order_info["event"]
-        logger.info(f"on_order_event: {order_event}")
+        order_event_spec = order_info["event_spec"]
+        logger.info(f"on_order_event: {order_event_spec}")
 
         order = order_info["order"]
 
-        event_name = order_event.name
+        event_name = order_event_spec.name
 
         match event_name:
             case OrderEventName.Filled:
                 # order is filled, do something
+
+                order = await order_data_manager.get(
+                    filter_params=dict(id=self.composite_order.id)
+                )
+                self.filled_quantity = order.filled_quantity
+
                 pass
 
             case OrderEventName.CancelSuccess:
@@ -256,7 +278,6 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         # price = event.data.get('price')
 
         time_data_tracker = self.time_data_tracker
-
         data = event.data
 
         date_at = data["date_at"]

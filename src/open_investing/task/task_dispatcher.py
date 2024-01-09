@@ -6,7 +6,8 @@ from enum import Enum
 from abc import ABC, abstractmethod
 import uuid
 
-from open_investing.task.const import ListenerType
+from open_library.observe.const import ListenerType
+
 from open_investing.task.task_manager import TaskManager
 from open_investing.task_spec.task_spec import TaskSpec
 

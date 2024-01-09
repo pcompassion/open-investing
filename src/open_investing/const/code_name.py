@@ -26,13 +26,13 @@ class DerivativeType(str, Enum):
     Put = "Put"
 
 
-class SecurityType(str, Enum):
-    # https://stackoverflow.com/a/46080827
-    cls = vars()
+# class SecurityType(str, Enum):
+#     # https://stackoverflow.com/a/46080827
+#     cls = vars()
 
-    for member in chain(list(BaseType), list(DerivativeType)):
-        cls[member.name] = member.value
-    del member, cls
+#     for member in chain(list(BaseType), list(DerivativeType)):
+#         cls[member.name] = member.value
+#     del member, cls
 
 
 class FieldName(str, Enum):

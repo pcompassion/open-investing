@@ -11,6 +11,10 @@ from open_investing.order.const.order import (
 from typing import ClassVar
 from open_investing.task_spec.order.order import OrderSpec, OrderAgent
 import logging
+from open_investing.event_spec.event_spec import OrderEventSpec
+from open_library.observe.listener_spec import ListenerSpec
+from open_library.observe.const import ListenerType
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +62,13 @@ class MarketOrderAgent(OrderAgent):
             case OrderCommandName.Open:
                 order_event_broker = self.order_event_broker
 
-                order_event_broker.subscribe(order.id, self.enqueue_order_event)
+                order_event_spec = OrderEventSpec(order_id=order_id)
+                listener_spec = ListenerSpec(
+                    listener_type=ListenerType.Callable,
+                    listener_or_name=self.enqueue_order_event,
+                )
+
+                order_event_broker.subscribe(order_event_spec, listener_spec)
 
                 await self.order_service.open_order(order, exchange_manager)
             case OrderCommandName.CancelRemaining:
@@ -73,7 +83,7 @@ class MarketOrderAgent(OrderAgent):
 
         match event_name:
             case OrderEventName.Filled:
-
+                pass
                 # check if filled,
             case _:
                 pass

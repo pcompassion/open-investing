@@ -41,5 +41,5 @@ class QuoteService:
             self.subscription_manager.subscribe(event_spec, listener_spec)
             exchange_manager.subscribe_quote(event_spec, listener_spec_me)
 
-    async def on_quote_event(self, quote_event: QuoteEventSpec):
-        await self.subscription_manager.publish(quote_event)
+    async def on_quote_event(self, message):
+        await self.subscription_manager.publish(message)

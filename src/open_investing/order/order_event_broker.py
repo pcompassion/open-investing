@@ -9,15 +9,18 @@ from pydantic import BaseModel
 
 
 class OrderEventBroker(PubsubBroker):
+    order_event_broker_service_key = ServiceKey(
+        service_type="pubsub_broker",
+        service_name="order_event_broker",
+    )
+    quote_event_broker_service_key = ServiceKey(
+        service_type="pubsub_broker",
+        service_name="quote_event_broker",
+    )
+
     service_keys = [
-        ServiceKey(
-            service_type="pubsub_broker",
-            service_name="order_event_broker",
-        ),
-        ServiceKey(
-            service_type="pubsub_broker",
-            service_name="quote_event_broker",
-        ),
+        order_event_broker_service_key,
+        quote_event_broker_service_key,
     ]
 
 

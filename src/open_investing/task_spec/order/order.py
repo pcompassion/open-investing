@@ -23,8 +23,8 @@ class OrderSpec(TaskSpec):
     # non hashed
     decision_id: UUID
     order_id: UUID | None
-    parent_order_id: str | None
-    price: float | None
+    parent_order_id: str | None = None
+    price: float | None = None
 
     security_code: str
     quantity: float

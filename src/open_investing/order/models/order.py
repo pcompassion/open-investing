@@ -14,7 +14,7 @@ class Order(models.Model):
     order_type = models.CharField(max_length=32)
     order_price_type = models.CharField(max_length=32)
 
-    exchange_order_id = models.CharField(max_length=255, blank=True)
+    exchange_order_id = models.CharField(max_length=255, blank=True, null=True)
     security_code = models.CharField(max_length=32, blank=True)
     side = models.CharField(max_length=32, blank=True)
 

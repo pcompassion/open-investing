@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from open_library.observe.listener_spec import ListenerSpec
+from open_investing.event_spec.event_spec import QuoteEventSpec
 from datetime import timedelta
 from typing import Any, Tuple
 from open_library.time.datetime import determine_datetime, now_local
@@ -27,6 +29,8 @@ from open_library.observe.pubsub_broker import PubsubBroker
 import logging
 from open_library.time.datetime import combine, time_from_format
 from open_investing.config.base import DEFAULT_TIME_FORMAT
+from open_investing.security.quote import Quote
+from open_library.observe.subscription_manager import SubscriptionManager
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +360,7 @@ class EbestApiManager(OrderMixin):
         tr_code = "t2301"
         api_response = await api.get_market_data(tr_code)
 
-        if api_response is None:
+        if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
 
         df = pd.DataFrame(api_response.data)
@@ -534,6 +538,7 @@ class EbestApiManager(OrderMixin):
         logger.info(f"quote_listener {message}")
 
         security_code = message["header"]["tr_key"]
+        tr_code = message["header"]["tr_cd"]
 
         data = message["body"]
 
@@ -542,6 +547,11 @@ class EbestApiManager(OrderMixin):
 
         data["date_at"] = date_at
 
-        quote_event = QuoteEventSpec(security_code=security_code, data=data)
+        data = EbestApiField.get_response_data(tr_code=tr_code, **data)
 
-        self.subscription_manager.pubish(quote_event)
+        quote_event_spec = QuoteEventSpec(security_code=security_code)
+        quote = Quote(**data)
+
+        event_info = dict(event=quote_event_spec, data=quote)
+
+        self.subscription_manager.pubish(event_info)

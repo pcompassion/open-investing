@@ -32,7 +32,7 @@ class Task:
                 self.cron_time, func=self.coro, start=True, run_immediate=True
             )
         else:
-            self.task = asyncio.create_task(self.run())
+            self.task = asyncio.create_task(self.run(), name=self.name)
         self.running = True
 
     async def stop(self):

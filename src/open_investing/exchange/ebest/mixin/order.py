@@ -82,18 +82,23 @@ class OrderMixin:
                     exchange_order_id=exchange_order_id
                 )
 
-                order_event = OrderEventSpec(
+                order_event_spec = OrderEventSpec(
                     name=OrderEventName.ExchangeFilled,
-                    data=dict(
-                        fill_quantity=data["chevol"],
-                        fill_price=data["cheprice"],
-                        date_at=combine(data["chedate"], data["chetime"]),
-                    ),
                 )
 
-                order_event_broker.enqueue_message(
-                    order.id, dict(order_event=order_event, order=order)
+                data = dict(
+                    fill_quantity=data["chevol"],
+                    fill_price=data["cheprice"],
+                    date_at=combine(data["chedate"], data["chetime"]),
                 )
+
+                message = dict(
+                    event_spec=order_event_spec,
+                    order=order,
+                    data=data,
+                )
+
+                await self.order_event_broker.enqueue_message(message)
 
     async def cancel_order_quantity(
         self,
@@ -118,7 +123,7 @@ class OrderMixin:
             api_response.data,
             key_mapping=dict(
                 CancQty="cancelled_quantity",
-                OrgOrdNo="exchange_order_id",
+                OrgOrdNo="open_order_id",
                 OrdNo="cancel_order_id",
             ),
         )

@@ -2,8 +2,9 @@
 from typing import Any
 from open_library.base_spec.base_spec import BaseSpec
 from open_investing.order.const.order import OrderEventName
+from uuid import UUID
 
-from open_investing.const.code_name import SecurityType
+from open_investing.const.code_name import DerivativeType
 
 
 class EventSpec(BaseSpec):
@@ -18,17 +19,21 @@ class QuoteEventSpec(EventSpec):
     spec_type_name: str = "quote"
 
     security_code: str | None = None
-    security_type: SecurityType | list[SecurityType] | None = None
+    derivative_type: DerivativeType | list[DerivativeType] | None = None
 
     @property
     def hash_keys(self):
-        return ["spec_type_name", "security_code", "security_type"]
+        return ["spec_type_name", "security_code", "derivative_type"]
 
 
 class OrderEventSpec(EventSpec):
     spec_type_name: str = "order"
 
-    order_id: str
+    order_id: UUID | None = None
     name: OrderEventName | None = None
 
     data: dict[str, Any] | None = None
+
+    @property
+    def hash_keys(self):
+        return ["spec_type_name", "order_id", "name"]

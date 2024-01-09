@@ -70,7 +70,9 @@ class EbestApi(ExchangeApi):
 
         self.env = env
 
-        self.ws_clients: Dict[str, WebSocketClient] = {}
+        self.ws_clients: Dict[str, WebSocketClient] = {}  # not used
+        self.ws_client: WebSocketClient = None
+
         self.shutdown_event = asyncio.Event()
 
     def start_token_refresh(self):

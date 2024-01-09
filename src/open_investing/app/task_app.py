@@ -100,7 +100,7 @@ class App(BaseApp):
                 "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
                 "order_task_dispatcher": LocalTaskDispatcher.service_key,
                 "decision_task_dispatcher": LocalTaskDispatcher.service_key,
-                "order_event_broker": OrderEventBroker.service_key,
+                "order_event_broker": OrderEventBroker.order_event_broker_service_key,
                 "order_service": OrderService.service_key,
                 uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
