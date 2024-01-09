@@ -100,9 +100,9 @@ class TaskSpecHandler(ABC):
             await listener(message)
 
     async def start_tasks(self):
+        self.running = True
         for k, task in self.tasks.items():
             await task.start()
-        self.running = True
 
     async def stop_tasks(self):
         self.running = False

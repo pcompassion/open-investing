@@ -10,6 +10,9 @@ from open_investing.strategy.models.decision import Decision
 from open_library.locator.service_locator import ServiceKey
 from typing import ClassVar
 from open_investing.task_spec.decision.decison import DecisionSpec, DecisionHandler
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DeltaHedgeDecisionSpec(DecisionSpec):
@@ -67,10 +70,19 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             )
 
             await order_task_dispatcher.dispatch_task(order_spec_dict, order_command)
+            logger.info("on_decision ended")
 
     async def run_decision(self):
         while True:
             # while not self.command_queue.empty():
-            decision_info = await self.command_queue.get()
+            try:
+                decision_info = await self.command_queue.get()
 
-            await self.on_decision(decision_info)
+                await self.on_decision(decision_info)
+            except Exception as e:
+                logger.info("e")
+
+    async def start_tasks(self):
+        self.running = True
+        for k, task in self.tasks.items():
+            await task.start()

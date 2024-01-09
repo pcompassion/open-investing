@@ -22,6 +22,7 @@ class RedisTaskDispatcher(TaskDispatcher):
         super().__init__()
         self.channel_name = channel_name
         self.redis_client = redis_client
+        self.listening_task = None
 
     @singledispatchmethod
     async def dispatch_task(self, task_spec, command):
@@ -90,4 +91,4 @@ class RedisTaskDispatcher(TaskDispatcher):
         self.pubsub = pubsub = self.redis_client.pubsub()
 
         await pubsub.subscribe(self.channel_name)
-        asyncio.create_task(self.listen_for_task_updates())
+        self.listening_task = asyncio.create_task(self.listen_for_task_updates())

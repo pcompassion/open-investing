@@ -236,7 +236,7 @@ class EbestApi(ExchangeApi):
             if rsp_cd != 0:
                 raise
         except:
-            logger.warning(f"data: {data}")
+            logger.warning(f"request: {body}, data: {data}")
             return ApiResponse(
                 success=False,
                 raw_data=data,

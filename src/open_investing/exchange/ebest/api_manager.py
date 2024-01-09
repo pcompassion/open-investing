@@ -305,7 +305,7 @@ class EbestApiManager(OrderMixin):
         tr_code = "t8432"
         api_response = await api.get_market_data(tr_code)
 
-        if api_response is None:
+        if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
 
         df = pd.DataFrame(api_response.data)

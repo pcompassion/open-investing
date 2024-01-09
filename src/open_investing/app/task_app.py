@@ -221,23 +221,23 @@ class App(BaseApp):
         )
         strategy_session_data_manager = self.get_service(service_key)
 
-        strategy_sessions = (
-            await strategy_session_data_manager.ongoing_strategy_sessions()
-        )
+        # strategy_sessions = (
+        #     await strategy_session_data_manager.ongoing_strategy_sessions()
+        # )
 
-        for strategy_session in strategy_sessions:
-            strategy_name = strategy_session.strategy_name
+        # for strategy_session in strategy_sessions:
+        #     strategy_name = strategy_session.strategy_name
 
-            task_spec_dict = {
-                "spec_type_name": strategy_name,
-                "strategy_session_id": strategy_session.id,
-            }
-            task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
+        #     task_spec_dict = {
+        #         "spec_type_name": strategy_name,
+        #         "strategy_session_id": strategy_session.id,
+        #     }
+        #     task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
 
-            command = TaskCommand(name=TaskCommandName.Start)
-            await self.task_dispatcher.dispatch_task(task_spec, command)
+        #     command = TaskCommand(name=TaskCommandName.Start)
+        #     await self.task_dispatcher.dispatch_task(task_spec, command)
 
-            running_strategies[strategy_name] += 1
+        #     running_strategies[strategy_name] += 1
 
         if "delta_hedge" not in running_strategies:
             task_spec_dict = {

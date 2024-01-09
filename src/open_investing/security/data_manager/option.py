@@ -30,7 +30,10 @@ class OptionDataManager:
         return await Option.objects.filter(**params).order_by("date_at").alast()
 
     async def save_options(
-        self, options_data: ListDataTypeHint, extra_data: dict, field_names=list[str]
+        self,
+        options_data: ListDataTypeHint,
+        extra_data: dict,
+        field_names: list[str] = None,
     ):
         extra_data = extra_data or {}
 

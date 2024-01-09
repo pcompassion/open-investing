@@ -38,6 +38,7 @@ class OrderService:
         self.order_event_queue = asyncio.Queue()
         self.order_event_task = None
         self.exchange_manager = None
+        self.running_tasks = set()
 
     async def initialize(self):
         self.order_event_task = asyncio.create_task(self.run_order_event())
@@ -119,7 +120,10 @@ class OrderService:
         )
 
     async def open_order(self, order, exchange_manager):
-        asyncio.create_task(self._open_order(order, exchange_manager))
+        task = asyncio.create_task(self._open_order(order, exchange_manager))
+
+        self.running_tasks.add(task)
+        task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
     async def _cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
         order_data_manager = self.order_data_manager
@@ -168,6 +172,9 @@ class OrderService:
         )
 
     async def cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
-        asyncio.create_task(
+        task = asyncio.create_task(
             self._cancel_order_quantity(order, exchange_manager, cancel_quantity)
         )
+
+        self.running_tasks.add(task)
+        task.add_done_callback(lambda t: self.running_tasks.remove(t))

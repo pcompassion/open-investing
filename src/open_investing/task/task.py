@@ -38,6 +38,7 @@ class Task:
     async def stop(self):
         if not self.running:
             return
+        logger.info(f"calling stop coroutine {self.name}")
 
         if isinstance(self.task, CronEx):
             self.task.stop()
@@ -46,15 +47,17 @@ class Task:
         self.running = False
 
     async def run(self):
+        logger.info(f"Task {self.name} is starting")
         try:
+            logger.info(f"Before awaiting coroutine in {self.name}")
             await self.coro
+            logger.info(f"After awaiting coroutine in {self.name}")
         except asyncio.CancelledError as e:
             logger.info(f"{self.name} task cancelled: {e}")
-            # Handle task cancellation
         except Exception as general_exception:
             logger.exception(f"{self.name} task exception: {general_exception}")
-
         finally:
+            logger.info(f"Task {self.name} has ended")
             self.running = False
 
     def status(self):
