@@ -138,13 +138,23 @@ class OrderAgent(Generic[T], TaskSpecHandler):
             service_name="quote_event_broker",
         )
 
-        return self.services[service_key]
+        service = self.services[service_key]
+        return service
 
     @property
     def order_service(self):
         service_key = ServiceKey(
             service_type="service",
             service_name="order_service",
+        )
+
+        return self.services[service_key]
+
+    @property
+    def quote_service(self):
+        service_key = ServiceKey(
+            service_type="service",
+            service_name="quote_service",
         )
 
         return self.services[service_key]

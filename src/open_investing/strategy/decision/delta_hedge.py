@@ -55,10 +55,19 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             await decision_data_manager.set_started(decision)
 
             # for test
+            # order_spec_dict = self.base_spec_dict | dict(
+            #     spec_type_name="order.best_market_iceberg",
+            #     time_interval_second=10,
+            #     split=5,
+            #     security_code=self.decision_spec.leader_security_code,
+            #     quantity=self.decision_spec.leader_quantity,
+            #     order_id=None,
+            #     parent_order_id=None,
+            # )
             order_spec_dict = self.base_spec_dict | dict(
-                spec_type_name="order.best_market_iceberg",
-                time_interval_second=10,
-                split=5,
+                spec_type_name="order.best_limit_iceberg",
+                max_tick_diff=5,
+                tick_size=0.25,
                 security_code=self.decision_spec.leader_security_code,
                 quantity=self.decision_spec.leader_quantity,
                 order_id=None,

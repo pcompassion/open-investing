@@ -40,6 +40,7 @@ class EbestApiManager(OrderMixin):
         service_type="exchange_api_manager",
         service_name="ebest",
     )
+    name = EbestApi.name
 
     def __init__(self):
         self.order_event_broker: PubsubBroker | None = None
@@ -537,4 +538,7 @@ class EbestApiManager(OrderMixin):
 
         event_info = dict(event=quote_event_spec, data=quote)
 
-        self.subscription_manager.pubish(event_info)
+        await self.subscription_manager.publish(event_info)
+
+    async def news_listener(self, message):
+        logger.info(f"news_listener {message}")

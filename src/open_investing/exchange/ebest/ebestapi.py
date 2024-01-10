@@ -315,7 +315,7 @@ class EbestApi(ExchangeApi):
         header = {"tr_type": tr_type}
         topic_key = self._dict_to_key(body)
 
-        await ws_client.subscribe(topic_key, handler, body, header)
+        await ws_client.subscribe(topic_key, handler, header, body)
 
     async def unsubscribe(
         self,
@@ -329,7 +329,7 @@ class EbestApi(ExchangeApi):
         header = {"tr_type": tr_type}
         topic_key = self._dict_to_key(body)
 
-        await ws_client.unsubscribe(topic_key, handler, body, header)
+        await ws_client.unsubscribe(topic_key, handler, header, body)
 
     async def shutdown(self):
         logger.info("shutdown")

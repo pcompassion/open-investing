@@ -24,7 +24,7 @@ class Task:
 
     async def start(self):
         if self.running:
-            print(f"{self.name} is already running")
+            logger.info(f"{self.name} is already running")
             return
 
         if self.cron_time:
@@ -47,11 +47,8 @@ class Task:
         self.running = False
 
     async def run(self):
-        logger.info(f"Task {self.name} is starting")
         try:
-            logger.info(f"Before awaiting coroutine in {self.name}")
             await self.coro
-            logger.info(f"After awaiting coroutine in {self.name}")
         except asyncio.CancelledError as e:
             logger.info(f"{self.name} task cancelled: {e}")
         except Exception as general_exception:

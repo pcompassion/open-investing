@@ -72,7 +72,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
-        self.time_data_tracker = TimeDataTracker()
+        self.time_data_tracker = TimeDataTracker(time_window_seconds=10)
         self.quote = None
         self.composite_order = None
         self.filled_quantity = None
@@ -233,8 +233,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     data=dict(
                         security_code=order_spec.security_code,
                         side=OrderSide.Buy,
-                        time_interval_second=order_spec.time_interval_second,
-                        split=order_spec.split,
+                        max_tick_diff=order_spec.max_tick_diff,
+                        tick_size=order_spec.tick_size,
                     ),
                 ),
                 save=True,
@@ -253,7 +253,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 listener_or_name=self.enqueue_quote_event,
             )
 
-            await self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
+            self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
 
             listener_spec = ListenerSpec(
                 service_key=ServiceKey(
@@ -264,7 +264,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 listener_or_name="enqueue_message",
             )
 
-            await quote_service.subscribe_quote(quote_event_spec, listener_spec)
+            await self.quote_service.subscribe_quote(quote_event_spec, listener_spec)
 
             command_queue = asyncio.Queue()
             self.run_order_task = asyncio.create_task(
