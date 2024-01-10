@@ -20,3 +20,5 @@ class DecisionCommandName(str, Enum):
     Close = "close"
 
     Start = "start"
+
+    Echo = "echo"

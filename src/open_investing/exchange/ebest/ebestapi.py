@@ -242,6 +242,7 @@ class EbestApi(ExchangeApi):
                 raw_data=data,
                 data_field_name=data_block_name,
                 error_code=rsp_cd,
+                exchange_api_code=tr_code,
                 default_data_type=default_data_type,
             )
 
@@ -250,6 +251,7 @@ class EbestApi(ExchangeApi):
             success=True,
             raw_data=data,
             data_field_name=data_block_name,
+            exchange_api_code=tr_code,
             default_data_type=default_data_type,
         )
 

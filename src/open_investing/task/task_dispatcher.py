@@ -43,7 +43,7 @@ class DummyTaskDispatcher(TaskDispatcher):
         pass
 
     def subscribe(
-        self, task_spec: TaskSpec, listener, listner_type=ListenerType.Callable
+        self, task_spec: TaskSpec, listener, listener_type=ListenerType.Callable
     ):
         pass
 

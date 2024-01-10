@@ -3,6 +3,9 @@ from typing import Dict, Type
 from functools import singledispatchmethod
 
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskSpecHandlerRegistry:

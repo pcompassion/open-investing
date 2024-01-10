@@ -297,17 +297,16 @@ class EbestApiManager(OrderMixin):
     async def future_list(
         self,
         interval_second: int,
-        future_data_manager=None,
         return_type: ListDataType = ListDataType.Dataframe,
-        save=True,
     ):
         api = self.stock_api
         tr_code = "t8432"
         api_response = await api.get_market_data(tr_code)
+        return pd.DataFrame(), api_response
 
         if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
-
+        logger.info(f"api response raw_data {api_response.raw_data} ")
         df = pd.DataFrame(api_response.data)
 
         valid_codes = {code.value for code in DerivativeTypeCode}
@@ -328,22 +327,6 @@ class EbestApiManager(OrderMixin):
 
         mask = df["derivative_type"].isin([DerivativeType.Future])
         df = df[mask]
-
-        field_names = ["expire_at", "security_code", "price"]
-
-        if save:
-            if not future_data_manager:
-                raise ValueError("future_data_manager is None")
-
-            extra_data = dict(
-                exchange_name=api.name,
-                exchange_api_code=tr_code,
-                timeframe=timedelta(interval_second),
-                date_at=now_local(),
-            )
-            df = await future_data_manager.save_futures(
-                df, extra_data=extra_data, field_names=field_names
-            )
 
         result = await as_list_type(df, return_type)
 
