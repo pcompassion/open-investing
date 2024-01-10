@@ -26,11 +26,13 @@ class TaskDispatcher(ABC):
         pass
 
     @abstractmethod
-    def subscribe(self, event_spec: EventSpec, listener_spec: ListenerSpec | Callable):
+    async def subscribe(
+        self, event_spec: EventSpec, listener_spec: ListenerSpec | Callable
+    ):
         pass
 
     @abstractmethod
-    def unsubscribe(
+    async def unsubscribe(
         self, event_spec: EventSpec, listener_spec: ListenerSpec | Callable
     ):
         pass

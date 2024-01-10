@@ -27,23 +27,18 @@ class TaskManager:
         self.command_queue = asyncio.Queue()
         self.service_locator = service_locator
 
-    def subscribe(self, task_spec, listener):
-        # task_spec_h = Hashabledict(task_spec)
-        task_spec_h = task_spec
-
-        if listener not in self.listeners[task_spec_h]:
-            self.listeners[task_spec].append(listener)
+    def subscribe(self, event_spec, listener):
+        if listener not in self.listeners[event_spec]:
+            self.listeners[event_spec].append(listener)
 
     def subscribe_all(self, listener):
         if listener not in self.broadcast_listeners:
             self.broadcast_listeners.append(listener)
 
     async def notify_listeners(self, message):
-        task_spec = message["task_spec"]
-        # task_spec_h = Hashabledict(task_spec)
-        task_spec_h = task_spec
+        event_spec = message["event_spec"]
 
-        listeners = self.listeners[task_spec_h]
+        listeners = self.listeners[event_spec]
 
         for listener in listeners:
             await listener(message)

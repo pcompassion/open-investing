@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.event_spec.event_spec import EventSpec
 from open_investing.task_spec.task_spec import TaskSpec
 import json
 from open_investing.task.task_manager import TaskManager
@@ -41,14 +42,14 @@ class RedisTaskReceiver:
                 )
 
     async def notify_listeners(self, message):
-        task_spec_ = message["task_spec"]
+        event_spec_ = message["event_spec"]
 
-        if isinstance(task_spec_, TaskSpec):
-            task_spec = task_spec_.model_dump()
+        if isinstance(event_spec_, EventSpec):
+            event_spec = event_spec_.model_dump()
         else:
-            task_spec = task_spec_
+            event_spec = event_spec_
 
-        message_updated = message | {"task_spec": task_spec}
+        message_updated = message | {"event_spec": event_spec}
 
         try:
             await self.redis_client.publish(

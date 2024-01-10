@@ -31,7 +31,7 @@ class MarketEventSpec(TaskSpec):
     # source_type: MarketEventSourceType = MarketEventSourceType.EXCHANGE
 
     def __str__(self):
-        return f"{self.event_type} : {self.cron_time} {self.data}"
+        return f"{self.spec_type_name} : {self.cron_time} {self.data}"
 
     def __eq__(self, other):
         if isinstance(other, MarketEventSpec):
