@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from open_investing.event_spec.event_spec import OrderEventSpec
 from typing import ClassVar
 from open_investing.task_spec.order.order import OrderAgent, OrderSpec
 from open_investing.order.const.order import OrderCommandName, OrderEventName
@@ -35,7 +36,9 @@ class CancelRemainingOrderAgent(OrderAgent):
 
                 cancel_quantity = order_spec.cancel_quantity
 
-                order_event_broker.subscribe(order.id, self.enqueue_order_event)
+                order_event_spec = OrderEventSpec(order_id=order_id)
+
+                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
 
                 await self.order_service.cancel_order_quantity(
                     order, exchange_manager, cancel_quantity

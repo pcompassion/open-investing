@@ -18,11 +18,9 @@ from uuid import UUID
 class StrategySpec(TaskSpec):
     strategy_session_id: UUID
 
-    def __hash__(self):
-        attrs_hash = map(hash, (self.spec_type_name, self.strategy_session_id))
-        data_items_hash = map(hash, tuple(self.data.items()))
-        combined_hashes = itertools.chain(attrs_hash, data_items_hash)
-        return functools.reduce(operator.xor, combined_hashes, 0)
+    @property
+    def hash_keys(self):
+        return super().hash_keys + ["spec_type_name", "strategy_session_id"]
 
     @property
     def strategy_name(self):

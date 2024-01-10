@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import operator
+import functools
+import itertools
 from abc import ABC, abstractmethod
 from typing import ClassVar, Dict, List, Optional, Type, Union
 
@@ -8,13 +11,12 @@ from open_library.time.const import TimeUnit
 from pydantic import BaseModel, root_validator, ValidationError
 from open_investing.task.task import Task
 from open_library.locator.service_locator import ServiceKey
+from open_library.base_spec.base_spec import BaseSpec
+from open_investing.event_spec.event_spec import EventSpec
 
 
 # Base TaskSpec class
-class TaskSpec(BaseModel):
-    spec_type_name_classvar: ClassVar[str]
-
-    spec_type_name: str = ""
+class TaskSpec(EventSpec):
     cron_time: str | None = None
     data: dict[str, Union[str, int, float]] = {}
     service_keys: dict[str, ServiceKey] = {}
@@ -22,8 +24,20 @@ class TaskSpec(BaseModel):
     # provide default value
     default_service_keys: ClassVar[dict[str, ServiceKey]] = {}
 
+    @property
+    def hash_keys(self):
+        return ["spec_type_name", "cron_time"]
+
     def __hash__(self):
-        return hash((type(self),) + tuple(sorted(self.__dict__.items())))
+        # Get the base class hash
+        base_hash = super().__hash__()
+
+        # Hash subclass-specific attributes
+        data_items_hash = map(hash, tuple(self.data.items()))
+
+        # Combine all hashes
+        combined_hashes = itertools.chain([base_hash], data_items_hash)
+        return functools.reduce(operator.xor, combined_hashes, 0)
 
     def estimated_interval(self, time_unit: TimeUnit = TimeUnit.SECOND):
         if self.cron_time:

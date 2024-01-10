@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+from typing import Callable
+from open_library.observe.listener_spec import ListenerSpec
+from open_investing.event_spec.event_spec import EventSpec
+from open_library.observe.pubsub_broker import PubsubBroker
 from functools import singledispatchmethod
 from redis import asyncio as aioredis
 import asyncio
@@ -23,6 +27,10 @@ class RedisTaskDispatcher(TaskDispatcher):
         self.channel_name = channel_name
         self.redis_client = redis_client
         self.listening_task = None
+        self.pubsub_broker = PubsubBroker()  # for notifying listeners
+
+    async def init(self):
+        self.pubsub_task = asyncio.create_task(self.pubsub_broker.run())
 
     @singledispatchmethod
     async def dispatch_task(self, task_spec, command):
@@ -41,40 +49,24 @@ class RedisTaskDispatcher(TaskDispatcher):
         await self.redis_client.rpush("task_queue", task_info_json)
 
     @singledispatchmethod
-    def subscribe(self, task_spec, listener, listener_type=ListenerType.Callable):
+    def subscribe(self, event_spec: EventSpec, listener_spec: ListenerSpec | Callable):
         raise NotImplementedError
 
-    @subscribe.register(TaskSpec)
-    def _(self, task_spec: TaskSpec, listener, listener_type=ListenerType.Callable):
-        self.subscribe(task_spec.model_dump(), listener, listener_type)
+    @subscribe.register
+    def _(self, event_spec: EventSpec, listener_spec):
+        self.subscribe(event_spec.model_dump(), listener_spec)
 
-    @subscribe.register(dict)
-    def _(self, task_spec, listener, listener_type=ListenerType.Callable):
-        # task_spec_h = hashable_json(task_spec)
-        task_spec_h = task_spec["spec_type_name"]
-        listener_pair = (listener, listener_type)
-        if listener_pair not in self.listeners[task_spec_h]:
-            self.listeners[task_spec_h].append(listener_pair)
+    @subscribe.register
+    def _(self, event_spec: dict, listener_spec):
+        self.pubsub_broker.subscribe(event_spec, listener_spec)
+
+    def unsubscribe(
+        self, event_spec: EventSpec, listener_spec: ListenerSpec | Callable
+    ):
+        self.pubsub_broker.unsubscribe(event_spec, listener_spec)
 
     async def notify_listeners(self, message):
-        task_spec = message["task_spec"]
-
-        task_spec_h = task_spec["spec_type_name"]
-
-        # task_spec_h = hashable_json(task_spec)
-
-        listeners = self.listeners[task_spec_h]
-
-        for listener, listener_type in listeners:
-            match listener_type:
-                case ListenerType.Callable:
-                    await listener(task_spec, message)
-                case ListenerType.ChannelGroup:
-                    channel_layer = get_channel_layer()
-                    group_name = listener
-                    await channel_layer.group_send(
-                        group_name, {"type": "task_message", "message": message}
-                    )
+        await self.pubsub_broker.enqueue_message(message)
 
     async def listen_for_task_updates(self):
         while True:

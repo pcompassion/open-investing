@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.event_spec.event_spec import OrderEventSpec
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 
 from open_library.locator.service_locator import ServiceKey
@@ -61,8 +62,9 @@ class LimitOrderAgent(OrderAgent):
         match command.name:
             case OrderCommandName.Open:
                 order_event_broker = self.order_event_broker
+                order_event_spec = OrderEventSpec(order_id=order_id)
 
-                order_event_broker.subscribe(order.id, self.enqueue_order_event)
+                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
 
                 await self.order_service.open_order(order, exchange_manager)
             case OrderCommandName.CancelRemaining:

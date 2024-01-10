@@ -63,12 +63,12 @@ class MarketOrderAgent(OrderAgent):
                 order_event_broker = self.order_event_broker
 
                 order_event_spec = OrderEventSpec(order_id=order_id)
-                listener_spec = ListenerSpec(
-                    listener_type=ListenerType.Callable,
-                    listener_or_name=self.enqueue_order_event,
-                )
+                # listener_spec = ListenerSpec(
+                #     listener_type=ListenerType.Callable,
+                #     listener_or_name=self.enqueue_order_event,
+                # )
 
-                order_event_broker.subscribe(order_event_spec, listener_spec)
+                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
 
                 await self.order_service.open_order(order, exchange_manager)
             case OrderCommandName.CancelRemaining:

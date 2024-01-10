@@ -38,7 +38,7 @@ class App(BaseApp):
 
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
-        self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
+        self.task_dispatcher = None
 
         self.tasks = []
 
@@ -69,6 +69,9 @@ class App(BaseApp):
         """initialize app"""
         self.setup_logging()
         self.setup_django()
+
+        self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
+        await self.task_dispatcher.init()
 
         self.setup_default_service_keys()
         await self.setup_service_manager()
