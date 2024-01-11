@@ -10,6 +10,7 @@ from open_investing.strategy.models.decision import Decision
 from open_library.locator.service_locator import ServiceKey
 from typing import ClassVar
 from open_investing.task_spec.decision.decison import DecisionSpec, DecisionHandler
+from open_investing.order.const.order import OrderEventName
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         super().__init__(decision_spec)
 
         self.open_decisions: list[Decision] = []
+        self.cancel_events = {}
 
         self.tasks = dict(
             run_strategy=Task("run_decision", self.run_decision()),
@@ -95,3 +97,52 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         self.running = True
         for k, task in self.tasks.items():
             await task.start()
+
+    async def on_order_event(self, order_info):
+        order_event = order_info["event"]
+        logger.info(f"on_order_event: {order_event}")
+
+        order = order_info["order"]
+
+        event_name = order_event.name
+
+        match event_name:
+            case OrderEventName.Filled:
+                # order is filled, do something
+
+                if order.security_code != self.decision_spec.leader_security_code:
+                    return
+
+                fill_quantity = order_event.data["fill_quantity"]
+
+                quantity = fill_quantity * self.decision_spec.leader_follower_ratio
+
+                order_spec_dict = self.base_spec_dict | dict(
+                    spec_type_name="order.market",
+                    security_code=self.decision_spec.follower_security_code,
+                    quantity=quantity,
+                    order_id=None,
+                    parent_order_id=None,
+                )
+
+                order_command = OrderTaskCommand(
+                    name="command",
+                    order_command=OrderCommand(name=OrderCommandName.Open),
+                )
+                order_task_dispatcher = self.order_task_dispatcher
+
+                await order_task_dispatcher.dispatch_task(
+                    order_spec_dict, order_command
+                )
+
+            case OrderEventName.CancelSuccess:
+                order_id = order.id
+
+                event = self.cancel_events.get(order_id)
+                if event:
+                    event.set()
+                    del self.cancel_events[event]
+            case _:
+                pass
+
+        pass

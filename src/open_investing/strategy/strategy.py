@@ -69,3 +69,47 @@ class Strategy(TaskSpecHandler):
 
         data_manager = self.services[service_key]
         return data_manager
+
+    @property
+    def market_indicator_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Indicator.MarketIndicator"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager
+
+    @property
+    def nearby_future_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Security.NearbyFuture"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager
+
+    @property
+    def future_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Security.Future"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager
+
+    @property
+    def option_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Security.Option"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager

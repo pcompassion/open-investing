@@ -17,6 +17,7 @@ class EbestUrl:
     option_order: str = "/futureoption/order"
 
     market_indicator: str = "/indtp/market-data"
+    market_indicator_chart: str = "/indtp/chart"
 
     def __init__(self):
         self.base_url: str = "https://openapi.ebestsec.co.kr:8080"

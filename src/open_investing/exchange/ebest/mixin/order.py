@@ -78,7 +78,7 @@ class OrderMixin:
                 security_code = data["expcode"]
                 exchange_order_id = data["ordno"]
 
-                order = await order_data_manager.get(
+                order = await self.order_data_manager.get(
                     exchange_order_id=exchange_order_id
                 )
 
@@ -87,6 +87,7 @@ class OrderMixin:
                 )
 
                 data = dict(
+                    security_code=security_code,
                     fill_quantity=data["chevol"],
                     fill_price=data["cheprice"],
                     date_at=combine(data["chedate"], data["chetime"]),

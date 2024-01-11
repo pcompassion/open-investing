@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+import datetime
 from enum import Enum, auto
 import calendar
 from pendulum import time
@@ -68,6 +69,7 @@ class DerivativeCode:
         self.year = expire_at.year
         self.month = expire_at.month
         self.expire_at = expire_at
+
         self.strike_price = strike_price
         self.price = price
 
@@ -165,7 +167,9 @@ class DerivativeCode:
         return pd.Series([code.name, int(code.strike_price)])
 
     @classmethod
-    def get_fields(cls, code_str, field_names):
+    def get_fields(
+        cls, code_str, field_names, date_at: datetime.datetime | None = None
+    ):
         code = cls.from_string(code_str)
 
         l = []
@@ -178,6 +182,11 @@ class DerivativeCode:
                     l.append(float(code.strike_price))
                 case "expire_at":
                     l.append(code.expire_at_str)
+                case "time_to_maturity":
+                    l.append(
+                        (code.expire_at - date_at).total_seconds()
+                        / (365 * 24 * 60 * 60)
+                    )
                 case _:
                     l.append(getattr(code, field_name))
 

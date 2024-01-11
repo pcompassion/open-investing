@@ -97,7 +97,19 @@ class EbestApiData:
             "field_name_map": {
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
+            "f_data_block_name": "{tr_code}OutBlock1",
             "request_per_second": 1,
+        },
+        "t8418": {
+            "body": {
+                "ncnt": 0,
+                "comp_yn": "N",
+                "cts_date": "" * 8,
+                "cts_time": "" * 10,
+            },
+            "page_key_names": ["cts_time", "cts_date"],
+            "f_data_block_name": "{tr_code}OutBlock1",
+            "api_path": EbestUrl.market_indicator_chart,
         },
         "t8432": {
             "body": {

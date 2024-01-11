@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_library.data.conversion import ListDataType, as_list_type
 from open_library.time.datetime import now_local
 from open_investing.indicator.models import MarketIndicator
 import pendulum
@@ -11,7 +12,7 @@ class MarketIndicatorDataManager:
     service_key = ServiceKey(
         service_type="data_manager",
         service_name="database",
-        params={"model": "MarketIndicator"},
+        params={"model": "Indicator.MarketIndicator"},
     )
 
     def initialize(self, environment):
@@ -31,3 +32,10 @@ class MarketIndicatorDataManager:
             .order_by("date_at")
             .alast()
         )
+
+    async def market_indicators(
+        self, filter_params: dict, return_type: ListDataType = ListDataType.Dataframe
+    ):
+        qs = MarketIndicator.objects.filter(**filter_params).order_by("date_at")
+
+        return await as_list_type(qs, data_type=return_type)
