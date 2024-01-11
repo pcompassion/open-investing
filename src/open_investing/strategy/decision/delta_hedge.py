@@ -39,6 +39,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         self.tasks = dict(
             run_strategy=Task("run_decision", self.run_decision()),
         )
+        self.strategy_session_id = self.decision_spec.strategy_session_id
 
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
@@ -53,35 +54,42 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
         command = decision_info["command"]
 
-        if command.name == DecisionCommandName.Start:
-            await decision_data_manager.set_started(decision)
+        match command.name:
+            case DecisionCommandName.Start:
+                await decision_data_manager.set_started(decision)
 
-            # for test
-            # order_spec_dict = self.base_spec_dict | dict(
-            #     spec_type_name="order.best_market_iceberg",
-            #     time_interval_second=10,
-            #     split=5,
-            #     security_code=self.decision_spec.leader_security_code,
-            #     quantity=self.decision_spec.leader_quantity,
-            #     order_id=None,
-            #     parent_order_id=None,
-            # )
-            order_spec_dict = self.base_spec_dict | dict(
-                spec_type_name="order.best_limit_iceberg",
-                max_tick_diff=5,
-                tick_size=0.25,
-                security_code=self.decision_spec.leader_security_code,
-                quantity=self.decision_spec.leader_quantity,
-                order_id=None,
-                parent_order_id=None,
-            )
+                # for test
+                # order_spec_dict = self.base_spec_dict | dict(
+                #     spec_type_name="order.best_market_iceberg",
+                #     time_interval_second=10,
+                #     split=5,
+                #     security_code=self.decision_spec.leader_security_code,
+                #     quantity=self.decision_spec.leader_quantity,
+                #     order_id=None,
+                #     parent_order_id=None,
+                # )
+                order_spec_dict = self.base_spec_dict | dict(
+                    spec_type_name="order.best_limit_iceberg",
+                    max_tick_diff=5,
+                    tick_size=0.25,
+                    security_code=self.decision_spec.leader_security_code,
+                    quantity=self.decision_spec.leader_quantity,
+                    order_id=None,
+                    parent_order_id=None,
+                )
 
-            order_command = OrderTaskCommand(
-                name="command", order_command=OrderCommand(name=OrderCommandName.Open)
-            )
+                order_command = OrderTaskCommand(
+                    name="command",
+                    order_command=OrderCommand(name=OrderCommandName.Open),
+                )
 
-            await order_task_dispatcher.dispatch_task(order_spec_dict, order_command)
-            logger.info("on_decision ended")
+                await order_task_dispatcher.dispatch_task(
+                    order_spec_dict, order_command
+                )
+                logger.info("on_decision ended")
+            case DecisionCommandName.Close:
+                # TODO: close all orders for strategy_session
+                pass
 
     async def run_decision(self):
         while True:
@@ -104,36 +112,47 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
         order = order_info["order"]
 
+        if order.strategy_session_id != self.strategy_session_id:
+            return
+
         event_name = order_event.name
 
         match event_name:
             case OrderEventName.Filled:
-                # order is filled, do something
-
-                if order.security_code != self.decision_spec.leader_security_code:
-                    return
-
+                # TODO: better check tighter condition
                 fill_quantity = order_event.data["fill_quantity"]
 
-                quantity = fill_quantity * self.decision_spec.leader_follower_ratio
+                if order.security_code == self.decision_spec.leader_security_code:
+                    quantity = fill_quantity * self.decision_spec.leader_follower_ratio
 
-                order_spec_dict = self.base_spec_dict | dict(
-                    spec_type_name="order.market",
-                    security_code=self.decision_spec.follower_security_code,
-                    quantity=quantity,
-                    order_id=None,
-                    parent_order_id=None,
-                )
+                    order_spec_dict = self.base_spec_dict | dict(
+                        spec_type_name="order.market",
+                        security_code=self.decision_spec.follower_security_code,
+                        quantity=quantity,
+                        order_id=None,
+                        parent_order_id=None,
+                    )
 
-                order_command = OrderTaskCommand(
-                    name="command",
-                    order_command=OrderCommand(name=OrderCommandName.Open),
-                )
-                order_task_dispatcher = self.order_task_dispatcher
+                    order_command = OrderTaskCommand(
+                        name="command",
+                        order_command=OrderCommand(name=OrderCommandName.Open),
+                    )
+                    order_task_dispatcher = self.order_task_dispatcher
 
-                await order_task_dispatcher.dispatch_task(
-                    order_spec_dict, order_command
-                )
+                    await order_task_dispatcher.dispatch_task(
+                        order_spec_dict, order_command
+                    )
+
+                elif order.security_code == self.decision_spec.follower_security_code:
+                    decision_fill_quantity = (
+                        fill_quantity / self.decision_spec.leader_follower_ratio
+                    )
+
+                    # actually decision filled
+
+                    order.decision.update_fill(decision_fill_quantity)
+                    # TODO: save decision
+                    # if fully filled, mark it
 
             case OrderEventName.CancelSuccess:
                 order_id = order.id

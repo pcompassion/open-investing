@@ -112,8 +112,13 @@ class OrderDataManager:
             case OrderType.BestMarketIceberg:
                 composite_order.update_fill(fill_quantity, fill_price)
                 # decision = composite_order.decision
+            case OrderType.BestLimitIceberg:
+                composite_order.update_fill(fill_quantity, fill_price)
+
             case _:
                 pass
+
+        await self.save(composite_order, save_params={})
 
     async def handle_cancel_success_event_for_composite_order(
         self, event_params: dict, order, composite_order

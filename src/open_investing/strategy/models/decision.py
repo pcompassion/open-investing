@@ -35,4 +35,7 @@ class Decision(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # self.life_stage = DecisionLifeStage.Unopened
+    def update_fill(self, fill_quantity):
+        # Update total cost and filled quantity
+
+        self.filled_quantity += fill_quantity
