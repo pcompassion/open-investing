@@ -3,6 +3,7 @@
 
 import uuid
 from django.db import models
+from open_investing.order.const.order import OrderLifeStage
 
 
 class CompositeOrder(models.Model):
@@ -16,6 +17,9 @@ class CompositeOrder(models.Model):
     )
     decision = models.ForeignKey(
         "strategy.Decision", on_delete=models.CASCADE, blank=True, null=True
+    )
+    life_stage = models.CharField(
+        max_length=32, blank=True, default=OrderLifeStage.Undefined
     )
 
     quantity = models.FloatField(default=0)
@@ -40,6 +44,8 @@ class CompositeOrder(models.Model):
         # Update average fill price
         if self.filled_quantity > 0:
             self.average_fill_price = self.total_cost / self.filled_quantity
+        if self.life_stage == OrderLifeStage.Undefined:
+            self.life_stage = OrderLifeStage.Opened
 
     def subtract_quantity(self, quantity):
         self.quantity -= quantity

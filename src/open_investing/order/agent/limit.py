@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class LimitOrderSpec(OrderSpec):
-    spec_type_name_classvar: ClassVar[str] = "order.limit_order"
+    spec_type_name_classvar: ClassVar[str] = OrderType.Limit
     spec_type_name: str = spec_type_name_classvar
 
 
@@ -50,7 +50,7 @@ class LimitOrderAgent(OrderAgent):
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
-                    side=OrderSide.Buy,
+                    side=order_spec.order_side,
                     parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,
                     price=order_spec.price,

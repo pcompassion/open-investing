@@ -9,8 +9,18 @@ class DecisionLifeStage(str, Enum):
 
     Started = "started"
     Opened = "opened"
+    Fullfilled = "fullfilled"
 
+    Closing = "closing"
     Closed = "closed"
+
+    @property
+    def is_active(self):
+        return self in [self.Decided, self.Started, self.Opened]
+
+    @property
+    def started_closing(self):
+        return self in [self.Closing, self.Closed]
 
 
 class DecisionCommandName(str, Enum):

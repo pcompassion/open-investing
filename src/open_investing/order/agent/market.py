@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class MarketOrderSpec(OrderSpec):
-    spec_type_name_classvar: ClassVar[str] = "order.market_order"
+    spec_type_name_classvar: ClassVar[str] = OrderType.Market
     spec_type_name: str = spec_type_name_classvar
 
 
@@ -50,14 +50,14 @@ class MarketOrderAgent(OrderAgent):
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
-                    side=OrderSide.Buy,
+                    side=order_spec.side,
                     parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,
                 )
             )
 
         command = order_info["command"]
-
+        order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
         match command.name:
             case OrderCommandName.Open:
                 order_event_broker = self.order_event_broker
@@ -68,11 +68,24 @@ class MarketOrderAgent(OrderAgent):
                 #     listener_or_name=self.enqueue_order_event,
                 # )
 
-                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
-
                 await self.order_service.open_order(order, exchange_manager)
             case OrderCommandName.CancelRemaining:
                 await self.order_service.cancel_remaining_order(order, exchange_manager)
+
+            case OrderCommandName.Close:
+                # TODO maybe need to do something for market order as well
+
+                close_order = await order_data_manager.prepare_order(
+                    params=dict(
+                        quantity=order.filled_quantity,
+                        order_type=self.order_type,
+                        security_code=order_spec.security_code,
+                        side=OrderSide(order.side).opposite,
+                        parent_order_id=order_spec.parent_order_id,
+                        order_price_type=self.order_price_type,
+                    )
+                )
+                await self.order_service.close_order(order, exchange_manager)
 
     async def on_order_event(self, order_info):
         order_event = order_info["event"]

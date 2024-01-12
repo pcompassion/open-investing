@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+from open_investing.order.const.order import OrderSide
 import uuid
+from open_investing.order.const.order import OrderLifeStage
 from django.db import models
 
 
@@ -18,7 +20,9 @@ class Order(models.Model):
     security_code = models.CharField(max_length=32, blank=True)
     side = models.CharField(max_length=32, blank=True)
 
-    status = models.CharField(max_length=32, blank=True)
+    life_stage = models.CharField(
+        max_length=32, blank=True, default=OrderLifeStage.Undefined
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     date_at = models.DateTimeField(null=True)
@@ -55,6 +59,9 @@ class Order(models.Model):
         if self.filled_quantity > 0:
             self.average_fill_price = self.total_cost / self.filled_quantity
 
+        if self.life_stage == OrderLifeStage.Undefined:
+            self.life_stage = OrderLifeStage.Opened
+
     def calculate_roi(self, current_price):
         """
         Calculates the return on investment (ROI) based on the current price.
@@ -72,6 +79,17 @@ class Order(models.Model):
 
     def subtract_quantity(self, quantity):
         self.quantity -= quantity
+
+    def calculate_pnl(self, current_price):
+        if self.filled_quantity == 0:
+            return 0
+
+        current_value = current_price * self.filled_quantity
+
+        if self.side == OrderSide.Buy:
+            return current_value - self.total_cost
+        elif self.side == OrderSide.Sell:
+            return self.total_cost - current_value
 
 
 class Trade(models.Model):

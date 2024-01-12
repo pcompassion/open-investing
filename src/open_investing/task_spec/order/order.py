@@ -8,7 +8,7 @@ import asyncio
 from typing import ClassVar, Type, cast
 from typing import Generic, TypeVar
 
-from open_investing.order.const.order import OrderCommandName
+from open_investing.order.const.order import OrderCommandName, OrderSide
 from open_investing.task.task_command import TaskCommand, SubCommand
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 from open_library.locator.service_locator import ServiceKey
@@ -22,6 +22,7 @@ class OrderSpec(TaskSpec):
 
     # non hashed
     decision_id: UUID
+    order_side: OrderSide
     order_id: UUID | None
     parent_order_id: str | None = None
     price: float | None = None

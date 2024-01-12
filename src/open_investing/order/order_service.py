@@ -125,6 +125,16 @@ class OrderService:
         self.running_tasks.add(task)
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
+    async def close_order(self, order, exchange_manager):
+        task = asyncio.create_task(self._close_order(order, exchange_manager))
+
+        self.running_tasks.add(task)
+        task.add_done_callback(lambda t: self.running_tasks.remove(t))
+
+    async def _close_order(self, order, exchange_manager):
+        # TODO: maybe do something other than open_order
+        return await self._open_order(order, exchange_manager)
+
     async def _cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
         order_data_manager = self.order_data_manager
         exchange_manager = self.exchange_manager

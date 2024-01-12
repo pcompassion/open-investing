@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
+from open_library.data.conversion import ListDataType
 from open_investing.task.task import Task
-from open_investing.strategy.const.decision import DecisionCommandName
+from open_investing.strategy.const.decision import (
+    DecisionCommandName,
+    DecisionLifeStage,
+)
 from open_investing.task_spec.order.order import OrderCommand, OrderTaskCommand
 from open_investing.task.task_command import SubCommand, TaskCommand
-from open_investing.order.const.order import OrderCommandName
+from open_investing.order.const.order import OrderCommandName, OrderSide, OrderType
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 import asyncio
 from open_investing.strategy.models.decision import Decision
@@ -69,9 +73,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 #     parent_order_id=None,
                 # )
                 order_spec_dict = self.base_spec_dict | dict(
-                    spec_type_name="order.best_limit_iceberg",
+                    spec_type_name=OrderType.BestLimitIceberg,
                     max_tick_diff=5,
                     tick_size=0.25,
+                    order_side=OrderSide.Sell,
                     security_code=self.decision_spec.leader_security_code,
                     quantity=self.decision_spec.leader_quantity,
                     order_id=None,
@@ -88,8 +93,44 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 )
                 logger.info("on_decision ended")
             case DecisionCommandName.Close:
-                # TODO: close all orders for strategy_session
-                pass
+                # TODO: close all orders
+                # maybe keep ongoing_orders to avoid db read
+
+                # TODO: should close remaining as well
+                # TODO: should stop all active order tasks
+                order_command = OrderTaskCommand(
+                    name="command",
+                    order_command=OrderCommand(name=OrderCommandName.Close),
+                )
+
+                order_data_manager = self.order_data_manager
+                orders_single = await order_data_manager.filter(
+                    filter_params=dict(strategy_session_id=self.strategy_session_id),
+                    return_type=ListDataType.List,
+                )
+                orders_composite = await order_data_manager.filter(
+                    filter_params=dict(
+                        strategy_session_id=self.strategy_session_id,
+                        order_type=OrderType.BestLimitIceberg,
+                    ),
+                    return_type=ListDataType.List,
+                )
+
+                orders = orders_single + orders_composite
+
+                for order in orders:
+                    order_spec_dict = self.base_spec_dict | dict(
+                        spec_type_name=order.order_type,
+                        strategy_name=order.strategy_session.strategy_name,
+                        strategy_session_id=order.strategy_session_id,
+                        order_id=order.id,
+                        order_side=OrderSide(order.side).opposite,
+                        parent_order_id=None,
+                    )
+
+                    await order_task_dispatcher.dispatch_task(
+                        order_spec_dict, order_command
+                    )
 
     async def run_decision(self):
         while True:
@@ -126,9 +167,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     quantity = fill_quantity * self.decision_spec.leader_follower_ratio
 
                     order_spec_dict = self.base_spec_dict | dict(
-                        spec_type_name="order.market",
+                        spec_type_name=OrderType.Market,
                         security_code=self.decision_spec.follower_security_code,
                         quantity=quantity,
+                        order_side=OrderSide.Sell,
                         order_id=None,
                         parent_order_id=None,
                     )
@@ -150,9 +192,16 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                     # actually decision filled
 
-                    order.decision.update_fill(decision_fill_quantity)
-                    # TODO: save decision
-                    # if fully filled, mark it
+                    decision = order.decision
+                    decision.update_fill(decision_fill_quantity)
+
+                    # TODO: maybe notify/update strategy
+
+                    save_params = {}
+                    if decision.is_fullfilled():
+                        save_params["life_stage"] = DecisionLifeStage.Fullfilled
+                    decision_data_manager = self.decision_data_manager
+                    await decision_data_manager.save(decision, save_params=save_params)
 
             case OrderEventName.CancelSuccess:
                 order_id = order.id

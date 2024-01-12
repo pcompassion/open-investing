@@ -39,3 +39,6 @@ class Decision(models.Model):
         # Update total cost and filled quantity
 
         self.filled_quantity += fill_quantity
+
+    def is_fullfilled(self):
+        return self.filled_quantity >= self.quantity

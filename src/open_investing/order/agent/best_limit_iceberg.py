@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class BestLimitIcebergOrderSpec(OrderSpec):
-    spec_type_name_classvar: ClassVar[str] = "order.best_limit_iceberg"
+    spec_type_name_classvar: ClassVar[str] = OrderType.BestLimitIceberg
     spec_type_name: str = spec_type_name_classvar
 
     max_tick_diff: int
@@ -69,6 +69,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.cancel_events = {}
         self.run_order_task = None
+        self.close_order_task = None
 
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
@@ -76,10 +77,14 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.quote = None
         self.composite_order = None
         self.filled_quantity = None
+        self.order_command_queue = (
+            asyncio.Queue()
+        )  # TODO: may need speparate order_command_queue for tasks
 
-    async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
+    async def run_order(self, order_spec, order):
         order_data_manager = self.order_data_manager
         order_event_broker = self.order_event_broker
+        order_task_dispatcher = self.order_task_dispatcher
 
         self.composite_order = order
         max_tick_diff = order_spec.max_tick_diff
@@ -94,9 +99,15 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         listener_spec = None
 
         while self.filled_quantity < quantity:
-            if not command_queue.empty():
-                command = await command_queue.get()
+            # TODO: probably need tighter check
+            remaining_quantity = quantity - self.filled_quantity
+
+            if not self.order_command_queue.empty():
+                command = await self.order_command_queue.get()
                 if command == "STOP":
+                    await self.cancel_remaining(
+                        order_id, security_code, remaining_quantity
+                    )
                     break
 
             try:
@@ -107,8 +118,6 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 raise e
                 # shouldn't happen
 
-            remaining_quantity = quantity - self.filled_quantity
-
             if self.quote is not None:
                 price_diff = price - self.quote.bid_price_1
 
@@ -116,35 +125,11 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 if tick_diff > max_tick_diff:
                     self.quote = recent_quote
-
-                    command = OrderTaskCommand(
-                        name="command",
-                        order_command=OrderCommand(name=OrderCommandName.Start),
+                    await self.cancel_remaining(
+                        order_id,
+                        security_code,
+                        remaining_quantity,
                     )
-
-                    cancel_event = asyncio.Event()
-
-                    self.cancel_events[order_id] = cancel_event
-
-                    cancel_order_spec_dict = self.base_spec_dict | {
-                        "spec_type_name": "order.cancel_remaining",
-                        "cancel_quantity": remaining_quantity,
-                        "order_id": order_id,
-                        "security_code": security_code,
-                    }
-
-                    await order_task_dispatcher.dispatch_task(
-                        cancel_order_spec_dict, command
-                    )
-
-                    try:
-                        await asyncio.wait_for(cancel_event.wait(), timeout=10)
-                        self.order_event_broker.unsubscribe(
-                            order_event_spec, listener_spec
-                        )
-
-                    except asyncio.TimeoutError:
-                        logger.warning(f"cancel order timed out {order_id}")
 
             remaining_quantity = quantity - self.filled_quantity
 
@@ -160,9 +145,10 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             self.order_event_broker.subscribe(order_event_spec, listener_spec)
 
             order_spec_dict = self.base_spec_dict | {
-                "spec_type_name": "order.limit_order",
+                "spec_type_name": OrderType.Limit,
                 # "quantity": quantity_partial,
                 # TODO: quantity type
+                "order_side": order_spec.order_side,
                 "quantity": int(remaining_quantity),
                 "order_id": order_id,
                 "security_code": security_code,
@@ -176,6 +162,40 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             order_task_dispatcher = self.order_task_dispatcher
             await order_task_dispatcher.dispatch_task(order_spec_dict, command)
 
+    async def cancel_remaining(self, order_id, security_code, cancel_quantity):
+        order_task_dispatcher = self.order_task_dispatcher
+
+        command = OrderTaskCommand(
+            name="command",
+            order_command=OrderCommand(name=OrderCommandName.Start),
+        )
+
+        cancel_event = asyncio.Event()
+
+        self.cancel_events[order_id] = cancel_event
+
+        cancel_order_spec_dict = self.base_spec_dict | {
+            "spec_type_name": "order.cancel_remaining",
+            "cancel_quantity": cancel_quantity,
+            "order_id": order_id,
+            "security_code": security_code,
+        }
+
+        await order_task_dispatcher.dispatch_task(cancel_order_spec_dict, command)
+
+        order_event_spec = OrderEventSpec(order_id=order_id)
+        listener_spec = ListenerSpec(
+            listener_type=ListenerType.Callable,
+            listener_or_name=self.enqueue_order_event,
+        )
+
+        try:
+            await asyncio.wait_for(cancel_event.wait(), timeout=10)
+            self.order_event_broker.unsubscribe(order_event_spec, listener_spec)
+
+        except asyncio.TimeoutError:
+            logger.warning(f"cancel order timed out {order_id}")
+
     async def on_order_event(self, order_info):
         order_event_spec = order_info["event_spec"]
         logger.info(f"on_order_event: {order_event_spec}")
@@ -188,7 +208,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             case OrderEventName.Filled:
                 # order is filled, do something
 
-                order = await order_data_manager.get(
+                order = await self.order_data_manager.get(
                     filter_params=dict(id=self.composite_order.id)
                 )
                 self.filled_quantity = order.filled_quantity
@@ -230,9 +250,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     order_type=self.order_type,
                     strategy_session_id=strategy_session_id,
                     decision_id=decision_id,
+                    side=order_spec.order_side,
                     data=dict(
                         security_code=order_spec.security_code,
-                        side=OrderSide.Buy,
                         max_tick_diff=order_spec.max_tick_diff,
                         tick_size=order_spec.tick_size,
                     ),
@@ -242,34 +262,42 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         command = order_info["command"]
 
-        if command.name == OrderCommandName.Open:
-            if self.run_order_task:
-                logger.warning("already running order task")
-                return
+        quote_event_spec = QuoteEventSpec(security_code=order_spec.security_code)
+        listener_spec = ListenerSpec(
+            listener_type=ListenerType.Callable,
+            listener_or_name=self.enqueue_quote_event,
+        )
 
-            quote_event_spec = QuoteEventSpec(security_code=order_spec.security_code)
-            listener_spec = ListenerSpec(
-                listener_type=ListenerType.Callable,
-                listener_or_name=self.enqueue_quote_event,
-            )
+        self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
 
-            self.quote_event_broker.subscribe(quote_event_spec, listener_spec)
+        listener_spec = ListenerSpec(
+            service_key=ServiceKey(
+                service_type="pubsub_broker",
+                service_name="quote_event_broker",
+            ),
+            listener_type=ListenerType.Service,
+            listener_or_name="enqueue_message",
+        )
 
-            listener_spec = ListenerSpec(
-                service_key=ServiceKey(
-                    service_type="pubsub_broker",
-                    service_name="quote_event_broker",
-                ),
-                listener_type=ListenerType.Service,
-                listener_or_name="enqueue_message",
-            )
+        await self.quote_service.subscribe_quote(quote_event_spec, listener_spec)
 
-            await self.quote_service.subscribe_quote(quote_event_spec, listener_spec)
+        match command.name:
+            case OrderCommandName.Open:
+                if self.run_order_task:
+                    logger.warning("already running order task")
+                    return
 
-            command_queue = asyncio.Queue()
-            self.run_order_task = asyncio.create_task(
-                self.run_order(order_spec, order, command_queue)
-            )
+                self.run_order_task = asyncio.create_task(
+                    self.run_order(order_spec, order)
+                )
+
+            case OrderCommandName.Close:
+                await self.command_queue.put("STOP")
+                # TODO: place closing orders for existing open orders
+
+                self.close_order_task = asyncio.create_task(
+                    self.run_order(order_spec, order)
+                )
 
     async def on_quote_event(self, event_info):
         event = event_info["event"]

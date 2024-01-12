@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class BestMarketIcebergOrderSpec(OrderSpec):
-    spec_type_name_classvar: ClassVar[str] = "order.best_market_iceberg"
+    spec_type_name_classvar: ClassVar[str] = OrderType.BestMarketIceberg
     spec_type_name: str = spec_type_name_classvar
 
     time_interval_second: float
@@ -111,7 +111,7 @@ class BestMarketIcebergOrderAgent(OrderAgent):
             order_event_broker.subscribe(order_event_spec, listener_spec)
 
             order_spec_dict = self.base_spec_dict | {
-                "spec_type_name": "order.market_order",
+                "spec_type_name": OrderType.Market,
                 # "quantity": quantity_partial,
                 # TODO: quantity type
                 "quantity": int(quantity_partial),
@@ -206,9 +206,9 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                     order_type=self.order_type,
                     strategy_session_id=strategy_session_id,
                     decision_id=decision_id,
+                    side=order_spec.order_side,
                     data=dict(
                         security_code=order_spec.security_code,
-                        side=OrderSide.Buy,
                         time_interval_second=order_spec.time_interval_second,
                         split=order_spec.split,
                     ),

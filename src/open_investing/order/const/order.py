@@ -8,11 +8,15 @@ class OrderType(str, Enum):
     type of orders that are supported
     """
 
-    Market = "market"
-    Limit = "limit"
+    Market = "order.market"
+    Limit = "order.limit"
 
-    BestMarketIceberg = "best_market_iceberg"
-    BestLimitIceberg = "best_limit_iceberg"
+    BestMarketIceberg = "order.best_market_iceberg"
+    BestLimitIceberg = "order.best_limit_iceberg"
+
+    @property
+    def is_single_order(self):
+        return self in [OrderType.Market, OrderType.Limit]
 
 
 SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)
@@ -21,6 +25,15 @@ SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)
 class OrderSide(str, Enum):
     Buy = "buy"
     Sell = "sell"
+
+    @property
+    def opposite(self):
+        if self == OrderSide.Buy:
+            return OrderSide.Sell
+        elif self == OrderSide.Sell:
+            return OrderSide.Buy
+        else:
+            raise ValueError("Invalid OrderSide")
 
 
 class OrderPriceType(str, Enum):
@@ -52,3 +65,17 @@ class OrderEventName(str, Enum):
     Filled = "filled"  # order fill is recorded in db
     CancelSuccess = "cancel_success"  # order cancel is recorded in db
     CancelFailure = "cancel_failure"  # order cancel is recorded in db
+
+
+class OrderCloseReason(str, Enum):
+    TakeProfit = "take_profit"
+    StopLoss = "stop_loss"
+
+
+class OrderLifeStage(str, Enum):
+    Undefined = "undefined"
+    Opened = "opened"
+    Fullfilled = "fullfilled"
+
+    Closing = "closing"
+    Closed = "closed"

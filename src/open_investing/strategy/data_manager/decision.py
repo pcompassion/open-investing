@@ -16,6 +16,23 @@ class DecisionDataManager:
         params={"model": "Strategy.Decision"},
     )
 
+    async def prepare_decision(self, params: dict, save=True):
+        params_updated = to_jsonable_python(params)
+
+        decision = Decision(**params_updated)
+
+        if save:
+            await self.save(decision, {})
+
+        return decision
+
+    async def save(self, decision, save_params: dict):
+        params = to_jsonable_python(save_params)
+        for field, value in params.items():
+            setattr(decision, field, value)
+
+        await decision.asave()
+
     async def make_decision(
         self,
         decision: Decision,

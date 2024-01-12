@@ -87,3 +87,14 @@ class DecisionHandler(Generic[T], TaskSpecHandler):
         await self.command_queue.put(decision_info)
 
     enqueue_command = enqueue_decision_command
+
+    @property
+    def order_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Order.Order"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager

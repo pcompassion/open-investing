@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from uuid import uuid4
 from django.core.exceptions import ObjectDoesNotExist
 
-from open_investing.order.const.order import SINGLE_ORDER_TYPES
 from open_investing.order.models.order import Order, Trade, OrderEventEntry
 from open_investing.order.const.order import OrderEventName
 from open_investing.order.models.composite.composite import CompositeOrder
@@ -35,7 +35,7 @@ class OrderDataManager:
         if params.get("id") is None:
             updated_params = params | {"id": uuid4()}
 
-        if order_type in SINGLE_ORDER_TYPES:
+        if order_type.is_single_order:
             return Order(**updated_params)
         else:
             return CompositeOrder(**updated_params)
@@ -53,7 +53,7 @@ class OrderDataManager:
         order_type = filter_params["order_type"]
 
         try:
-            if order_type in SINGLE_ORDER_TYPES:
+            if order_type.is_single_order:
                 return await Order.objects.aget(**filter_params)
             else:
                 return await CompositeOrder.objects.aget(**filter_params)
@@ -64,7 +64,7 @@ class OrderDataManager:
         parent_order = None
         trade = None
 
-        if order.order_type in SINGLE_ORDER_TYPES:
+        if order.order_type.is_single_order:
             parent_order = order.parent_order
 
         fill_quantity = event_params["fill_quantity"]
@@ -151,7 +151,7 @@ class OrderDataManager:
         trade = None
         event_name = event_params_updated["event_name"]
 
-        if order is not None and order.order_type not in SINGLE_ORDER_TYPES:
+        if order is not None and not order.order_type.is_single_order:
             composite_order = order
             order = None
 
@@ -165,3 +165,18 @@ class OrderDataManager:
         )
 
         return order_event
+
+    async def filter(
+        self,
+        filter_params: dict,
+        field_names: list | None = None,
+        return_type: ListDataType = ListDataType.Dataframe,
+    ) -> ListDataTypeHint:
+        order_type = filter_params.get("order_type", None)
+
+        if order_type is None or order_type.is_single_order:
+            qs = Order.objects.filter(**filter_params)
+        else:
+            qs = CompositeOrder.objects.filter(**filter_params)
+
+        return await as_list_type(qs, return_type, field_names)

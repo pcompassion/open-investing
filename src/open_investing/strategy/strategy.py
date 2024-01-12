@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import cast
+from typing import Generic, TypeVar, cast
 from open_library.locator.service_locator import ServiceKey
 import functools
 import operator
@@ -27,13 +27,16 @@ class StrategySpec(TaskSpec):
         return self.spec_type_name
 
 
-class Strategy(TaskSpecHandler):
+T = TypeVar("T", bound=StrategySpec)
+
+
+class Strategy(Generic[T], TaskSpecHandler):
     def __init__(self, task_spec: StrategySpec) -> None:
         super().__init__(task_spec)
 
     @property
-    def strategy_spec(self) -> StrategySpec:
-        return cast(StrategySpec, self.task_spec)  # convenient
+    def strategy_spec(self) -> T:
+        return cast(T, self.task_spec)  # convenient
 
     @property
     def decision_task_dispatcher(self):
@@ -109,6 +112,17 @@ class Strategy(TaskSpecHandler):
             service_type="data_manager",
             service_name="database",
             params={"model": "Security.Option"},
+        )
+
+        data_manager = self.services[service_key]
+        return data_manager
+
+    @property
+    def order_data_manager(self):
+        service_key = ServiceKey(
+            service_type="data_manager",
+            service_name="database",
+            params={"model": "Order.Order"},
         )
 
         data_manager = self.services[service_key]
