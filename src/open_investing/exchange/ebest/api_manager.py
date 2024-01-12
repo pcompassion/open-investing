@@ -107,7 +107,6 @@ class EbestApiManager(OrderMixin):
             DerivativeCode.from_string(e["shcode"], price=e["recprice"])
             for e in api_response.data[:count]
         ]
-        print("mini_future_codes", mini_future_codes)
 
         mini_future_codes = sorted(mini_future_codes, key=lambda x: x.expire_at)
 
@@ -122,7 +121,6 @@ class EbestApiManager(OrderMixin):
                 exchange_api_code=api_code,
                 timeframe=timedelta(hours=12),
             )
-
             mini_futures_data = await data_manager.save_futures(
                 mini_futures_data, extra_data=extra_data
             )
@@ -303,11 +301,12 @@ class EbestApiManager(OrderMixin):
         api = self.stock_api
         tr_code = "t8432"
         api_response = await api.get_market_data(tr_code)
-        return pd.DataFrame(), api_response
+        # return pd.DataFrame(), api_response
 
         if api_response is None or not api_response.success:
+            logger.warn(f"api error while fetching future list")
             return pd.DataFrame(), api_response
-        logger.info(f"api response raw_data {api_response.raw_data} ")
+        # logger.info(f"api response raw_data {api_response.raw_data} ")
         df = pd.DataFrame(api_response.data)
 
         valid_codes = {code.value for code in DerivativeTypeCode}
@@ -347,7 +346,8 @@ class EbestApiManager(OrderMixin):
         if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
 
-        df = pd.DataFrame(api_response.data)
+        data = api_response.data + api_response.raw_data["t2301OutBlock2"]
+        df = pd.DataFrame(data)
 
         valid_codes = {code.value for code in DerivativeTypeCode}
         mask = df["optcode"].str.startswith(tuple(valid_codes), na=False)

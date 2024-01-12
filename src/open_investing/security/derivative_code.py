@@ -51,6 +51,7 @@ class DerivativeCode:
 
     BASE_YEAR = 2004
     BASE_YEAR_STR = "A"
+    OMITTED_YEAR_STR = "U"
 
     tz = "Asia/Seoul"
 
@@ -129,10 +130,15 @@ class DerivativeCode:
     @property
     def year_str(self):
         year_offset = self.year - self.BASE_YEAR
-        return chr(ord(self.BASE_YEAR_STR) + year_offset)
+        char = chr(ord(self.BASE_YEAR_STR) + year_offset)
+        if char >= self.OMITTED_YEAR_STR:
+            char = chr(ord(char) + 1)  # Skip over the omitted character
+        return char
 
     @classmethod
     def year_from_str(cls, char):
+        if char >= cls.OMITTED_YEAR_STR:
+            char = chr(ord(char) - 1)  # Adjust for the omitted character
         year_offset = ord(char) - ord(cls.BASE_YEAR_STR)
         return cls.BASE_YEAR + year_offset
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_library.time.datetime import now_local
 from asgiref.sync import sync_to_async
 from open_library.pandas.dataframe import serialize_row
 import pandas as pd
@@ -68,12 +69,17 @@ class OptionDataManager:
         FROM option_table
         WHERE date_at = recent_at;
         """
+        now = now_local()
 
-        option_qs = Option.objects.annotate(
-            recent_at=Window(
-                expression=Max("date_at"), partition_by=[F("security_code")]
+        option_qs = (
+            Option.objects.filter(expire_at__gt=now)
+            .annotate(
+                recent_at=Window(
+                    expression=Max("expire_at"), partition_by=[F("security_code")]
+                )
             )
-        ).filter(date_at=F("recent_at"))
+            .filter(expire_at=F("recent_at"))
+        )
 
         if filter_params:
             option_qs = option_qs.filter(**filter_params)

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import pandas as pd
 import pendulum
-from django.db.models import Window, F, Max
+from django.db.models import Window, F, Max, Min
+from asgiref.sync import sync_to_async
 
 from datetime import timedelta
 from open_investing.security.derivative_code import DerivativeCode
@@ -50,18 +51,45 @@ class NearbyFutureDataManager:
         filter_params: dict | None = None,
         return_type: ListDataType = ListDataType.Dataframe,
     ) -> ListDataTypeHint:
+        # TODO: don't need this logic
         filter_params = filter_params or {}
         now = now_local()
 
-        future_qs = NearbyFuture.objects.annotate(
-            recent_at=Window(
-                expression=Max("date_at"), partition_by=[F("security_code")]
+        future_qs = (
+            NearbyFuture.objects.filter(expire_at__gt=now)
+            .annotate(
+                recent_at=Window(
+                    expression=Min("expire_at"), partition_by=[F("security_code")]
+                )
             )
-        ).filter(date_at=F("recent_at"))
+            .filter(expire_at=F("recent_at"))
+            .order_by("expire_at")
+        )
 
-        filter_params_updated = dict(date_at__gt=now - max_time_diff) | filter_params
+        # filter_params_updated = dict(expire_at__gt=now) | filter_params
 
-        if filter_params_updated:
-            future_qs = future_qs.filter(**filter_params_updated)
+        # if filter_params_updated:
+        #     future_qs = future_qs.filter(**filter_params_updated)
 
         return await as_list_type(future_qs, return_type)
+
+    async def nearby_expires(
+        self,
+        filter_params: dict | None = None,
+    ):
+        filter_params = filter_params or {}
+        now = now_local()
+
+        qs = (
+            NearbyFuture.objects.filter(expire_at__gt=now)
+            .values_list("expire_at", flat=True)
+            .order_by("expire_at")
+            .distinct()
+        )
+
+        # filter_params_updated = dict(expire_at__gt=now) | filter_params
+
+        # if filter_params_updated:
+        #     future_qs = future_qs.filter(**filter_params_updated)
+
+        return await sync_to_async(list)(qs)
