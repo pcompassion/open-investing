@@ -137,9 +137,9 @@ class EbestApiManager(OrderMixin):
         )
         data = api_response.data
 
-        change = data["change"]
+        value = data["close"]
 
-        return change, api_response
+        return value, api_response
 
     async def vix_market_indicator(self):
         api = self.stock_api

@@ -30,6 +30,11 @@ class Order(models.Model):
     parent_order = models.ForeignKey(
         "order.CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
+
+    offset_order = models.ForeignKey(
+        "order.Order", on_delete=models.CASCADE, blank=True, null=True
+    )
+
     strategy_session = models.ForeignKey(
         "strategy.StrategySession", on_delete=models.CASCADE, blank=True, null=True
     )

@@ -77,9 +77,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.quote = None
         self.composite_order = None
         self.filled_quantity = None
-        self.order_command_queue = (
-            asyncio.Queue()
-        )  # TODO: may need speparate order_command_queue for tasks
+        self.order_command_queues = dict()
 
     async def run_order(self, order_spec, order):
         order_data_manager = self.order_data_manager
@@ -97,29 +95,41 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         order_id = None
         order_event_spec = None
         listener_spec = None
+        order_side = order.side
+
+        order_command_queue = self.order_command_queues.get(order_id)
 
         while self.filled_quantity < quantity:
             # TODO: probably need tighter check
             remaining_quantity = quantity - self.filled_quantity
 
-            if not self.order_command_queue.empty():
-                command = await self.order_command_queue.get()
+            if order_command_queue is not None and not order_command_queue.empty():
+                command = await order_command_queue.get()
                 if command == "STOP":
                     await self.cancel_remaining(
                         order_id, security_code, remaining_quantity
                     )
+
                     break
 
             try:
                 recent_quote = await self.time_data_tracker.wait_for_valid_data()
-                price = recent_quote.bid_price_1
+
+                if order_side == OrderSide.Buy:
+                    price = recent_quote.bid_price_1
+                else:
+                    price = recent_quote.ask_price_1
+
             except TimeoutError as e:
                 print(e)
                 raise e
                 # shouldn't happen
 
             if self.quote is not None:
-                price_diff = price - self.quote.bid_price_1
+                if order_side == OrderSide.Buy:
+                    price_diff = price - self.quote.bid_price_1
+                else:
+                    price_diff = self.quote.ask_price_1 - price
 
                 tick_diff = math.floor(price_diff / order_spec.tick_size)
 
@@ -208,10 +218,10 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             case OrderEventName.Filled:
                 # order is filled, do something
 
-                order = await self.order_data_manager.get(
+                composite_order = await self.order_data_manager.get(
                     filter_params=dict(id=self.composite_order.id)
                 )
-                self.filled_quantity = order.filled_quantity
+                self.filled_quantity = composite_order.filled_quantity
 
                 pass
 
@@ -250,7 +260,6 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     order_type=self.order_type,
                     strategy_session_id=strategy_session_id,
                     decision_id=decision_id,
-                    side=order_spec.order_side,
                     data=dict(
                         security_code=order_spec.security_code,
                         max_tick_diff=order_spec.max_tick_diff,
@@ -287,13 +296,16 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     logger.warning("already running order task")
                     return
 
+                self.order_command_queues[order.id] = asyncio.Queue()
+
                 self.run_order_task = asyncio.create_task(
                     self.run_order(order_spec, order)
                 )
 
             case OrderCommandName.Close:
-                await self.command_queue.put("STOP")
-                # TODO: place closing orders for existing open orders
+                order_command_queue = self.order_command_queues.get(order.id)
+                if order_command_queue:
+                    await order_command_queue.put("STOP")
 
                 self.close_order_task = asyncio.create_task(
                     self.run_order(order_spec, order)

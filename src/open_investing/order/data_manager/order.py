@@ -31,6 +31,8 @@ class OrderDataManager:
 
     def _unsaved_order(self, params: dict):
         order_type = params["order_type"]
+
+        order_type = OrderType(order_type)
         updated_params = params
         if params.get("id") is None:
             updated_params = params | {"id": uuid4()}
@@ -51,6 +53,7 @@ class OrderDataManager:
         filter_params = filter_params or {}
 
         order_type = filter_params["order_type"]
+        order_type = OrderType(order_type)
 
         try:
             if order_type.is_single_order:
@@ -63,8 +66,9 @@ class OrderDataManager:
     async def handle_filled_event(self, event_params: dict, order):
         parent_order = None
         trade = None
+        order_type = OrderType(order.order_type)
 
-        if order.order_type.is_single_order:
+        if order_type.is_single_order:
             parent_order = order.parent_order
 
         fill_quantity = event_params["fill_quantity"]
@@ -151,7 +155,7 @@ class OrderDataManager:
         trade = None
         event_name = event_params_updated["event_name"]
 
-        if order is not None and not order.order_type.is_single_order:
+        if order is not None and not OrderType(order.order_type).is_single_order:
             composite_order = order
             order = None
 
@@ -174,7 +178,7 @@ class OrderDataManager:
     ) -> ListDataTypeHint:
         order_type = filter_params.get("order_type", None)
 
-        if order_type is None or order_type.is_single_order:
+        if order_type is None or OrderType(order_type).is_single_order:
             qs = Order.objects.filter(**filter_params)
         else:
             qs = CompositeOrder.objects.filter(**filter_params)

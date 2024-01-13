@@ -240,6 +240,7 @@ class EbestApi(ExchangeApi):
             return ApiResponse(
                 success=False,
                 raw_data=data,
+                headers=response.headers,
                 data_field_name=data_block_name,
                 error_code=rsp_cd,
                 exchange_api_code=tr_code,
@@ -250,6 +251,7 @@ class EbestApi(ExchangeApi):
         api_response = ApiResponse(
             success=True,
             raw_data=data,
+            headers=response.headers,
             data_field_name=data_block_name,
             exchange_api_code=tr_code,
             default_data_type=default_data_type,
