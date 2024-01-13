@@ -10,6 +10,10 @@ from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import OrderType
 
 from open_library.collections.dict import to_jsonable_python
+from open_investing.order.models.order_offset import OrderOffsetRelation
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderDataManager:
@@ -63,7 +67,7 @@ class OrderDataManager:
         except ObjectDoesNotExist:
             return None
 
-    async def handle_filled_event(self, event_params: dict, order):
+    async def handle_filled_event(self, event_params: dict, order) -> dict:
         parent_order = None
         trade = None
         order_type = OrderType(order.order_type)
@@ -90,7 +94,11 @@ class OrderDataManager:
                 event_params, order, parent_order
             )
 
+        offset_result = await self.offset_order(order, fill_quantity)
+
         await order.asave()
+
+        return offset_result
 
     async def handle_cancel_success_event(self, event_params: dict, order):
         parent_order = order.parent_order
@@ -184,3 +192,42 @@ class OrderDataManager:
             qs = CompositeOrder.objects.filter(**filter_params)
 
         return await as_list_type(qs, return_type, field_names)
+
+    async def create_offset_order_relation(
+        self, offsetting_order, offsetted_order_id, offset_quantity
+    ):
+        order_offset_relation, _ = await OrderOffsetRelation.objects.aget_or_create(
+            offsetting_order=offsetting_order,
+            offsetted_order_id=offsetted_order_id,
+            kwargs={"offset_quantity": offset_quantity},
+        )
+
+    async def offset_order(self, offsetting_order, fill_quantity) -> dict:
+        # TODO: possibly there are many order_offset_relation,
+        order_offset_relation = await OrderOffsetRelation.objects.filter(
+            offsetting_order=offsetting_order, fully_offsetted=False
+        ).afirst()
+
+        offset_result = dict(
+            offsetted=False,
+            fully_offsetted=False,
+            offsetted_order_id=None,
+        )
+
+        if order_offset_relation:
+            offset_result[
+                "offsetted_order_id"
+            ] = order_offset_relation.offsetted_order_id
+            remaining_quantity = order_offset_relation.update_fill(fill_quantity)
+
+            if remaining_quantity < 0:
+                logger.warning(
+                    f"offset_order bigger quantity than requested {remaining_quantity}"
+                )
+
+            await order_offset_relation.asave()
+
+            offset_result["offsetted"] = True
+            offset_result["fully_offsetted"] = order_offset_relation.fully_offsetted
+
+        return offset_result

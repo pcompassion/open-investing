@@ -20,7 +20,7 @@ class StrategySpec(TaskSpec):
 
     @property
     def hash_keys(self):
-        return super().hash_keys + ["spec_type_name", "strategy_session_id"]
+        return super().hash_keys + ["strategy_session_id"]
 
     @property
     def strategy_name(self):

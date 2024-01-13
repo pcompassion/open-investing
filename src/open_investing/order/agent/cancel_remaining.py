@@ -48,10 +48,11 @@ class CancelRemainingOrderAgent(OrderAgent):
                 pass
 
     async def on_order_event(self, order_info):
-        order_event = order_info["event"]
+        event_spec = order_info["event_spec"]
         order = order_info["order"]
+        data = order_info.get("data")
 
-        event_name = order_event.name
+        event_name = event_spec.name
 
         match event_name:
             case OrderEventName.CancelSuccess:

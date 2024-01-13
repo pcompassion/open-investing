@@ -56,26 +56,31 @@ class OrderService:
         order_data_manager = self.order_data_manager
         order_event_broker = self.order_event_broker
 
-        order_event = order_info["event"]
-
+        event_spec = order_info["event_spec"]
         order = order_info["order"]
+        data_initial = order_info.get("data")
 
-        event_name = order_event.name
+        event_name = event_spec.name
 
         match event_name:
             case OrderEventName.ExchangeFilled:
-                await order_data_manager.handle_filled_event(
-                    order_event.data, order=order
-                )
-                order_event = OrderEventSpec(
-                    order_id=order.id,
-                    name=OrderEventName.Filled,
-                    data=order_event.data,
+                filled_data = await order_data_manager.handle_filled_event(
+                    data_initial, order=order
                 )
 
-                await order_event_broker.enqueue_message(
-                    dict(event=order_event, order=order),
+                data = data_initial | filled_data
+                order_event_spec = OrderEventSpec(
+                    order_id=order.id,
+                    name=OrderEventName.Filled,
                 )
+
+                message = dict(
+                    event_spec=order_event_spec,
+                    order=order,
+                    data=data,
+                )
+
+                await order_event_broker.enqueue_message(message)
 
                 # check if filled,
             case _:
@@ -125,15 +130,31 @@ class OrderService:
         self.running_tasks.add(task)
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
-    async def close_order(self, order, exchange_manager):
-        task = asyncio.create_task(self._close_order(order, exchange_manager))
+    async def offset_order(
+        self, offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+    ):
+        task = asyncio.create_task(
+            self._offset_order(
+                offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+            )
+        )
 
         self.running_tasks.add(task)
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
-    async def _close_order(self, order, exchange_manager):
+    async def _offset_order(
+        self, offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+    ):
         # TODO: maybe do something other than open_order
-        return await self._open_order(order, exchange_manager)
+        order_data_manager = self.order_data_manager
+
+        await order_data_manager.create_offset_order_relation(
+            offsetting_order=offsetting_order,
+            offsetted_order_id=offsetted_order_id,
+            offset_quantity=offset_quantity,
+        )
+
+        return await self._open_order(offsetting_order, exchange_manager)
 
     async def _cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
         order_data_manager = self.order_data_manager
@@ -171,15 +192,18 @@ class OrderService:
             order=order,
         )
 
-        order_event = OrderEventSpec(
+        order_event_spec = OrderEventSpec(
             order_id=order.id,
             name=next_event_name,
-            data=event_params,
+        )
+        data = event_params
+        message = dict(
+            event_spec=order_event_spec,
+            order=order,
+            data=data,
         )
 
-        await order_event_broker.enqueue_message(
-            dict(event=order_event, order=order),
-        )
+        await order_event_broker.enqueue_message(message)
 
     async def cancel_order_quantity(self, order, exchange_manager, cancel_quantity):
         task = asyncio.create_task(

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from dataclasses import dataclass
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import OrderEventSpec, QuoteEventSpec
 import math
@@ -39,6 +40,12 @@ class BestLimitIcebergOrderSpec(OrderSpec):
 
     max_tick_diff: int
     tick_size: float
+
+
+@dataclass
+class InternalOrderCommand:
+    data: any
+    name: str
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -104,8 +111,10 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             remaining_quantity = quantity - self.filled_quantity
 
             if order_command_queue is not None and not order_command_queue.empty():
-                command = await order_command_queue.get()
-                if command == "STOP":
+                internal_order_command = await order_command_queue.get()
+                name = internal_order_command.name
+
+                if name == "STOP":
                     await self.cancel_remaining(
                         order_id, security_code, remaining_quantity
                     )
@@ -246,28 +255,6 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         order_id = order_spec.order_id
 
         order_data_manager = self.order_data_manager
-        order = None
-        if order_id:
-            order = await order_data_manager.get(
-                filter_params=dict(id=order_id, order_type=self.order_type)
-            )
-
-        if order is None:
-            order = await order_data_manager.prepare_order(
-                params=dict(
-                    id=order_id,
-                    quantity=order_spec.quantity,
-                    order_type=self.order_type,
-                    strategy_session_id=strategy_session_id,
-                    decision_id=decision_id,
-                    data=dict(
-                        security_code=order_spec.security_code,
-                        max_tick_diff=order_spec.max_tick_diff,
-                        tick_size=order_spec.tick_size,
-                    ),
-                ),
-                save=True,
-            )
 
         command = order_info["command"]
 
@@ -292,6 +279,29 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         match command.name:
             case OrderCommandName.Open:
+                order = None
+                if order_id:
+                    order = await order_data_manager.get(
+                        filter_params=dict(id=order_id, order_type=self.order_type)
+                    )
+
+                if order is None:
+                    order = await order_data_manager.prepare_order(
+                        params=dict(
+                            id=order_id,
+                            quantity=order_spec.quantity,
+                            order_type=self.order_type,
+                            strategy_session_id=strategy_session_id,
+                            decision_id=decision_id,
+                            data=dict(
+                                security_code=order_spec.security_code,
+                                max_tick_diff=order_spec.max_tick_diff,
+                                tick_size=order_spec.tick_size,
+                            ),
+                        ),
+                        save=True,
+                    )
+
                 if self.run_order_task:
                     logger.warning("already running order task")
                     return
@@ -303,9 +313,11 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 )
 
             case OrderCommandName.Close:
-                order_command_queue = self.order_command_queues.get(order.id)
+                order_command_queue = self.order_command_queues.get(order_spec.order_id)
+
                 if order_command_queue:
-                    await order_command_queue.put("STOP")
+                    internal_order_command = InternalOrderCommand(name="STOP")
+                    await order_command_queue.put(internal_order_command)
 
                 self.close_order_task = asyncio.create_task(
                     self.run_order(order_spec, order)

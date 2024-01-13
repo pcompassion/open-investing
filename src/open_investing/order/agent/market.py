@@ -39,6 +39,7 @@ class MarketOrderAgent(OrderAgent):
 
         order_data_manager = self.order_data_manager
         exchange_manager = self.exchange_manager
+        order_event_broker = self.order_event_broker
         order = None
         if order_id:
             order = await order_data_manager.get(
@@ -57,16 +58,11 @@ class MarketOrderAgent(OrderAgent):
             )
 
         command = order_info["command"]
-        order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
+
         match command.name:
             case OrderCommandName.Open:
-                order_event_broker = self.order_event_broker
-
                 order_event_spec = OrderEventSpec(order_id=order_id)
-                # listener_spec = ListenerSpec(
-                #     listener_type=ListenerType.Callable,
-                #     listener_or_name=self.enqueue_order_event,
-                # )
+                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
 
                 await self.order_service.open_order(order, exchange_manager)
             case OrderCommandName.CancelRemaining:
@@ -75,7 +71,7 @@ class MarketOrderAgent(OrderAgent):
             case OrderCommandName.Close:
                 # TODO maybe need to do something for market order as well
 
-                close_order = await order_data_manager.prepare_order(
+                offsetting_order = await order_data_manager.prepare_order(
                     params=dict(
                         quantity=order.filled_quantity,
                         order_type=self.order_type,
@@ -85,14 +81,28 @@ class MarketOrderAgent(OrderAgent):
                         order_price_type=self.order_price_type,
                     )
                 )
-                await self.order_service.close_order(order, exchange_manager)
+                offsetted_order_id = order_spec.order_id
+                offsetted_order = order
+                assert offsetted_order_id == offsetted_order.id
+
+                order_event_spec = OrderEventSpec(order_id=offsetted_order_id)
+                order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
+
+                await self.order_service.offset_order(
+                    offsetting_order,
+                    offsetted_order_id,
+                    offset_quantity=offsetted_order.filled_quantity,
+                    exchange_manager=exchange_manager,
+                )
 
     async def on_order_event(self, order_info):
-        order_event = order_info["event"]
-        logger.info(f"on_order_event: {order_event}")
+        event_spec = order_info["event_spec"]
         order = order_info["order"]
+        data = order_info.get("data")
 
-        event_name = order_event.name
+        logger.info(f"on_order_event: {event_spec}")
+
+        event_name = event_spec.name
 
         match event_name:
             case OrderEventName.Filled:

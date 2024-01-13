@@ -31,10 +31,6 @@ class Order(models.Model):
         "order.CompositeOrder", on_delete=models.CASCADE, blank=True, null=True
     )
 
-    offset_order = models.ForeignKey(
-        "order.Order", on_delete=models.CASCADE, blank=True, null=True
-    )
-
     strategy_session = models.ForeignKey(
         "strategy.StrategySession", on_delete=models.CASCADE, blank=True, null=True
     )
@@ -53,6 +49,14 @@ class Order(models.Model):
     exchange_api_code = models.CharField(max_length=32, blank=True)
 
     data = models.JSONField(default=dict)
+
+    offsetted_by_me = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        through="order.OrderOffsetRelation",
+        through_fields=("offsetting_order", "offsetted_order"),
+        related_name="offsetting_me",
+    )
 
     def update_fill(self, fill_quantity, fill_price):
         # Update total cost and filled quantity
@@ -95,6 +99,18 @@ class Order(models.Model):
             return current_value - self.total_cost
         elif self.side == OrderSide.Sell:
             return self.total_cost - current_value
+
+    def get_offsetted_orders(self):
+        """
+        Returns a queryset of Orders that this Order offsets
+        """
+        return self.offsetted_by_me.all()
+
+    def get_offsetting_orders(self):
+        """
+        Returns a queryset of Orders that offset this Order
+        """
+        return self.offsetting_me.all()
 
 
 class Trade(models.Model):

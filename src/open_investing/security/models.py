@@ -18,7 +18,7 @@ class Option(models.Model):
     price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
     date_at = models.DateTimeField(db_index=True)
-    create_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
@@ -43,7 +43,7 @@ class Future(models.Model):
     price = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
     date_at = models.DateTimeField()
-    create_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
     exchange_name = models.CharField(max_length=32, blank=True)
@@ -72,7 +72,7 @@ class NearbyFuture(models.Model):
     timeframe = models.DurationField()
 
     date_at = models.DateTimeField(db_index=True)
-    create_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     data = models.JSONField(default=list)
 
@@ -80,7 +80,7 @@ class NearbyFuture(models.Model):
 class Quote(models.Model):
     security_code = models.CharField(max_length=8, db_index=True)
     date_at = models.DateTimeField(db_index=True)
-    create_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     data = models.JSONField(default=dict)
 

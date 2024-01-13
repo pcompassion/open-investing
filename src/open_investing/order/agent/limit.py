@@ -71,11 +71,13 @@ class LimitOrderAgent(OrderAgent):
                 await self.order_service.cancel_remaining_order(order, exchange_manager)
 
     async def on_order_event(self, order_info):
-        order_event = order_info["order_event"]
-        logger.info(f"on_order_event: {order_event}")
+        event_spec = order_info["event_spec"]
         order = order_info["order"]
+        data = order_info.get("data")
 
-        event_name = order_event.name
+        logger.info(f"on_order_event: {event_spec}")
+
+        event_name = event_spec.name
 
         match event_name:
             case OrderEventName.Filled:

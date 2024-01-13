@@ -62,16 +62,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             case DecisionCommandName.Start:
                 await decision_data_manager.set_started(decision)
 
-                # for test
-                # order_spec_dict = self.base_spec_dict | dict(
-                #     spec_type_name="order.best_market_iceberg",
-                #     time_interval_second=10,
-                #     split=5,
-                #     security_code=self.decision_spec.leader_security_code,
-                #     quantity=self.decision_spec.leader_quantity,
-                #     order_id=None,
-                #     parent_order_id=None,
-                # )
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
                     max_tick_diff=5,
@@ -124,7 +114,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         strategy_name=order.strategy_session.strategy_name,
                         strategy_session_id=order.strategy_session_id,
                         order_id=order.id,
-                        order_side=OrderSide(order.side).opposite,
                         parent_order_id=None,
                     )
 
@@ -148,20 +137,21 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             await task.start()
 
     async def on_order_event(self, order_info):
-        order_event = order_info["event"]
-        logger.info(f"on_order_event: {order_event}")
-
+        event_spec = order_info["event_spec"]
         order = order_info["order"]
+        data = order_info.get("data")
+
+        logger.info(f"on_order_event: {event_spec}")
 
         if order.strategy_session_id != self.strategy_session_id:
             return
 
-        event_name = order_event.name
+        event_name = event_spec.name
 
         match event_name:
             case OrderEventName.Filled:
                 # TODO: better check tighter condition
-                fill_quantity = order_event.data["fill_quantity"]
+                fill_quantity = data["fill_quantity"]
 
                 if order.security_code == self.decision_spec.leader_security_code:
                     quantity = fill_quantity * self.decision_spec.leader_follower_ratio
