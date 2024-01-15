@@ -19,11 +19,13 @@ from open_library.environment.environment import Environment
 from open_investing.app.base_app import App as BaseApp
 from open_library.locator.service_locator import ServiceKey, ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
-from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
+
 from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
 from open_investing.security.quote_service import QuoteService
+
+from open_investing.config.task import Config
 
 
 async def debug_control():
@@ -34,11 +36,11 @@ async def debug_control():
 class App(BaseApp):
     name = "task_app"
 
-    def __init__(self, env_directory=Path(), env_file=".env.dev"):
+    def __init__(self, env_directory=Path(), env_file=".env.cafe24"):
         super().__init__(env_directory=env_directory, env_file=env_file)
+        self.config = Config(self.environment)
 
         self.task_manager = TaskManager(self._service_locator)
-        self.task_dispatcher = None
 
         self.tasks = []
 
@@ -47,6 +49,9 @@ class App(BaseApp):
 
         task_manager = self.task_manager
         tasks.append(asyncio.create_task(task_manager.run()))
+
+        redis_config = self.config.redis_config
+        STRATEGY_CHANNEL_NAME = self.config.STRATEGY_CHANNEL_NAME
 
         redis_client = aioredis.from_url(**redis_config["strategy"])
 
@@ -58,8 +63,6 @@ class App(BaseApp):
 
         self.setup_base_tasks()
 
-        await self.start_strategies()
-
         if self.environment.is_dev():
             self.tasks.append(asyncio.create_task(debug_control()))
 
@@ -67,49 +70,3 @@ class App(BaseApp):
 
     async def init(self):
         await super().init()
-
-        self.task_dispatcher = LocalTaskDispatcher(self.task_manager)
-        await self.task_dispatcher.init()
-
-    async def start_strategies(self):
-        from open_investing.task_spec.task_spec_handler_registry import (
-            TaskSpecHandlerRegistry,
-        )
-
-        running_strategies = defaultdict(int)
-
-        service_key = ServiceKey(
-            service_type="data_manager",
-            service_name="database",
-            params={"model": "Strategy.StrategySession"},
-        )
-        strategy_session_data_manager = self.get_service(service_key)
-
-        # strategy_sessions = (
-        #     await strategy_session_data_manager.ongoing_strategy_sessions()
-        # )
-
-        # for strategy_session in strategy_sessions:
-        #     strategy_name = strategy_session.strategy_name
-
-        #     task_spec_dict = {
-        #         "spec_type_name": strategy_name,
-        #         "strategy_session_id": strategy_session.id,
-        #     }
-        #     task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
-
-        #     command = TaskCommand(name=TaskCommandName.Start)
-        #     await self.task_dispatcher.dispatch_task(task_spec, command)
-
-        #     running_strategies[strategy_name] += 1
-
-        if "delta_hedge" not in running_strategies:
-            task_spec_dict = {
-                "spec_type_name": "strategy.delta_hedge",
-                "strategy_session_id": uuid4(),
-            }
-            task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_dict)
-
-            command = TaskCommand(name=TaskCommandName.Start)
-
-            await self.task_dispatcher.dispatch_task(task_spec, command)

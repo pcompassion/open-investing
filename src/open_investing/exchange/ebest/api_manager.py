@@ -22,13 +22,12 @@ from open_library.locator.service_locator import ServiceKey
 from open_investing.const.code_name import IndexCode
 from open_investing.security.derivative_code import DerivativeCode, DerivativeTypeCode
 
-from open_investing.config.base import DEFAULT_TIME_FORMAT
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_investing.exchange.ebest.mixin.order import OrderMixin
 from open_library.observe.pubsub_broker import PubsubBroker
 import logging
 from open_library.time.datetime import combine, time_from_format
-from open_investing.config.base import DEFAULT_TIME_FORMAT
+
 from open_investing.security.quote import Quote
 from open_library.observe.subscription_manager import SubscriptionManager
 
@@ -41,6 +40,7 @@ class EbestApiManager(OrderMixin):
         service_name="ebest",
     )
     name = EbestApi.name
+    DEFAULT_TIME_FORMAT = "HHmmss"
 
     def __init__(self):
         self.order_event_broker: PubsubBroker | None = None
@@ -234,7 +234,7 @@ class EbestApiManager(OrderMixin):
             return await as_list_type([], return_type), api_response
 
         futures_df["date_at"] = futures_df["chetime"].apply(
-            lambda x: determine_datetime(x, base_datetime, DEFAULT_TIME_FORMAT)
+            lambda x: determine_datetime(x, base_datetime, self.DEFAULT_TIME_FORMAT)
         )
 
         if start_at:
@@ -460,7 +460,7 @@ class EbestApiManager(OrderMixin):
             return await as_list_type([], return_type), api_response
 
         options_df["date_at"] = options_df["chetime"].apply(
-            lambda x: determine_datetime(x, base_datetime, DEFAULT_TIME_FORMAT)
+            lambda x: determine_datetime(x, base_datetime, self.DEFAULT_TIME_FORMAT)
         )
 
         if start_at:

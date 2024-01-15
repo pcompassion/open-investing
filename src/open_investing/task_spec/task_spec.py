@@ -68,7 +68,7 @@ class TaskSpec(EventSpec):
 
     @classmethod
     def set_default_service_keys(cls, service_keys):
-        cls.default_service_keys = service_keys
+        cls.default_service_keys = cls.default_service_keys | service_keys
 
     @classmethod
     def get_default_service_key(cls, name: str | None = None, **kwargs):

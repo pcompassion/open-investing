@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.task.task_command import TaskCommand
 from typing import Callable
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import EventSpec
@@ -12,6 +13,9 @@ from channels.layers import get_channel_layer
 from open_library.collections.dict import hashable_json
 from open_library.collections.hashable_dict import Hashabledict
 from open_investing.task_spec.task_spec import TaskSpec
+from open_investing.task_spec.task_spec_handler_registry import (
+    TaskSpecHandlerRegistry,
+)
 
 from open_library.observe.const import ListenerType
 
@@ -29,7 +33,7 @@ class RedisTaskDispatcher(TaskDispatcher):
         self.listening_task = None
         self.pubsub_broker = PubsubBroker()  # for notifying listeners
 
-    async def init(self):
+    def init(self):
         self.pubsub_task = asyncio.create_task(self.pubsub_broker.run())
 
     @singledispatchmethod
@@ -39,8 +43,9 @@ class RedisTaskDispatcher(TaskDispatcher):
     @dispatch_task.register(TaskSpec)
     async def _(self, task_spec: TaskSpec, command):
         task_json = task_spec.model_dump()
+        command_json = command.model_dump()
 
-        await self.dispatch_task(task_json, command)
+        await self.dispatch_task(task_json, command_json)
 
     @dispatch_task.register(dict)
     async def _(self, task_spec, command):
@@ -53,11 +58,12 @@ class RedisTaskDispatcher(TaskDispatcher):
         raise NotImplementedError
 
     @subscribe.register
-    def _(self, event_spec: EventSpec, listener_spec):
-        self.subscribe(event_spec.model_dump(), listener_spec)
+    def _(self, event_spec: dict, listener_spec):
+        event_spec_ = TaskSpecHandlerRegistry.create_task_spec(event_spec)
+        self.subscribe(event_spec_, listener_spec)
 
     @subscribe.register
-    def _(self, event_spec: dict, listener_spec):
+    def _(self, event_spec: EventSpec, listener_spec):
         self.pubsub_broker.subscribe(event_spec, listener_spec)
 
     def unsubscribe(
@@ -70,14 +76,25 @@ class RedisTaskDispatcher(TaskDispatcher):
 
     async def listen_for_task_updates(self):
         while True:
-            message = await self.pubsub.get_message(
+            redis_message = await self.pubsub.get_message(
                 ignore_subscribe_messages=True, timeout=None
             )
             logger.info("received pubsub message")
-            if message:
-                data = json.loads(message["data"].decode("utf-8"))
+            if redis_message:
+                message_ = json.loads(redis_message["data"].decode("utf-8"))
 
-                await self.notify_listeners(data)
+                event_spec_ = message_["event_spec"]
+
+                if isinstance(event_spec_, dict):
+                    event_spec = TaskSpecHandlerRegistry.create_spec_instance(
+                        event_spec_
+                    )
+
+                else:
+                    event_spec = event_spec_
+
+                message = dict(event_spec=event_spec, data=message_["data"])
+                await self.notify_listeners(message)
 
     async def start_listening(self):
         self.pubsub = pubsub = self.redis_client.pubsub()

@@ -18,7 +18,6 @@ from open_library.environment.environment import Environment
 from open_library.app.base_app import BaseApp
 from open_library.locator.service_locator import ServiceKey, ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
-from open_investing.config.base import STRATEGY_CHANNEL_NAME, redis_config
 from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
@@ -33,20 +32,19 @@ async def debug_control():
 class App(BaseApp):
     name = "base_app"
 
-    def __init__(self, env_directory=Path(), env_file=".env.dev"):
-        self.environment = Environment(env_directory=env_directory, env_file=env_file)
+    def __init__(self, env_directory=Path(), env_file=".env.dev", config_cls=None):
+        super().__init__(env_directory=env_directory, env_file=env_file)
 
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = None
 
-        self.tasks = []
+        self.config = config_cls(self.environment) if config_cls else None
 
-    async def init(self):
-        """initialize app"""
-        self.setup_logging()
+        self.tasks = []
         self.setup_django()
 
+    async def init(self):
         self.setup_default_service_keys()
         await self.setup_service_manager()
 
@@ -104,8 +102,10 @@ class App(BaseApp):
 
         service_locator = self._service_locator
 
+        local_task_dispatcher = LocalTaskDispatcher(self.task_manager)
+        local_task_dispatcher.init()
         service_locator.register_service(
-            LocalTaskDispatcher.service_key, self.task_dispatcher
+            local_task_dispatcher.service_key, local_task_dispatcher
         )
 
         ebest_api_manager = EbestApiManager()

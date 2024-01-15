@@ -69,11 +69,13 @@ class TaskManager:
         return task_spec_handler, created
 
     async def start_task(self, task_spec: TaskSpec, task_command: TaskCommand):
-        logger.info(f"Starting task: {task_spec.spec_type_name}")
+        logger.info(f"received start task: {task_spec.spec_type_name}")
         task_spec_handler, created = await self._init_task_spec_handler(task_spec)
 
         if not task_spec_handler.is_running():
             await task_spec_handler.start_tasks()
+            logger.info(f"Starting task: {task_spec.spec_type_name}")
+
         return task_spec_handler, created
 
     async def stop_task(self, task_spec: TaskSpec, task_command: TaskCommand):
@@ -106,13 +108,17 @@ class TaskManager:
             # while not self.command_queue.empty():
             task_info = await self.command_queue.get()
             task_spec_ = task_info["task_spec"]
+            command_ = task_info["command"]
 
             if isinstance(task_spec_, dict):
                 task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
             else:
                 task_spec = task_spec_
 
-            command = task_info["command"]
+            if isinstance(command_, dict):
+                command = TaskCommand(**command_)
+            else:
+                command = command_
 
             if command.name == "start":
                 await self.start_task(task_spec, command)
