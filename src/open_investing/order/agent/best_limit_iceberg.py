@@ -44,8 +44,8 @@ class BestLimitIcebergOrderSpec(OrderSpec):
 
 @dataclass
 class InternalOrderCommand:
-    data: any
     name: str
+    data: any = None
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -248,6 +248,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
     async def on_order_command(self, order_info):
         order_spec = order_info["task_spec"]
+
+        logger.info(f"on_command_event: {order_spec.spec_type_name}")
 
         strategy_session_id = order_spec.strategy_session_id
         decision_id = order_spec.decision_id

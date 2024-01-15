@@ -11,7 +11,7 @@ from open_library.collections.dict import instance_to_dict
 
 from open_investing.security.models import Option
 from open_library.locator.service_locator import ServiceKey
-from django.db.models import Window, F, Max
+from django.db.models import Window, F, Max, Min
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_library.extension.django.orm import get_model_field_names
 from open_library.collections.dict import filter_dict
@@ -75,10 +75,11 @@ class OptionDataManager:
             Option.objects.filter(expire_at__gt=now)
             .annotate(
                 recent_at=Window(
-                    expression=Max("expire_at"), partition_by=[F("security_code")]
+                    expression=Min("expire_at"), partition_by=[F("security_code")]
                 )
             )
             .filter(expire_at=F("recent_at"))
+            .order_by("expire_at")
         )
 
         if filter_params:

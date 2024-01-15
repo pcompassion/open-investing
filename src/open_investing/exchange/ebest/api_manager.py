@@ -252,7 +252,7 @@ class EbestApiManager(OrderMixin):
             extra_data = dict(
                 exchange_name=api.name,
                 exchange_api_code=tr_code,
-                timeframe=timedelta(interval_second),
+                timeframe=timedelta(seconds=interval_second),
             )
             futures_df = await future_data_manager.save_futures(
                 futures_df, extra_data=extra_data
@@ -376,7 +376,7 @@ class EbestApiManager(OrderMixin):
             extra_data = dict(
                 exchange_name=api.name,
                 exchange_api_code=tr_code,
-                timeframe=timedelta(interval_second),
+                timeframe=timedelta(seconds=interval_second),
                 date_at=now_local(),
             )
             df = await option_data_manager.save_options(df, extra_data=extra_data)
@@ -480,7 +480,7 @@ class EbestApiManager(OrderMixin):
                 strike_price=option_data.strike_price,
                 security_code=security_code,
                 derivative_type=option_data.derivative_type,
-                timeframe=timedelta(interval_second),
+                timeframe=timedelta(seconds=interval_second),
             )
             options_df = await option_data_manager.save_options(
                 options_df, extra_data=extra_data

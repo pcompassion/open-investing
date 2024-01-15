@@ -16,6 +16,7 @@ from open_library.locator.service_locator import ServiceKey
 
 class OrderSpec(TaskSpec):
     spec_type_name_classvar: ClassVar[str]
+    spec_type_name: str
 
     strategy_name: str
     strategy_session_id: UUID
