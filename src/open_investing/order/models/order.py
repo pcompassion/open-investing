@@ -39,6 +39,8 @@ class Order(models.Model):
         "strategy.Decision", on_delete=models.CASCADE, blank=True, null=True
     )
 
+    price = models.FloatField(default=0)
+
     quantity = models.FloatField(default=0)
     filled_quantity = models.FloatField(default=0)
 

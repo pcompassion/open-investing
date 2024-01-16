@@ -34,7 +34,7 @@ class RedisTaskDispatcher(TaskDispatcher):
         self.pubsub_broker = PubsubBroker()  # for notifying listeners
 
     def init(self):
-        self.pubsub_task = asyncio.create_task(self.pubsub_broker.run())
+        self.pubsub_broker.init()
 
     @singledispatchmethod
     async def dispatch_task(self, task_spec, command):

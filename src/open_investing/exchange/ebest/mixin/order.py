@@ -33,19 +33,22 @@ class OrderMixin:
         quantity = order.quantity
         side = order.side
 
+        additional = {}
+
+        match order_price_type:
+            case OrderPriceType.Market:
+                pass
+            case OrderPriceType.Limit:
+                additional.update(dict(order_price=order.price))
+
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
             security_code=security_code,
             order_quantity=int(quantity),
             order_side=side,
             order_price_type=order_price_type,
+            **additional,
         )
-
-        match order_price_type:
-            case OrderPriceType.Market:
-                pass
-            case OrderPriceType.Limit:
-                send_data.update(dict(price=order.price))
 
         api_response = await api.open_order(
             tr_code, send_data=send_data, default_data_type=dict

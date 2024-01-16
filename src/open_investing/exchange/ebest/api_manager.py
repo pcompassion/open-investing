@@ -33,6 +33,10 @@ from open_library.observe.subscription_manager import SubscriptionManager
 
 logger = logging.getLogger(__name__)
 
+quote_logger = logging.getLogger("quote")
+interval_filter = IntervalLoggingFilter(60)  # Log once every 60 seconds
+quote_logger.addFilter(interval_filter)
+
 
 class EbestApiManager(OrderMixin):
     service_key = ServiceKey(
@@ -519,7 +523,7 @@ class EbestApiManager(OrderMixin):
         )
 
     async def quote_listener(self, message):
-        logger.info(f"quote_listener {message}")
+        quote_logger.info(f"quote_listener {message['header']}")
 
         security_code = message["header"]["tr_key"]
         tr_code = message["header"]["tr_cd"]
@@ -536,7 +540,7 @@ class EbestApiManager(OrderMixin):
         quote_event_spec = QuoteEventSpec(security_code=security_code)
         quote = Quote(**data)
 
-        event_info = dict(event=quote_event_spec, data=quote)
+        event_info = dict(event_spec=quote_event_spec, data=quote)
 
         await self.subscription_manager.publish(event_info)
 

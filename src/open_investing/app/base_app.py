@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_library.observe.listener_spec import ListenerSpec
 from open_investing.task.task_command import TaskCommand
 from collections import defaultdict
 from uuid import uuid4
@@ -58,6 +59,8 @@ class App(BaseApp):
         for module in import_modules:
             importlib.import_module(module)
 
+        ListenerSpec.set_service_locator(self._service_locator)
+
     def setup_default_service_keys(self):
         from .after_django import (
             MarketIndicatorDataManager,
@@ -114,7 +117,8 @@ class App(BaseApp):
             ebest_api_manager.service_key, ebest_api_manager
         )
 
-        order_event_broker = OrderEventBroker()
+        order_event_broker = OrderEventBroker()  # and QuoteEventBroker
+        order_event_broker.init()
         for service_key in order_event_broker.service_keys:
             service_locator.register_service(service_key, order_event_broker)
 

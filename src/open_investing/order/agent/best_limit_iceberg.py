@@ -30,8 +30,13 @@ from open_library.observe.listener_spec import ListenerSpec
 from open_library.observe.const import ListenerType
 
 from open_library.time_tracker.time_data_tracker import TimeDataTracker
+from open_library.logging.logging_filter import IntervalLoggingFilter
 
 logger = logging.getLogger(__name__)
+
+quote_logger = logging.getLogger("quote")
+interval_filter = IntervalLoggingFilter(60)  # Log once every 60 seconds
+quote_logger.addFilter(interval_filter)
 
 
 class BestLimitIcebergOrderSpec(OrderSpec):
@@ -80,7 +85,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
-        self.time_data_tracker = TimeDataTracker(time_window_seconds=10)
+        self.quote_tracker = TimeDataTracker(time_window_seconds=10)
+        self.order_fill_tracker = TimeDataTracker(time_window_seconds=10)
+
         self.quote = None
         self.composite_order = None
         self.filled_quantity = None
@@ -99,10 +106,10 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.filled_quantity = order.filled_quantity
 
         orders = dict()
-        order_id = None
+        order_id = order.id
         order_event_spec = None
         listener_spec = None
-        order_side = order.side
+        order_side = order_spec.order_side
 
         order_command_queue = self.order_command_queues.get(order_id)
 
@@ -122,7 +129,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     break
 
             try:
-                recent_quote = await self.time_data_tracker.wait_for_valid_data()
+                timed_data = await self.quote_tracker.wait_for_valid_data()
+                recent_quote = timed_data.data
 
                 if order_side == OrderSide.Buy:
                     price = recent_quote.bid_price_1
@@ -130,8 +138,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     price = recent_quote.ask_price_1
 
             except TimeoutError as e:
-                print(e)
-                raise e
+                logger.warning(f"wait for valid data timeout {e}")
+                continue
+
                 # shouldn't happen
 
             if self.quote is not None:
@@ -149,8 +158,21 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         security_code,
                         remaining_quantity,
                     )
+                    continue
+                else:
+                    # wait for fill
 
-            remaining_quantity = quantity - self.filled_quantity
+                    try:
+                        timed_data = await self.order_fill_tracker.wait_for_valid_data(
+                            timeout_seconds=3
+                        )
+                        continue
+                    except TimeoutError as e:
+                        logger.warning(f"wait for order fill data timeout {e}")
+                        continue
+
+            else:
+                self.quote = recent_quote
 
             order_id = uuid4()
             orders[order_id] = None
@@ -220,6 +242,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         logger.info(f"on_order_event: {order_event_spec}")
 
         order = order_info["order"]
+        data = order_info["data"]
 
         event_name = order_event_spec.name
 
@@ -232,7 +255,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 )
                 self.filled_quantity = composite_order.filled_quantity
 
-                pass
+                date_at = data["date_at"]
+                await self.order_fill_tracker.add_data(data, date_at)
 
             case OrderEventName.CancelSuccess:
                 order_id = order.id
@@ -326,14 +350,14 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 )
 
     async def on_quote_event(self, event_info):
-        event = event_info["event"]
-        logger.info(f"on_quote_event: {event}")
+        event_spec = event_info["event_spec"]
+        quote_logger.info(f"on_quote_event: {event_spec}")
 
         # price = event.data.get('price')
 
-        time_data_tracker = self.time_data_tracker
-        data = event.data
+        quote_tracker = self.quote_tracker
+        data = event_info["data"]
 
-        date_at = data["date_at"]
+        date_at = data.date_at
 
-        time_data_tracker.add_data(event.data, date_at)
+        await quote_tracker.add_data(data, date_at)

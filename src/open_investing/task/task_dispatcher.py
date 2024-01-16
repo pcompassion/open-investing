@@ -73,10 +73,9 @@ class LocalTaskDispatcher(TaskDispatcher):
         self.task_manager = task_manager
 
         self.pubsub_broker = PubsubBroker()
-        self.pubsub_task = None
 
     def init(self):
-        self.pubsub_task = asyncio.create_task(self.pubsub_broker.run())
+        self.pubsub_broker.init()
 
     async def dispatch_task(self, task_spec: TaskSpec, command):
         task_info = {"command": command, "task_spec": task_spec}

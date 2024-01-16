@@ -36,7 +36,7 @@ class EbestApiField:
         (re.compile(r"^bidho(\d+)$"), r"bid_price_\1"),
         (re.compile(r"^bidrem(\d+)$"), r"bid_volume_\1"),
         (re.compile(r"^offerho(\d+)$"), r"ask_price_\1"),
-        (re.compile(r"^offerrem(\d+)$"), r"offer_volume_\1")
+        (re.compile(r"^offerrem(\d+)$"), r"ask_volume_\1")
         # Add more regex rules as needed
     ]
 
@@ -121,13 +121,13 @@ class EbestApiField:
                 res[field_name] = value
 
             else:
-                new_key = k
                 for pattern, replacement in cls.regex_rules:
                     match = pattern.match(k)
                     if match:
                         new_key = pattern.sub(replacement, k)
+                        kwargs.pop(k)
+                        res[new_key] = v
                         break
-                res[new_key] = v
 
         return kwargs | res
 
