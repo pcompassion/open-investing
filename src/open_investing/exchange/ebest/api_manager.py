@@ -526,7 +526,7 @@ class EbestApiManager(OrderMixin):
 
         data = message["body"]
 
-        time = time_from_format(data["hotime"], time_format=DEFAULT_TIME_FORMAT)
+        time = time_from_format(data["hotime"], time_format=self.DEFAULT_TIME_FORMAT)
         date_at = combine(now_local().date(), time)
 
         data["date_at"] = date_at
