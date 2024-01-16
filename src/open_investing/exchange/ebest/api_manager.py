@@ -30,6 +30,7 @@ from open_library.time.datetime import combine, time_from_format
 
 from open_investing.security.quote import Quote
 from open_library.observe.subscription_manager import SubscriptionManager
+from open_library.logging.logging_filter import IntervalLoggingFilter
 
 logger = logging.getLogger(__name__)
 
