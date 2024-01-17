@@ -22,10 +22,11 @@ class OrderMixin:
         try:
             derivative_code = DerivativeCode.from_string(security_code)
             tr_code = "CFOAT00100"
-            api = self.stock_api
+            api = self.derivative_api
+
         except ValueError:
             tr_code = "CSPAT00601"
-            api = self.derivative_api
+            api = self.stock_api
 
         order_price_type = order.order_price_type
 
