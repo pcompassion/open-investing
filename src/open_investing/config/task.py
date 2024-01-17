@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 
+from open_library.app.config import BaseConfig
 
-class Config:
+
+class Config(BaseConfig):
     STRATEGY_CHANNEL_NAME = "strategy"
 
-    def __init__(self, environment):
-        self.environment = environment
+    def __init__(self):
+        super().__init__()
+
+    def initialize(self, environment):
+        super().initialize(environment)
 
         self.redis_url = environment.get("STRATEGY_REDIS_URL", "redis://localhost:6379")
 

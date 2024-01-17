@@ -36,9 +36,15 @@ async def debug_control():
 class App(BaseApp):
     name = "task_app"
 
-    def __init__(self, env_directory=Path(), env_file=".env.cafe24"):
-        super().__init__(env_directory=env_directory, env_file=env_file)
-        self.config = Config(self.environment)
+    def __init__(self, env_directory=None, env_file=".env.cafe24", config=None):
+        if env_directory is None:
+            env_directory = Path()
+        if config is None:
+            config = Config()
+
+        super().__init__(env_directory=env_directory, env_file=env_file, config=config)
+
+        self.config = config
 
         self.task_manager = TaskManager(self._service_locator)
 

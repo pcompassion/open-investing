@@ -181,3 +181,9 @@ class OrderAgent(Generic[T], TaskSpecHandler):
 
         spec_dict["parent_order_id"] = self.order_spec.order_id
         return spec_dict
+
+    @property
+    def app_config(self):
+        service_key = self.task_spec.get_service_key(name="app_config")
+
+        return self.services[service_key]

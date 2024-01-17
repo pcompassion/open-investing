@@ -23,6 +23,7 @@ from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
 from open_investing.security.quote_service import QuoteService
+from open_library.app.config import BaseConfig
 
 
 async def debug_control():
@@ -33,14 +34,15 @@ async def debug_control():
 class App(BaseApp):
     name = "base_app"
 
-    def __init__(self, env_directory=Path(), env_file=".env.dev", config_cls=None):
+    def __init__(self, env_directory, env_file, config: BaseConfig):
         super().__init__(env_directory=env_directory, env_file=env_file)
 
         self._service_locator = ServiceLocator()
         self.task_manager = TaskManager(self._service_locator)
         self.task_dispatcher = None
 
-        self.config = config_cls(self.environment) if config_cls else None
+        config.initialize(self.environment)
+        self.config = config
 
         self.tasks = []
         self.setup_django()
@@ -82,6 +84,7 @@ class App(BaseApp):
                 "quote_event_broker": OrderEventBroker.quote_event_broker_service_key,
                 "order_service": OrderService.service_key,
                 "quote_service": QuoteService.service_key,
+                "app_config": self.config.service_key,
                 uuid4(): MarketIndicatorDataManager.service_key,
                 uuid4(): NearbyFutureDataManager.service_key,
                 uuid4(): FutureDataManager.service_key,
@@ -180,6 +183,9 @@ class App(BaseApp):
         quote_service.set_exchange_manager(ebest_api_manager)
 
         service_locator.register_service(quote_service.service_key, quote_service)
+
+        config = self.config
+        service_locator.register_service(config.service_key, config)
 
     def setup_django(self):
         import django

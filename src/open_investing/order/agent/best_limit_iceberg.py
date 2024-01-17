@@ -139,6 +139,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
             except TimeoutError as e:
                 logger.warning(f"wait for valid data timeout {e}")
+
                 continue
 
                 # shouldn't happen
