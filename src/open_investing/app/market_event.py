@@ -34,9 +34,9 @@ async def debug_control():
 
 
 class App(BaseApp):
-    name = "task_app"
+    name = "market_event_app"
 
-    def __init__(self, env_directory=None, env_file=".env.cafe24", config=None):
+    def __init__(self, env_directory=None, env_file=".env.market_event", config=None):
         if env_directory is None:
             env_directory = Path()
         if config is None:
@@ -57,11 +57,13 @@ class App(BaseApp):
         tasks.append(asyncio.create_task(task_manager.run()))
 
         redis_config = self.config.redis_config
-        STRATEGY_CHANNEL_NAME = self.config.STRATEGY_CHANNEL_NAME
+        MARKET_EVENT_CHANNEL_NAME = self.config.MARKET_EVENT_CHANNEL_NAME
 
-        redis_client = aioredis.from_url(**redis_config["strategy"])
+        redis_client = aioredis.from_url(**redis_config["market_event"])
 
-        receiver = RedisTaskReceiver(task_manager, STRATEGY_CHANNEL_NAME, redis_client)
+        receiver = RedisTaskReceiver(
+            task_manager, MARKET_EVENT_CHANNEL_NAME, redis_client
+        )
         tasks.append(asyncio.create_task(receiver.run()))
 
     async def main(self):

@@ -16,6 +16,7 @@ from open_investing.task_spec.task_spec import TaskSpec
 from open_investing.task_spec.task_spec_handler_registry import (
     TaskSpecHandlerRegistry,
 )
+from open_library.collections.dict import to_jsonable_python
 
 from open_library.observe.const import ListenerType
 
@@ -50,7 +51,8 @@ class RedisTaskDispatcher(TaskDispatcher):
     @dispatch_task.register(dict)
     async def _(self, task_spec, command):
         task_info = {"task_spec": task_spec, "command": command}
-        task_info_json = json.dumps(task_info)
+        task_info_updated = to_jsonable_python(task_info)
+        task_info_json = json.dumps(task_info_updated)
         await self.redis_client.rpush("task_queue", task_info_json)
 
     @singledispatchmethod
@@ -59,7 +61,7 @@ class RedisTaskDispatcher(TaskDispatcher):
 
     @subscribe.register
     def _(self, event_spec: dict, listener_spec):
-        event_spec_ = TaskSpecHandlerRegistry.create_task_spec(event_spec)
+        event_spec_ = TaskSpecHandlerRegistry.create_spec_instance(event_spec)
         self.subscribe(event_spec_, listener_spec)
 
     @subscribe.register
