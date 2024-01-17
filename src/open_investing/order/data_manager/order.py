@@ -67,6 +67,14 @@ class OrderDataManager:
         except ObjectDoesNotExist:
             return None
 
+    async def get_single_order(self, filter_params: dict | None):
+        filter_params = filter_params or {}
+
+        try:
+            return await Order.objects.aget(**filter_params)
+        except ObjectDoesNotExist:
+            return None
+
     async def handle_filled_event(self, event_params: dict, order) -> dict:
         parent_order = None
         trade = None

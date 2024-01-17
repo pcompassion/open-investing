@@ -54,14 +54,22 @@ class OrderMixin:
         api_response = await api.open_order(
             tr_code, send_data=send_data, default_data_type=dict
         )
-
-        exchange_order_id = api_response.data.get("ordno")
+        exchange_order_id = None
+        if api_response.success:
+            if tr_code == "CFOAT00100":
+                exchange_order_id = api_response.raw_data["CFOAT00100OutBlock2"].get(
+                    "OrdNo"
+                )
+            elif tr_code == "CSPAT00601":
+                exchange_order_id = api_response.raw_data["CSPAT00601OutBlock2"].get(
+                    "OrdNo"
+                )
 
         return exchange_order_id, api_response
 
     async def stock_order_listener(self, message):
         logger.info(f"stock_order_listener {message}")
-        return
+
         tr_cd = message["header"]["tr_cd"]
         data = message.get("body")
         match tr_cd:
@@ -81,9 +89,10 @@ class OrderMixin:
             case _:
                 security_code = data["expcode"]
                 exchange_order_id = data["ordno"]
+                exchange_order_id = int(exchange_order_id)
 
-                order = await self.order_data_manager.get(
-                    exchange_order_id=exchange_order_id
+                order = await self.order_data_manager.get_single_order(
+                    filter_params=dict(exchange_order_id=exchange_order_id)
                 )
 
                 order_event_spec = OrderEventSpec(

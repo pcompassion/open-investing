@@ -161,12 +161,14 @@ class EbestApiData:
         "CFOAT00100": {
             "api_path": EbestUrl.option_order,
             "f_data_block_name": "{tr_code}OutBlock1",
+            "f_in_block_name": "{tr_code}InBlock1",
             "market_type": MarketType.DERIVATIVE,
             "request_per_second": 10,
         },
         "CFOAT00300": {
             "api_path": EbestUrl.option_order,
             "market_type": MarketType.DERIVATIVE,
+            "f_in_block_name": "{tr_code}InBlock1",
             "f_data_block_name": "{tr_code}OutBlock1",
             "request_per_second": 10,
         },

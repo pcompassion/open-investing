@@ -50,7 +50,7 @@ class Task:
         try:
             await self.coro
         except asyncio.CancelledError as e:
-            logger.info(f"{self.name} task cancelled: {e}")
+            logger.warning(f"{self.name} task cancelled: {e}")
         except Exception as general_exception:
             logger.exception(f"{self.name} task exception: {general_exception}")
         finally:

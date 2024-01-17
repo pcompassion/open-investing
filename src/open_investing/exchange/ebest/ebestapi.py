@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 import sys
 
-# if "/Users/littlehome/projects/risk-glass/src/" not in sys.path:
-#     sys.path.append("d:/dev/XingAPI/risk/src/")
-
 import requests
 import json
 from pathlib import Path

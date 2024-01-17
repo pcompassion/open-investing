@@ -35,6 +35,8 @@ class MarketOrderAgent(OrderAgent):
 
     async def on_order_command(self, order_info):
         order_spec = order_info["task_spec"]
+        logger.info(f"on_order_command: {order_spec.spec_type_name}")
+
         order_id = order_spec.order_id
 
         order_data_manager = self.order_data_manager
@@ -108,6 +110,7 @@ class MarketOrderAgent(OrderAgent):
             case OrderEventName.Filled:
                 pass
                 # check if filled,
+
             case _:
                 pass
 

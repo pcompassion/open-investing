@@ -123,6 +123,7 @@ class OrderService:
         await order_data_manager.save(
             order, save_params=dict(exchange_order_id=exchange_order_id)
         )
+        pass
 
     async def open_order(self, order, exchange_manager):
         task = asyncio.create_task(self._open_order(order, exchange_manager))
