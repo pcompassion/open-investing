@@ -35,7 +35,7 @@ from open_library.logging.logging_filter import IntervalLoggingFilter
 logger = logging.getLogger(__name__)
 
 quote_logger = logging.getLogger("quote")
-interval_filter = IntervalLoggingFilter(60)  # Log once every 60 seconds
+interval_filter = IntervalLoggingFilter(2)  # Log once every 60 seconds
 quote_logger.addFilter(interval_filter)
 
 

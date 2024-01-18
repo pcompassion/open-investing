@@ -23,7 +23,7 @@ from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.order.order_event_broker import OrderEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
-from open_investing.security.quote_service import QuoteService
+
 
 from open_investing.config.task import Config
 

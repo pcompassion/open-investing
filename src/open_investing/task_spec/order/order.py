@@ -12,6 +12,9 @@ from open_investing.order.const.order import OrderCommandName, OrderSide
 from open_investing.task.task_command import TaskCommand, SubCommand
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 from open_library.locator.service_locator import ServiceKey
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderSpec(TaskSpec):
@@ -67,6 +70,8 @@ class OrderAgent(Generic[T], TaskSpecHandler):
             run_order_command=Task("run_order_command", self.run_order_command()),
             run_order_event=Task("run_order_event", self.run_order_event()),
         )
+        self.running_order_command = False
+        self.running_order_event = False
 
     @property
     def order_spec(self) -> T:
@@ -80,10 +85,14 @@ class OrderAgent(Generic[T], TaskSpecHandler):
         pass
 
     async def run_order_command(self):
+        self.running_order_command = True
         while True:
-            order_info = await self.command_queue.get()
+            try:
+                order_info = await self.command_queue.get()
 
-            await self.on_order_command(order_info)
+                await self.on_order_command(order_info)
+            except Exception as e:
+                logger.exception(f"run_order_command: {e}")
 
     async def enqueue_order_command(self, order_info):
         await self.command_queue.put(order_info)
@@ -94,10 +103,14 @@ class OrderAgent(Generic[T], TaskSpecHandler):
         pass
 
     async def run_order_event(self):
+        self.running_order_event = True
         while True:
-            order_event = await self.order_event_queue.get()
+            try:
+                order_event = await self.order_event_queue.get()
 
-            await self.on_order_event(order_event)
+                await self.on_order_event(order_event)
+            except Exception as e:
+                logger.exception(f"run_order_event: {e}")
 
     async def enqueue_order_event(self, order_event):
         await self.order_event_queue.put(order_event)
@@ -107,9 +120,12 @@ class OrderAgent(Generic[T], TaskSpecHandler):
 
     async def run_quote_event(self):
         while True:
-            quote_event = await self.quote_event_queue.get()
+            try:
+                quote_event = await self.quote_event_queue.get()
 
-            await self.on_quote_event(quote_event)
+                await self.on_quote_event(quote_event)
+            except Exception as e:
+                logger.exception(f"run_quote_event: {e}")
 
     async def enqueue_quote_event(self, event):
         await self.quote_event_queue.put(event)

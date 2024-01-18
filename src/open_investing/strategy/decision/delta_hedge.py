@@ -47,6 +47,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
+        logger.info(f"on_decision: {decision_spec}")
         order_task_dispatcher = self.order_task_dispatcher
 
         decision_id = decision_spec.decision_id
@@ -129,7 +130,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                 await self.on_decision(decision_info)
             except Exception as e:
-                logger.info("e")
+                logger.info(f"run_decision: {e}")
 
     async def start_tasks(self):
         self.running = True

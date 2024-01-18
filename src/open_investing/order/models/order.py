@@ -13,17 +13,17 @@ class Order(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order_type = models.CharField(max_length=32)
+    order_type = models.CharField(max_length=32, db_index=True)
     order_price_type = models.CharField(max_length=32)
 
     exchange_order_id = models.CharField(
-        max_length=255, blank=True, null=False, default=""
+        max_length=255, blank=True, null=False, default="", db_index=True
     )
-    security_code = models.CharField(max_length=32, blank=True)
+    security_code = models.CharField(max_length=32, blank=True, db_index=True)
     side = models.CharField(max_length=32, blank=True)
 
     life_stage = models.CharField(
-        max_length=32, blank=True, default=OrderLifeStage.Undefined
+        max_length=32, blank=True, default=OrderLifeStage.Undefined, db_index=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

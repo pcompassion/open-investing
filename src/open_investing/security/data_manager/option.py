@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from django.db.models.functions import Rank
 
 from open_library.time.datetime import now_local
 from asgiref.sync import sync_to_async
@@ -65,24 +66,44 @@ class OptionDataManager:
         # ) -> QuerySet:
     ) -> ListDataTypeHint:
         """
-        SELECT *, MAX(date_at) OVER (PARTITION BY security_code) as recent_at
-        FROM option_table
-        WHERE date_at = recent_at;
+        SELECT *,
+        MIN(expire_at) OVER (PARTITION BY security_code) as recent_at,
+        RANK() OVER (PARTITION BY security_code ORDER BY expire_at ASC, date_at DESC) as rank
+        FROM option
+        WHERE expire_at > 'your_now_value'
+        HAVING expire_at = recent_at AND rank = 1
+        ORDER BY expire_at, date_at;
+
         """
+        # TODO: this is taking too long, too many data
         now = now_local()
+        filter_params = filter_params or {}
+
+        filter_params_updated = dict(expire_at__gt=now) | filter_params
 
         option_qs = (
-            Option.objects.filter(expire_at__gt=now)
+            Option.objects.filter(**filter_params_updated)
             .annotate(
                 recent_at=Window(
                     expression=Min("expire_at"), partition_by=[F("security_code")]
-                )
+                ),
+                rank=Window(
+                    expression=Rank(),
+                    partition_by=[F("security_code")],
+                    order_by=[F("expire_at").asc(), F("date_at").desc()],
+                ),
             )
-            .filter(expire_at=F("recent_at"))
-            .order_by("expire_at")
+            .filter(expire_at=F("recent_at"), rank=1)
+            .order_by("expire_at", "date_at")
         )
-
-        if filter_params:
-            option_qs = option_qs.filter(**filter_params)
-
         return await as_list_type(option_qs, return_type, field_names)
+
+        # option_qs = Option.objects.filter(**filter_params_updated)
+
+        # option_df_ = await as_list_type(option_qs, return_type, field_names)
+        # # Group by 'security_code' and find the index of the row with the minimum 'expire_at'
+        # idx = option_df_.groupby("security_code")["expire_at"].idxmin()
+
+        # # Use the indices to filter the DataFrame
+        # option_df = option_df_.loc[idx]
+        # return option_df

@@ -101,7 +101,7 @@ class OrderService:
 
                 await self.on_order_event(order_event)
             except Exception as e:
-                logger.warning(f"run_order_event: {e}")
+                logger.exception(f"run_order_event: {e}")
 
     async def _open_order(self, order, exchange_manager):
         order_data_manager = self.order_data_manager
@@ -132,6 +132,7 @@ class OrderService:
         pass
 
     async def open_order(self, order, exchange_manager):
+        logger.info(f"open_order: {order.id} {order.order_type}")
         task = asyncio.create_task(self._open_order(order, exchange_manager))
 
         self.running_tasks.add(task)

@@ -105,24 +105,27 @@ class TaskManager:
 
     async def run(self):
         while True:
-            # while not self.command_queue.empty():
-            task_info = await self.command_queue.get()
-            task_spec_ = task_info["task_spec"]
-            command_ = task_info["command"]
+            try:
+                # while not self.command_queue.empty():
+                task_info = await self.command_queue.get()
+                task_spec_ = task_info["task_spec"]
+                command_ = task_info["command"]
 
-            if isinstance(task_spec_, dict):
-                task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
-            else:
-                task_spec = task_spec_
+                if isinstance(task_spec_, dict):
+                    task_spec = TaskSpecHandlerRegistry.create_spec_instance(task_spec_)
+                else:
+                    task_spec = task_spec_
 
-            if isinstance(command_, dict):
-                command = TaskCommand(**command_)
-            else:
-                command = command_
+                if isinstance(command_, dict):
+                    command = TaskCommand(**command_)
+                else:
+                    command = command_
 
-            if command.name == "start":
-                await self.start_task(task_spec, command)
-            elif command.name == "stop":
-                await self.stop_task(task_spec, command)
-            elif command.name == "command":
-                await self.command_task(task_spec, command.sub_command)
+                if command.name == "start":
+                    await self.start_task(task_spec, command)
+                elif command.name == "stop":
+                    await self.stop_task(task_spec, command)
+                elif command.name == "command":
+                    await self.command_task(task_spec, command.sub_command)
+            except Exception as e:
+                logger.exception(f"task manager run: {e}")

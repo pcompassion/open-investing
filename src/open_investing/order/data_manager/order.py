@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from django.db import connection
+
+import time
 from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from uuid import uuid4
 from django.core.exceptions import ObjectDoesNotExist
@@ -71,7 +74,20 @@ class OrderDataManager:
         filter_params = filter_params or {}
 
         try:
-            return await Order.objects.aget(**filter_params)
+            start_time = time.time()
+            # order = await Order.objects.aget(**filter_params)
+            order = await Order.objects.filter(**filter_params).afirst()
+            end_time = time.time()
+            duration = end_time - start_time
+
+            logger.info(f"get_single_order: {duration}")
+
+            # with connection.cursor() as cursor:
+            #     query_str = str(Order.objects.filter(**filter_params).query)
+            #     cursor.execute(f"EXPLAIN {query_str}")
+            #     explanation = cursor.fetchall()
+            #     logger.info(f"get_single_order explanation: {explanation}")
+            return order
         except ObjectDoesNotExist:
             return None
 

@@ -66,6 +66,8 @@ class OrderMixin:
                 exchange_order_id = api_response.raw_data["CSPAT00601OutBlock2"].get(
                     "OrdNo"
                 )
+            if exchange_order_id:
+                exchange_order_id = int(exchange_order_id)
 
         return exchange_order_id, api_response
 
@@ -131,8 +133,8 @@ class OrderMixin:
 
                 data = dict(
                     security_code=security_code,
-                    fill_quantity=data["chevol"],
-                    fill_price=data["cheprice"],
+                    fill_quantity=int(data["chevol"]),
+                    fill_price=float(data["cheprice"]),
                     date_at=combine(date, time_obj),
                 )
 

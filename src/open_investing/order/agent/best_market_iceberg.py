@@ -73,90 +73,94 @@ class BestMarketIcebergOrderAgent(OrderAgent):
         self.run_order_task = None
 
     async def run_order(self, order_spec, order, command_queue: asyncio.Queue):
-        order_data_manager = self.order_data_manager
-        order_event_broker = self.order_event_broker
+        try:
+            order_data_manager = self.order_data_manager
+            order_event_broker = self.order_event_broker
 
-        composite_order = order
-        time_interval_second = order_spec.time_interval_second
-        split = order_spec.split
-        security_code = order_spec.security_code
-        quantity = order_spec.quantity
+            composite_order = order
+            time_interval_second = order_spec.time_interval_second
+            split = order_spec.split
+            security_code = order_spec.security_code
+            quantity = order_spec.quantity
 
-        filled_quantity = order.filled_quantity
+            filled_quantity = order.filled_quantity
 
-        orders = dict()
+            orders = dict()
 
-        while filled_quantity < quantity:
-            if not command_queue.empty():
-                command = await command_queue.get()
-                if command == "STOP":
-                    break
+            while filled_quantity < quantity:
+                if not command_queue.empty():
+                    command = await command_queue.get()
+                    if command == "STOP":
+                        break
 
-            remaining_quantity = quantity - filled_quantity
-            quantity_partial = min(quantity / split, remaining_quantity)
-            # TODO: stock seems to only allows integer
-            quantity_partial = math.ceil(quantity_partial)
-            if quantity_partial == 0:
-                quantity_partial = remaining_quantity
+                remaining_quantity = quantity - filled_quantity
+                quantity_partial = min(quantity / split, remaining_quantity)
+                # TODO: stock seems to only allows integer
+                quantity_partial = math.ceil(quantity_partial)
+                if quantity_partial == 0:
+                    quantity_partial = remaining_quantity
 
-            order_id = uuid4()
-            orders[order_id] = None
+                order_id = uuid4()
+                orders[order_id] = None
 
-            order_event_spec = OrderEventSpec(order_id=order_id)
-            listener_spec = ListenerSpec(
-                listener_type=ListenerType.Callable,
-                listener_or_name=self.enqueue_order_event,
-            )
-
-            order_event_broker.subscribe(order_event_spec, listener_spec)
-
-            order_spec_dict = self.base_spec_dict | {
-                "spec_type_name": OrderType.Market,
-                # "quantity": quantity_partial,
-                # TODO: quantity type
-                "quantity": int(quantity_partial),
-                "order_id": order_id,
-                "security_code": security_code,
-            }
-
-            command = OrderTaskCommand(
-                name="command", order_command=OrderCommand(name=OrderCommandName.Open)
-            )
-
-            order_task_dispatcher = self.order_task_dispatcher
-            await order_task_dispatcher.dispatch_task(order_spec_dict, command)
-
-            await asyncio.sleep(time_interval_second)
-            order = await order_data_manager.get(filter_params=dict(id=order_id))
-            filled_quantity_new = order.filled_quantity
-
-            if filled_quantity_new < quantity_partial:
-                command = OrderTaskCommand(
-                    name="command",
-                    order_command=OrderCommand(name=OrderCommandName.Start),
+                order_event_spec = OrderEventSpec(order_id=order_id)
+                listener_spec = ListenerSpec(
+                    listener_type=ListenerType.Callable,
+                    listener_or_name=self.enqueue_order_event,
                 )
 
-                cancel_event = asyncio.Event()
+                order_event_broker.subscribe(order_event_spec, listener_spec)
 
-                self.cancel_events[order_id] = cancel_event
-
-                remaining_quantity = quantity_partial - filled_quantity_new
-
-                cancel_order_spec_dict = self.base_spec_dict | {
-                    "spec_type_name": "order.cancel_remaining",
-                    "cancel_quantity": remaining_quantity,
+                order_spec_dict = self.base_spec_dict | {
+                    "spec_type_name": OrderType.Market,
+                    # "quantity": quantity_partial,
+                    # TODO: quantity type
+                    "quantity": int(quantity_partial),
                     "order_id": order_id,
                     "security_code": security_code,
                 }
 
-                await order_task_dispatcher.dispatch_task(
-                    cancel_order_spec_dict, command
+                command = OrderTaskCommand(
+                    name="command",
+                    order_command=OrderCommand(name=OrderCommandName.Open),
                 )
 
-                try:
-                    await asyncio.wait_for(cancel_event.wait(), timeout=10)
-                except asyncio.TimeoutError:
-                    logger.warning(f"cancel order timed out {order_id}")
+                order_task_dispatcher = self.order_task_dispatcher
+                await order_task_dispatcher.dispatch_task(order_spec_dict, command)
+
+                await asyncio.sleep(time_interval_second)
+                order = await order_data_manager.get(filter_params=dict(id=order_id))
+                filled_quantity_new = order.filled_quantity
+
+                if filled_quantity_new < quantity_partial:
+                    command = OrderTaskCommand(
+                        name="command",
+                        order_command=OrderCommand(name=OrderCommandName.Start),
+                    )
+
+                    cancel_event = asyncio.Event()
+
+                    self.cancel_events[order_id] = cancel_event
+
+                    remaining_quantity = quantity_partial - filled_quantity_new
+
+                    cancel_order_spec_dict = self.base_spec_dict | {
+                        "spec_type_name": "order.cancel_remaining",
+                        "cancel_quantity": remaining_quantity,
+                        "order_id": order_id,
+                        "security_code": security_code,
+                    }
+
+                    await order_task_dispatcher.dispatch_task(
+                        cancel_order_spec_dict, command
+                    )
+
+                    try:
+                        await asyncio.wait_for(cancel_event.wait(), timeout=10)
+                    except asyncio.TimeoutError:
+                        logger.warning(f"cancel order timed out {order_id}")
+        except Exception as e:
+            logger.exception(f"run_order: {e}")
 
     async def on_order_event(self, order_info):
         event_spec = order_info["event_spec"]

@@ -35,14 +35,15 @@ class LimitOrderAgent(OrderAgent):
 
     async def on_order_command(self, order_info):
         order_spec = order_info["task_spec"]
+        logger.info(f"on_order_command: {order_spec}")
         order_id = order_spec.order_id
 
         order_data_manager = self.order_data_manager
         exchange_manager = self.exchange_manager
         order = None
         if order_id:
-            order = await order_data_manager.get(
-                filter_params=dict(id=order_id, order_type=self.order_type)
+            order = await order_data_manager.get_single_order(
+                filter_params=dict(id=order_id)
             )
         if not order:
             order = await order_data_manager.prepare_order(

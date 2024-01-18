@@ -92,128 +92,145 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.composite_order = None
         self.filled_quantity = None
         self.order_command_queues = dict()
+        self.limit_order_id = None
 
     async def run_order(self, order_spec, order):
-        order_data_manager = self.order_data_manager
-        order_event_broker = self.order_event_broker
-        order_task_dispatcher = self.order_task_dispatcher
+        try:
+            order_data_manager = self.order_data_manager
+            order_event_broker = self.order_event_broker
+            order_task_dispatcher = self.order_task_dispatcher
 
-        self.composite_order = order
-        max_tick_diff = order_spec.max_tick_diff
-        security_code = order_spec.security_code
-        quantity = order_spec.quantity
+            self.composite_order = order
+            max_tick_diff = order_spec.max_tick_diff
+            security_code = order_spec.security_code
+            quantity = order_spec.quantity
 
-        self.filled_quantity = order.filled_quantity
+            self.filled_quantity = order.filled_quantity
 
-        orders = dict()
-        order_id = order.id
-        order_event_spec = None
-        listener_spec = None
-        order_side = order_spec.order_side
+            orders = dict()
+            composite_order_id = order.id
+            order_event_spec = None
+            listener_spec = None
+            order_side = order_spec.order_side
 
-        order_command_queue = self.order_command_queues.get(order_id)
+            order_command_queue = self.order_command_queues.get(composite_order_id)
 
-        while self.filled_quantity < quantity:
-            # TODO: probably need tighter check
-            remaining_quantity = quantity - self.filled_quantity
+            while self.filled_quantity < quantity:
+                # TODO: probably need tighter check
+                remaining_quantity = quantity - self.filled_quantity
 
-            if order_command_queue is not None and not order_command_queue.empty():
-                internal_order_command = await order_command_queue.get()
-                name = internal_order_command.name
+                if order_command_queue is not None and not order_command_queue.empty():
+                    internal_order_command = await order_command_queue.get()
+                    name = internal_order_command.name
 
-                if name == "STOP":
-                    await self.cancel_remaining(
-                        order_id, security_code, remaining_quantity
-                    )
+                    if name == "STOP" and self.limit_order_id:
+                        await self.cancel_remaining(
+                            self.limit_order_id, security_code, remaining_quantity
+                        )
 
-                    break
+                        break
 
-            try:
-                timed_data = await self.quote_tracker.wait_for_valid_data()
-                recent_quote = timed_data.data
+                try:
+                    timed_data = await self.quote_tracker.wait_for_valid_data()
+                    recent_quote = timed_data.data
 
-                if order_side == OrderSide.Buy:
-                    price = recent_quote.bid_price_1
-                else:
-                    price = recent_quote.ask_price_1
-
-                test = True
-
-                if test:
-                    # for faster buy
                     if order_side == OrderSide.Buy:
-                        price = recent_quote.ask_price_1
-                    else:
                         price = recent_quote.bid_price_1
+                    else:
+                        price = recent_quote.ask_price_1
 
-            except TimeoutError as e:
-                logger.warning(f"wait for valid data timeout {e}")
+                    test = True
 
-                continue
+                    if test:
+                        # for faster testing
+                        if order_side == OrderSide.Buy:
+                            # logger.info(
+                            #     f"buying at {recent_quote.ask_price_2}, instead of {price}"
+                            # )
+                            price = recent_quote.ask_price_2
+                        else:
+                            # logger.info(
+                            #     f"selling at {recent_quote.bid_price_2}, instead of {price}"
+                            # )
 
-                # shouldn't happen
+                            price = recent_quote.bid_price_2
 
-            if self.quote is not None:
-                if order_side == OrderSide.Buy:
-                    price_diff = price - self.quote.bid_price_1
-                else:
-                    price_diff = self.quote.ask_price_1 - price
+                except TimeoutError as e:
+                    logger.warning(f"wait for quote data timeout {e}")
 
-                tick_diff = math.floor(price_diff / order_spec.tick_size)
-
-                if tick_diff > max_tick_diff:
-                    # TODO: cancel all
-                    logger.info(f"tick diff bigger than max_tick_diff {max_tick_diff}")
-                    self.quote = recent_quote
-                    await self.cancel_remaining(
-                        order_id,
-                        security_code,
-                        remaining_quantity,
-                    )
                     continue
-                else:
-                    # wait for fill
 
-                    try:
-                        timed_data = await self.order_fill_tracker.wait_for_valid_data(
-                            timeout_seconds=3
+                    # shouldn't happen
+
+                if self.quote is not None:
+                    if order_side == OrderSide.Buy:
+                        price_diff = price - self.quote.bid_price_1
+                    else:
+                        price_diff = self.quote.ask_price_1 - price
+
+                    tick_diff = math.floor(price_diff / order_spec.tick_size)
+
+                    if tick_diff > max_tick_diff:
+                        # TODO: cancel all
+                        logger.info(
+                            f"tick diff bigger than max_tick_diff {max_tick_diff}"
+                        )
+                        self.quote = recent_quote
+                        await self.cancel_remaining(
+                            self.limit_order_id,
+                            security_code,
+                            remaining_quantity,
                         )
                         continue
-                    except TimeoutError as e:
-                        logger.warning(f"wait for order fill data timeout {e}")
-                        continue
+                    else:
+                        # wait for fill
+                        if self.limit_order_id:
+                            try:
+                                timed_data = (
+                                    await self.order_fill_tracker.wait_for_valid_data(
+                                        timeout_seconds=3
+                                    )
+                                )
+                                continue
+                            except TimeoutError as e:
+                                logger.warning(f"wait for order fill data timeout {e}")
+                                continue
 
-            else:
-                self.quote = recent_quote
+                else:
+                    self.quote = recent_quote
 
-            order_id = uuid4()
-            orders[order_id] = None
+                order_id = self.limit_order_id = uuid4()
+                orders[order_id] = None
 
-            order_event_spec = OrderEventSpec(order_id=order_id)
-            listener_spec = ListenerSpec(
-                listener_type=ListenerType.Callable,
-                listener_or_name=self.enqueue_order_event,
-            )
+                order_event_spec = OrderEventSpec(order_id=order_id)
+                listener_spec = ListenerSpec(
+                    listener_type=ListenerType.Callable,
+                    listener_or_name=self.enqueue_order_event,
+                )
 
-            self.order_event_broker.subscribe(order_event_spec, listener_spec)
+                self.order_event_broker.subscribe(order_event_spec, listener_spec)
 
-            order_spec_dict = self.base_spec_dict | {
-                "spec_type_name": OrderType.Limit,
-                # "quantity": quantity_partial,
-                # TODO: quantity type
-                "order_side": order_spec.order_side,
-                "quantity": int(remaining_quantity),
-                "order_id": order_id,
-                "security_code": security_code,
-                "price": price,
-            }
+                order_spec_dict = self.base_spec_dict | {
+                    "spec_type_name": OrderType.Limit,
+                    # "quantity": quantity_partial,
+                    # TODO: quantity type
+                    "order_side": order_spec.order_side,
+                    "quantity": int(remaining_quantity),
+                    "order_id": order_id,
+                    "security_code": security_code,
+                    "price": price,
+                }
 
-            command = OrderTaskCommand(
-                name="command", order_command=OrderCommand(name=OrderCommandName.Open)
-            )
+                command = OrderTaskCommand(
+                    name="command",
+                    order_command=OrderCommand(name=OrderCommandName.Open),
+                )
 
-            order_task_dispatcher = self.order_task_dispatcher
-            await order_task_dispatcher.dispatch_task(order_spec_dict, command)
+                order_task_dispatcher = self.order_task_dispatcher
+                await order_task_dispatcher.dispatch_task(order_spec_dict, command)
+
+        except Exception as e:
+            logger.exception(f"run_order: {e}")
 
     async def cancel_remaining(self, order_id, security_code, cancel_quantity):
         order_task_dispatcher = self.order_task_dispatcher
@@ -274,6 +291,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 order_id = order.id
 
                 event = self.cancel_events.get(order_id)
+                self.limit_order_id = None
                 if event:
                     event.set()
                     del self.cancel_events[event]
