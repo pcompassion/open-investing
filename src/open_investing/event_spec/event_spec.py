@@ -10,7 +10,7 @@ from open_investing.const.code_name import DerivativeType
 class EventSpec(BaseSpec):
     def attr_names(self):
         # data is used as event data result
-        names = self.model_dump(exclude_unset=True, exclude=set(["data"])).keys()
+        names = self.model_dump(exclude_none=True, exclude=set(["data"])).keys()
 
         return names
 

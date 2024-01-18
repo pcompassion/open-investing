@@ -137,6 +137,15 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 else:
                     price = recent_quote.ask_price_1
 
+                test = True
+
+                if test:
+                    # for faster buy
+                    if order_side == OrderSide.Buy:
+                        price = recent_quote.ask_price_1
+                    else:
+                        price = recent_quote.bid_price_1
+
             except TimeoutError as e:
                 logger.warning(f"wait for valid data timeout {e}")
 
@@ -153,6 +162,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 tick_diff = math.floor(price_diff / order_spec.tick_size)
 
                 if tick_diff > max_tick_diff:
+                    # TODO: cancel all
+                    logger.info(f"tick diff bigger than max_tick_diff {max_tick_diff}")
                     self.quote = recent_quote
                     await self.cancel_remaining(
                         order_id,
