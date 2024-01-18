@@ -8,11 +8,14 @@ from open_investing.const.code_name import DerivativeType
 
 
 class EventSpec(BaseSpec):
-    def attr_names(self):
-        # data is used as event data result
-        names = self.model_dump(exclude_none=True, exclude=set(["data"])).keys()
+    pass
+    # def attr_names(self):
+    #     # data is used as event data result
+    #     names = self.model_dump(
+    #         exclude_none=True, exclude=set(["data", "service_keys"])
+    #     ).keys()
 
-        return names
+    #     return names
 
 
 class QuoteEventSpec(EventSpec):
