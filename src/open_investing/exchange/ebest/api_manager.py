@@ -66,10 +66,12 @@ class EbestApiManager(OrderMixin):
             EBEST_APP_KEY_DERIVATIVE, EBEST_APP_SECRET_DERIVATIVE
         )
 
+    async def subscribe_stock_order(self):
         await self.stock_api.subscribe(
             tr_type="1", tr_code="SC1", tr_key="", handler=self.stock_order_listener
         )
 
+    async def subscribe_derivative_order(self):
         await self.derivative_api.subscribe(
             tr_type="1",
             tr_code="C01",
@@ -506,7 +508,7 @@ class EbestApiManager(OrderMixin):
         tr_code = None
 
         match derivative_code.derivative_type:
-            case DerivativeType.Future:
+            case DerivativeType.Future | DerivativeType.MiniFuture:
                 tr_code = "FH0"
 
             case DerivativeType.Put | DerivativeType.Call:

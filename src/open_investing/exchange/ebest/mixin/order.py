@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from datetime import time
+import pendulum
 
 from open_investing.security.derivative_code import DerivativeCode
 
@@ -97,13 +99,41 @@ class OrderMixin:
 
                 order_event_spec = OrderEventSpec(
                     name=OrderEventName.ExchangeFilled,
+                    order_id=order.id,
                 )
+
+                date_str = data["chedate"]
+                time_str = data["chetime"]
+                date_format = "YYYYMMDD"
+                time_format = "HHmmssSSS"
+
+                dt = pendulum.from_format(date_str, date_format)
+                date = dt.date()
+
+                # time = pendulum.parse(time_str, exact=True, formatter=time_format)
+
+                hours, minutes, seconds = (
+                    int(time_str[:2]),
+                    int(time_str[2:4]),
+                    int(time_str[4:6]),
+                )
+                milliseconds = int(time_str[6:])
+
+                # Create a time object
+                time_obj = time(
+                    hour=hours,
+                    minute=minutes,
+                    second=seconds,
+                    microsecond=milliseconds
+                    * 1000,  # Convert milliseconds to microseconds
+                )
+                # Output: 2024-01-18
 
                 data = dict(
                     security_code=security_code,
                     fill_quantity=data["chevol"],
                     fill_price=data["cheprice"],
-                    date_at=combine(data["chedate"], data["chetime"]),
+                    date_at=combine(date, time_obj),
                 )
 
                 message = dict(

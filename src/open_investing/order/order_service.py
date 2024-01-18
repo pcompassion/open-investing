@@ -12,6 +12,9 @@ from open_library.observe.subscription_manager import SubscriptionManager
 from open_investing.event_spec.event_spec import OrderEventSpec
 from open_library.observe.listener_spec import ListenerSpec
 from open_library.observe.const import ListenerType
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderService:
@@ -93,9 +96,12 @@ class OrderService:
 
     async def run_order_event(self):
         while True:
-            order_event = await self.order_event_queue.get()
+            try:
+                order_event = await self.order_event_queue.get()
 
-            await self.on_order_event(order_event)
+                await self.on_order_event(order_event)
+            except Exception as e:
+                logger.warning(f"run_order_event: {e}")
 
     async def _open_order(self, order, exchange_manager):
         order_data_manager = self.order_data_manager

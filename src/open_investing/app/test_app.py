@@ -14,7 +14,7 @@ from open_library.environment.environment import Environment
 from open_library.app.base_app import BaseApp
 from open_library.locator.service_locator import ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
-from open_investing.app.task_app import App as TaskApp
+from open_investing.app.base_app import App as BaseApp
 
 
 async def debug_control():
@@ -22,7 +22,7 @@ async def debug_control():
         await asyncio.sleep(1)
 
 
-class App(TaskApp):
+class App(BaseApp):
     name = "test_app"
 
     def __init__(self, *args, **kwargs):

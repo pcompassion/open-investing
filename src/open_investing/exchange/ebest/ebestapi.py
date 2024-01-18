@@ -227,10 +227,10 @@ class EbestApi(ExchangeApi):
 
         logger.info(f"request data: {body}, response msg: {data.get('rsp_msg','')}")
 
-        rsp_cd = data.get("rsp_cd", -1)
+        rsp_cd = data.get("rsp_cd", None)
         try:
             rsp_cd = int(rsp_cd)
-            if rsp_cd != 0:
+            if rsp_cd >= 1000:
                 raise
         except:
             logger.warning(f"request: {body}, data: {data}")

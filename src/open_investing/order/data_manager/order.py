@@ -90,7 +90,7 @@ class OrderDataManager:
             order=order,
             quantity=event_params["fill_quantity"],
             price=event_params["fill_price"],
-            date_at=event_params["fill_at"],
+            date_at=event_params["date_at"],
         )
         trade = await Trade.objects.acreate(**params)
 
