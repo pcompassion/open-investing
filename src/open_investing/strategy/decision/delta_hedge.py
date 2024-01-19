@@ -70,6 +70,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     order_side=OrderSide.Sell,
                     security_code=self.decision_spec.leader_security_code,
                     quantity=self.decision_spec.leader_quantity,
+                    strategy_session_id=self.decision_spec.strategy_session_id,
                     order_id=None,
                     parent_order_id=None,
                 )
@@ -162,6 +163,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         security_code=self.decision_spec.follower_security_code,
                         quantity=quantity,
                         order_side=OrderSide.Sell,
+                        strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                         order_id=None,
                         parent_order_id=None,
                     )

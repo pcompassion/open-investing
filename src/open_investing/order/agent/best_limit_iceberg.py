@@ -217,6 +217,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     "order_side": order_spec.order_side,
                     "quantity": int(remaining_quantity),
                     "order_id": order_id,
+                    "strategy_session_id": order_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                     "security_code": security_code,
                     "price": price,
                 }
