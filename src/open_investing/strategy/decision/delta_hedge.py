@@ -83,6 +83,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     security_code=self.decision_spec.leader_security_code,
                     quantity=self.decision_spec.leader_quantity,
                     strategy_session_id=self.decision_spec.strategy_session_id,
+                    decision_id=decision_id,
                     order_id=order_id,
                     parent_order_id=None,
                 )
@@ -168,7 +169,12 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 fill_quantity = data["fill_quantity"]
 
                 if order.security_code == self.decision_spec.leader_security_code:
-                    quantity = fill_quantity * self.decision_spec.leader_follower_ratio
+                    # TODO: min quantity is 1 ?
+                    MIN_QUANTITY = 1
+                    quantity = max(
+                        fill_quantity * self.decision_spec.leader_follower_ratio,
+                        MIN_QUANTITY,
+                    )
 
                     order_spec_dict = self.base_spec_dict | dict(
                         spec_type_name=OrderType.Market,

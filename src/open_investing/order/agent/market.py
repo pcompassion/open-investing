@@ -56,6 +56,9 @@ class MarketOrderAgent(OrderAgent):
                     side=order_spec.order_side,
                     parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,
+                    strategy_session_id=order_spec.strategy_session_id,
+                    decision_id=order_spec.decision_id,
+                    id=order_id,
                 )
             )
 
