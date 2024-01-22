@@ -157,6 +157,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 except TimeoutError as e:
                     logger.warning(f"wait for quote data timeout {e}")
+                    await self._subscribe_quote(order_spec.security_code)
 
                     continue
 
@@ -302,21 +303,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         pass
 
-    async def on_order_command(self, order_info):
-        order_spec = order_info["task_spec"]
-
-        logger.info(f"on_command_event: {order_spec.spec_type_name}")
-
-        strategy_session_id = order_spec.strategy_session_id
-        decision_id = order_spec.decision_id
-
-        order_id = order_spec.order_id
-
-        order_data_manager = self.order_data_manager
-
-        command = order_info["command"]
-
-        quote_event_spec = QuoteEventSpec(security_code=order_spec.security_code)
+    async def _subscribe_quote(self, security_code: str):
+        quote_event_spec = QuoteEventSpec(security_code=security_code)
         listener_spec = ListenerSpec(
             listener_type=ListenerType.Callable,
             listener_or_name=self.enqueue_quote_event,
@@ -334,6 +322,22 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         )
 
         await self.quote_service.subscribe_quote(quote_event_spec, listener_spec)
+
+    async def on_order_command(self, order_info):
+        order_spec = order_info["task_spec"]
+
+        logger.info(f"on_command_event: {order_spec.spec_type_name}")
+
+        strategy_session_id = order_spec.strategy_session_id
+        decision_id = order_spec.decision_id
+
+        order_id = order_spec.order_id
+
+        order_data_manager = self.order_data_manager
+
+        command = order_info["command"]
+
+        await self._subscribe_quote(order_spec.security_code)
 
         match command.name:
             case OrderCommandName.Open:
