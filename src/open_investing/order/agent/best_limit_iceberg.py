@@ -139,7 +139,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     else:
                         price = recent_quote.ask_price_1
 
-                    test = True
+                    test = False
 
                     if test:
                         # for faster testing
