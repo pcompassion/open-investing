@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from django.db.models import Window, F, Max, Min
+from django.db.models.functions import Rank
 from open_library.pandas.dataframe import serialize_row
 import pandas as pd
 import pendulum
