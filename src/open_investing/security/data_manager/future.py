@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+from django.db.models import Window, F, Max, Min
 from open_library.pandas.dataframe import serialize_row
 import pandas as pd
 import pendulum
 from datetime import timedelta
 from open_investing.security.derivative_code import DerivativeCode
 from open_library.collections.dict import instance_to_dict
+from open_library.time.datetime import now_local
 
 from open_investing.security.models import Future
 from open_library.locator.service_locator import ServiceKey
@@ -49,3 +51,36 @@ class FutureDataManager:
             futures_data.loc[:, "id"] = future_ids
 
         return futures_data
+
+    async def nearby_futures(
+        self,
+        max_time_diff: timedelta = timedelta(days=5),
+        filter_params: dict | None = None,
+        return_type: ListDataType = ListDataType.Dataframe,
+    ) -> ListDataTypeHint:
+        # TODO: don't need this logic
+        filter_params = filter_params or {}
+        now = now_local()
+
+        future_qs = (
+            Future.objects.filter(expire_at__gt=now)
+            .annotate(
+                recent_at=Window(
+                    expression=Min("expire_at"), partition_by=[F("security_code")]
+                ),
+                rank=Window(
+                    expression=Rank(),
+                    partition_by=[F("security_code")],
+                    order_by=[F("expire_at").asc(), F("date_at").desc()],
+                ),
+            )
+            .filter(expire_at=F("recent_at"), rank=1)
+            .order_by("expire_at", "date_at")
+        )
+
+        # filter_params_updated = dict(expire_at__gt=now) | filter_params
+
+        # if filter_params_updated:
+        #     future_qs = future_qs.filter(**filter_params_updated)
+
+        return await as_list_type(future_qs, return_type)
