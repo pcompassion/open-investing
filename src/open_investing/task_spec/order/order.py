@@ -28,7 +28,7 @@ class OrderSpec(TaskSpec):
     decision_id: UUID
     order_side: OrderSide
     order_id: UUID | None
-    parent_order_id: str | None = None
+    parent_order_id: UUID | None = None
     price: float | None = None
 
     security_code: str

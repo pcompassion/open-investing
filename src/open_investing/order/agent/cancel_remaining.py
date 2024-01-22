@@ -26,7 +26,9 @@ class CancelRemainingOrderAgent(OrderAgent):
         order_data_manager = self.order_data_manager
         exchange_manager = self.exchange_manager
 
-        order = await order_data_manager.get(filter_params=dict(id=order_id))
+        order = await order_data_manager.get_single_order(
+            filter_params=dict(id=order_id)
+        )
 
         command = order_info["command"]
 

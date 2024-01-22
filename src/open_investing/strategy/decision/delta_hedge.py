@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from open_investing.event_spec.event_spec import OrderEventSpec
+from uuid import uuid4
 from open_library.data.conversion import ListDataType
 from open_investing.task.task import Task
 from open_investing.strategy.const.decision import (
@@ -42,8 +44,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
         self.tasks = dict(
             run_strategy=Task("run_decision", self.run_decision()),
+            run_order_event=Task("run_order_event", self.run_order_event()),
         )
         self.strategy_session_id = self.decision_spec.strategy_session_id
+        self.order_ids = []
 
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
@@ -63,6 +67,14 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             case DecisionCommandName.Start:
                 await decision_data_manager.set_started(decision)
 
+                order_id = uuid4()
+                self.order_ids.append(order_id)
+
+                order_event_spec = OrderEventSpec(order_id=order_id)
+                self.order_event_broker.subscribe(
+                    order_event_spec, self.enqueue_order_event
+                )
+
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
                     max_tick_diff=5,
@@ -71,7 +83,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     security_code=self.decision_spec.leader_security_code,
                     quantity=self.decision_spec.leader_quantity,
                     strategy_session_id=self.decision_spec.strategy_session_id,
-                    order_id=None,
+                    order_id=order_id,
                     parent_order_id=None,
                 )
 
@@ -83,7 +95,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 await order_task_dispatcher.dispatch_task(
                     order_spec_dict, order_command
                 )
-                logger.info("on_decision ended")
+                # logger.info("on_decision ended")
             case DecisionCommandName.Close:
                 # TODO: close all orders
                 # maybe keep ongoing_orders to avoid db read

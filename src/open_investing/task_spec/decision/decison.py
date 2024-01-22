@@ -12,6 +12,9 @@ from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 from open_investing.task.task_command import SubCommand, TaskCommand
 from open_investing.strategy.const.decision import DecisionCommandName
 from typing import Generic, TypeVar
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DecisionSpec(TaskSpec):
@@ -51,6 +54,7 @@ class DecisionHandler(Generic[T], TaskSpecHandler):
         super().__init__(decision_spec)
 
         self.command_queue = asyncio.Queue()
+        self.order_event_queue = asyncio.Queue()
 
     @property
     def decision_spec(self) -> T:
@@ -98,3 +102,28 @@ class DecisionHandler(Generic[T], TaskSpecHandler):
 
         data_manager = self.services[service_key]
         return data_manager
+
+    async def run_order_event(self):
+        self.running_order_event = True
+        while True:
+            try:
+                order_event = await self.order_event_queue.get()
+
+                await self.on_order_event(order_event)
+            except Exception as e:
+                logger.exception(f"run_order_event: {e}")
+
+    async def enqueue_order_event(self, order_event):
+        await self.order_event_queue.put(order_event)
+
+    async def on_order_event(self, order_event):
+        pass
+
+    @property
+    def order_event_broker(self):
+        service_key = ServiceKey(
+            service_type="pubsub_broker",
+            service_name="order_event_broker",
+        )
+
+        return self.services[service_key]

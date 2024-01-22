@@ -48,9 +48,11 @@ class LimitOrderAgent(OrderAgent):
         if not order:
             order = await order_data_manager.prepare_order(
                 params=dict(
+                    id=order_id,
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
+                    strategy_session_id=order_spec.strategy_session_id,
                     side=order_spec.order_side,
                     parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,

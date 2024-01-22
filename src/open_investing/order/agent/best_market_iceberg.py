@@ -129,7 +129,9 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                 await order_task_dispatcher.dispatch_task(order_spec_dict, command)
 
                 await asyncio.sleep(time_interval_second)
-                order = await order_data_manager.get(filter_params=dict(id=order_id))
+                order = await order_data_manager.get_single_order(
+                    filter_params=dict(id=order_id)
+                )
                 filled_quantity_new = order.filled_quantity
 
                 if filled_quantity_new < quantity_partial:

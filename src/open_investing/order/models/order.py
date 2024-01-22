@@ -97,7 +97,7 @@ class Order(models.Model):
         if self.filled_quantity == 0:
             return 0
 
-        current_value = current_price * self.filled_quantity
+        current_value = float(current_price) * self.filled_quantity
 
         if self.side == OrderSide.Buy:
             return current_value - self.total_cost

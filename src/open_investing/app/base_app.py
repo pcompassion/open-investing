@@ -20,6 +20,7 @@ from open_library.app.base_app import BaseApp
 from open_library.locator.service_locator import ServiceKey, ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.order.order_event_broker import OrderEventBroker
+from open_investing.order.quote_event_broker import QuoteEventBroker
 from open_investing.order.order_service import OrderService
 from open_investing.task.const import TaskCommandName
 from open_investing.security.quote_service import QuoteService
@@ -80,8 +81,8 @@ class App(BaseApp):
                 "market_event_task_dispatcher": LocalTaskDispatcher.service_key,
                 "order_task_dispatcher": LocalTaskDispatcher.service_key,
                 "decision_task_dispatcher": LocalTaskDispatcher.service_key,
-                "order_event_broker": OrderEventBroker.order_event_broker_service_key,
-                "quote_event_broker": OrderEventBroker.quote_event_broker_service_key,
+                "order_event_broker": OrderEventBroker.service_key,
+                "quote_event_broker": QuoteEventBroker.service_key,
                 "order_service": OrderService.service_key,
                 "quote_service": QuoteService.service_key,
                 "app_config": self.config.service_key,
@@ -122,8 +123,15 @@ class App(BaseApp):
 
         order_event_broker = OrderEventBroker()  # and QuoteEventBroker
         order_event_broker.init()
-        for service_key in order_event_broker.service_keys:
-            service_locator.register_service(service_key, order_event_broker)
+        service_locator.register_service(
+            order_event_broker.service_key, order_event_broker
+        )
+
+        quote_event_broker = QuoteEventBroker()  # and QuoteEventBroker
+        quote_event_broker.init()
+        service_locator.register_service(
+            quote_event_broker.service_key, quote_event_broker
+        )
 
         market_indicator_data_manager = MarketIndicatorDataManager()
         market_indicator_data_manager.initialize(self.environment)

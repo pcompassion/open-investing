@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_library.logging.logging_filter import IntervalLoggingFilter
 from open_library.locator.service_locator import ServiceKey
 import asyncio
 from open_library.observe.subscription_manager import SubscriptionManager
@@ -9,6 +10,10 @@ from open_library.asynch.queue import DroppingQueue
 import logging
 
 logger = logging.getLogger(__name__)
+interval_filter = IntervalLoggingFilter(60)  # Log once every 60 seconds
+quote_logger = logging.getLogger("quote")
+
+quote_logger.addFilter(interval_filter)
 
 
 class QuoteService:
@@ -57,7 +62,7 @@ class QuoteService:
         while self.running:
             try:
                 message = await self.queue.get()
-                logger.info(f"publishing quote")
+                quote_logger.info(f"publishing quote")
                 await self.subscription_manager.publish(message)
                 # rate limiting
                 await asyncio.sleep(1)

@@ -99,6 +99,12 @@ class OrderMixin:
                     filter_params=dict(exchange_order_id=exchange_order_id)
                 )
 
+                if order is None:
+                    logger.warning(
+                        f"order not found for exchange_order_id: {exchange_order_id}"
+                    )
+                    return
+
                 order_event_spec = OrderEventSpec(
                     name=OrderEventName.ExchangeFilled,
                     order_id=order.id,

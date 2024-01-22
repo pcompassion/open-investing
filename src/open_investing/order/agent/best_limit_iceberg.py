@@ -193,7 +193,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                                 )
                                 continue
                             except TimeoutError as e:
-                                logger.warning(f"wait for order fill data timeout {e}")
+                                logger.info(f"wait for order fill data timeout {e}")
                                 continue
 
                 else:
@@ -217,6 +217,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     "order_side": order_spec.order_side,
                     "quantity": int(remaining_quantity),
                     "order_id": order_id,
+                    "parent_order_id": self.composite_order.id,
                     "strategy_session_id": order_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                     "security_code": security_code,
                     "price": price,
@@ -280,7 +281,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             case OrderEventName.Filled:
                 # order is filled, do something
 
-                composite_order = await self.order_data_manager.get(
+                composite_order = await self.order_data_manager.get_composite_order(
                     filter_params=dict(id=self.composite_order.id)
                 )
                 self.filled_quantity = composite_order.filled_quantity
@@ -338,7 +339,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             case OrderCommandName.Open:
                 order = None
                 if order_id:
-                    order = await order_data_manager.get(
+                    order = await order_data_manager.get_composite_order(
                         filter_params=dict(id=order_id, order_type=self.order_type)
                     )
 

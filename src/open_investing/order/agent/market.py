@@ -44,8 +44,8 @@ class MarketOrderAgent(OrderAgent):
         order_event_broker = self.order_event_broker
         order = None
         if order_id:
-            order = await order_data_manager.get(
-                filter_params=dict(id=order_id, order_type=self.order_type)
+            order = await order_data_manager.get_single_order(
+                filter_params=dict(id=order_id)
             )
         if not order:
             order = await order_data_manager.prepare_order(
@@ -53,7 +53,7 @@ class MarketOrderAgent(OrderAgent):
                     quantity=order_spec.quantity,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
-                    side=order_spec.side,
+                    side=order_spec.order_side,
                     parent_order_id=order_spec.parent_order_id,
                     order_price_type=self.order_price_type,
                 )

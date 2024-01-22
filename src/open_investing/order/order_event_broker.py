@@ -6,22 +6,27 @@ from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import OrderEventName
 from open_library.observe.pubsub_broker import PubsubBroker
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OrderEventBroker(PubsubBroker):
-    order_event_broker_service_key = ServiceKey(
+    service_key = ServiceKey(
         service_type="pubsub_broker",
         service_name="order_event_broker",
     )
-    quote_event_broker_service_key = ServiceKey(
-        service_type="pubsub_broker",
-        service_name="quote_event_broker",
-    )
 
-    service_keys = [
-        order_event_broker_service_key,
-        quote_event_broker_service_key,
-    ]
+    async def run(self):
+        self.running = True
+        while self.running:
+            try:
+                message = await self.queue.get()
+                await self.subscription_manager.publish(message)
+                # rate limiting
+
+            except Exception as e:
+                logger.exception(f"order event broker run: {e}")
 
 
 # reuse as QuoteEventBroker

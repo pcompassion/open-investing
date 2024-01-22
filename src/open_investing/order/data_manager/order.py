@@ -56,37 +56,38 @@ class OrderDataManager:
 
         await order.asave()
 
-    async def get(self, filter_params: dict | None):
-        filter_params = filter_params or {}
+    # async def get(self, filter_params: dict | None):
+    #     filter_params = filter_params or {}
 
-        order_type = filter_params["order_type"]
-        order_type = OrderType(order_type)
+    #     order_type = filter_params["order_type"]
+    #     order_type = OrderType(order_type)
 
-        try:
-            if order_type.is_single_order:
-                return await Order.objects.aget(**filter_params)
-            else:
-                return await CompositeOrder.objects.aget(**filter_params)
-        except ObjectDoesNotExist:
-            return None
+    #     try:
+    #         if order_type.is_single_order:
+    #             return await Order.objects.aget(**filter_params)
+    #         else:
+    #             return await CompositeOrder.objects.aget(**filter_params)
+    #     except ObjectDoesNotExist:
+    #         return None
 
     async def get_single_order(self, filter_params: dict | None):
         filter_params = filter_params or {}
 
         try:
-            start_time = time.time()
             # order = await Order.objects.aget(**filter_params)
             order = await Order.objects.filter(**filter_params).afirst()
-            end_time = time.time()
-            duration = end_time - start_time
 
-            logger.info(f"get_single_order: {duration}")
+            return order
+        except ObjectDoesNotExist:
+            return None
 
-            # with connection.cursor() as cursor:
-            #     query_str = str(Order.objects.filter(**filter_params).query)
-            #     cursor.execute(f"EXPLAIN {query_str}")
-            #     explanation = cursor.fetchall()
-            #     logger.info(f"get_single_order explanation: {explanation}")
+    async def get_composite_order(self, filter_params: dict | None):
+        filter_params = filter_params or {}
+
+        try:
+            # order = await Order.objects.aget(**filter_params)
+            order = await CompositeOrder.objects.filter(**filter_params).afirst()
+
             return order
         except ObjectDoesNotExist:
             return None
@@ -96,8 +97,8 @@ class OrderDataManager:
         trade = None
         order_type = OrderType(order.order_type)
 
-        if order_type.is_single_order:
-            parent_order = order.parent_order
+        # if order_type.is_single_order:
+        #     parent_order = order.parent_order
 
         fill_quantity = event_params["fill_quantity"]
         fill_price = event_params["fill_price"]
@@ -113,7 +114,10 @@ class OrderDataManager:
         if order:
             order.update_fill(fill_quantity, fill_price)
 
-        if parent_order:
+        if order.parent_order_id:
+            parent_order = await self.get_composite_order(
+                filter_params=dict(id=order.parent_order_id)
+            )
             await self.handle_filled_event_for_composite_order(
                 event_params, order, parent_order
             )

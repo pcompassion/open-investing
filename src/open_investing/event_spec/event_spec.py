@@ -39,4 +39,4 @@ class OrderEventSpec(EventSpec):
 
     @property
     def hash_keys(self):
-        return ["spec_type_name", "order_id", "name"]
+        return ["spec_type_name", "order_id"]

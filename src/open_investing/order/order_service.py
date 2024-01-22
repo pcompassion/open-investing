@@ -84,6 +84,19 @@ class OrderService:
                 )
 
                 await order_event_broker.enqueue_message(message)
+                # TODO: haste, better think from where to send message
+                if order.parent_order_id:
+                    order_event_spec = OrderEventSpec(
+                        order_id=order.parent_order_id,
+                        name=OrderEventName.Filled,
+                    )
+                    message = dict(
+                        event_spec=order_event_spec,
+                        order=order,
+                        data=data,
+                    )
+
+                    await order_event_broker.enqueue_message(message)
 
                 # check if filled,
             case _:
