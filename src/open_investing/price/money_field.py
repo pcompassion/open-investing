@@ -109,14 +109,6 @@ class MoneyField(NonDatabaseFieldBase):
         setattr(instance, self.amount_field, amount)
         setattr(instance, self.currency_field, currency)
 
-    def formfield(self, **kwargs):
-        available_currencies = []
-        if hasattr(self, "model"):
-            available_currencies = self.model._meta.get_field(
-                self.currency_field
-            ).choices
-        return forms.MoneyField(available_currencies=available_currencies)
-
     def get_default(self):
         default_currency = None
         default_amount = Decimal(0)
@@ -129,6 +121,3 @@ class MoneyField(NonDatabaseFieldBase):
         if default_amount is None:
             return None
         return Money(amount=default_amount, currency=default_currency)
-
-    def get_col(self, alias, output_field=None):
-        return None

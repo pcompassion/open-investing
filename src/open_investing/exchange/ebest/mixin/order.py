@@ -141,7 +141,7 @@ class OrderMixin:
                 data = dict(
                     security_code=security_code,
                     fill_quantity=int(data["chevol"]),
-                    fill_price=Money(amount=data["cheprice"]),
+                    fill_price=Money(amount=data["cheprice"], currency="KRW"),
                     date_at=combine(date, time_obj),
                 )
 

@@ -31,6 +31,7 @@ from open_library.time.datetime import combine, time_from_format
 from open_investing.security.quote import Quote
 from open_library.observe.subscription_manager import SubscriptionManager
 from open_library.logging.logging_filter import IntervalLoggingFilter
+from open_investing.price.money import Money
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,9 @@ class EbestApiManager(OrderMixin):
         )
 
         mini_future_codes = [
-            DerivativeCode.from_string(e["shcode"], price=e["recprice"])
+            DerivativeCode.from_string(
+                e["shcode"], price=Money(amount=e["recprice"], currency="KRW")
+            )
             for e in api_response.data[:count]
         ]
 
@@ -358,10 +361,15 @@ class EbestApiManager(OrderMixin):
             lambda x: DerivativeCode.get_fields(x, infered_field_names)
         )
 
+        df["strike_price_amount"] = df["strike_price"].apply(lambda x: x.amount)
+        df["currency"] = df["strike_price"].apply(lambda x: x.currency)
+
         mask = df["derivative_type"].isin([DerivativeType.Call, DerivativeType.Put])
         df = df[mask]
 
         field_names = infered_field_names + ["price"]
+
+        df["price_amount"] = df["price"].apply(lambda x: x.amount)
 
         if save:
             if not option_data_manager:

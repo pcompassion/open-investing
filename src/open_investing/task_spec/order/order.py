@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_investing.price.money import Money
 import operator
 import functools
 from uuid import UUID
@@ -29,7 +30,7 @@ class OrderSpec(TaskSpec):
     order_side: OrderSide
     order_id: UUID | None
     parent_order_id: UUID | None = None
-    price: float | None = None
+    price: Money | None = None
 
     security_code: str
     quantity: float

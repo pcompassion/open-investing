@@ -198,12 +198,13 @@ class DerivativeCode:
 
         match self.derivative_type:
             case DerivativeType.Future | DerivativeType.MiniFuture:
-                fields += ["price"]
+                fields += ["price", "price_amount"]
             case DerivativeType.Call | DerivativeType.Put:
-                fields += ["strike_price"]
+                fields += ["strike_price", "strike_price_amount"]
             case _:
                 pass
 
+        fields += ["currency"]
         derivative_code = self
         dict_ = instance_to_dict(derivative_code, fields)
 
@@ -229,3 +230,23 @@ class DerivativeCode:
         if derivative_type in name_to_code_map:
             return name_to_code_map[derivative_type]
         raise ValueError(f"No matching DerivativeTypeCode for code {derivative_type}")
+
+    @property
+    def price_amount(self):
+        if self.price is None:
+            return None
+        return self.price.amount
+
+    @property
+    def strike_price_amount(self):
+        if self.strike_price is None:
+            return None
+        return self.strike_price.amount
+
+    @property
+    def currency(self):
+        if self.price is None and self.strike_price is None:
+            return None
+        if self.price is not None:
+            return self.price.currency
+        return self.strike_price.currency
