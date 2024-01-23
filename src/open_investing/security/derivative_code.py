@@ -12,6 +12,8 @@ from open_library.time.calendar import find_nth_weekday_of_month
 from open_investing.const.code_name import DerivativeType
 from open_library.collections.dict import instance_to_dict
 from open_library.time.datetime import combine
+from open_investing.price.money import Money
+from decimal import Decimal
 
 
 class DerivativeTypeCode(str, Enum):
@@ -59,8 +61,8 @@ class DerivativeCode:
         self,
         derivative_type: DerivativeType,
         expire_at: datetime.datetime,
-        price: float | None = None,
-        strike_price: float | None = None,
+        price: Money | None = None,
+        strike_price: Money | None = None,
     ):
         derivative_type_code = self.get_derivative_code_from_type(derivative_type)
 
@@ -78,8 +80,8 @@ class DerivativeCode:
     def from_string(
         cls,
         code_str,
-        price: float | None = None,
-        strike_price: float | None = None,
+        price: Money | None = None,
+        strike_price: Money | None = None,
     ):
         derivative_type_code = DerivativeTypeCode(code_str[:3])
         year_str = code_str[3]
@@ -89,9 +91,9 @@ class DerivativeCode:
 
         if derivative_type in [DerivativeType.Call, DerivativeType.Put]:
             if strike_price is None:
-                strike_price = float(code_str[5:])
+                strike_price = Money(amount=Decimal(code_str[5:]), currency="KRW")
                 if int(code_str[-1]) in [2, 7]:
-                    strike_price += 0.5
+                    strike_price.amount += Decimal(0.5)
 
         year = cls.year_from_str(year_str)
 
@@ -146,12 +148,6 @@ class DerivativeCode:
     def year_str(self, value):
         self.year = self.year_from_str(value)
 
-    @classmethod
-    def strike_price_from_string(cls, code_str):
-        code = cls.from_string(code_str)
-
-        return code.strike_price
-
     @property
     def name(self):
         return f"{self.derivative_type_code.value}{self.year_str}{self.month_str}"
@@ -163,14 +159,9 @@ class DerivativeCode:
             DerivativeTypeCode.Call,
             DerivativeTypeCode.Put,
         ]:
-            price = int(self.strike_price)
+            price = int(self.strike_price.amount)
 
         return f"{self.name}{price:03}"
-
-    @classmethod
-    def get_name_and_strike_price(cls, code_str):
-        code = cls.from_string(code_str)
-        return pd.Series([code.name, int(code.strike_price)])
 
     @classmethod
     def get_fields(
@@ -185,7 +176,7 @@ class DerivativeCode:
                 # case "name":
                 #     l.append(code.name)
                 case "strike_price":
-                    l.append(float(code.strike_price))
+                    l.append(code.strike_price)
                 case "expire_at":
                     l.append(code.expire_at_str)
                 case "time_to_maturity":

@@ -98,8 +98,6 @@ class EbestApiManager(OrderMixin):
     async def nearby_mini_futures(
         self,
         count=2,
-        data_manager=None,
-        save=True,
         return_type: ListDataType = ListDataType.Dataframe,
     ) -> Tuple[ListDataTypeHint, ApiResponse]:
         api = self.stock_api
@@ -120,17 +118,6 @@ class EbestApiManager(OrderMixin):
         mini_futures_data = [
             derivative_code.to_dict() for derivative_code in mini_future_codes
         ]
-
-        if data_manager and save:
-            extra_data = dict(
-                date_at=now_local(),
-                exchange_name=api.name,
-                exchange_api_code=api_code,
-                timeframe=timedelta(hours=12),
-            )
-            mini_futures_data = await data_manager.save_futures(
-                mini_futures_data, extra_data=extra_data
-            )
 
         mini_futures_data = await as_list_type(mini_futures_data, return_type)
 
