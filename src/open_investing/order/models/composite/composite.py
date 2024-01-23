@@ -22,11 +22,13 @@ class CompositeOrder(models.Model):
         max_length=32, blank=True, default=OrderLifeStage.Undefined
     )
 
-    quantity = models.FloatField(default=0)
-    filled_quantity = models.FloatField(default=0)
+    quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    filled_quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
-    average_fill_price = models.FloatField(default=0)
-    total_cost = models.FloatField(default=0)
+    average_fill_price = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
+    total_cost = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     data = models.JSONField(default=dict)

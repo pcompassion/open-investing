@@ -4,6 +4,7 @@ from open_investing.order.const.order import OrderSide
 import uuid
 from open_investing.order.const.order import OrderLifeStage
 from django.db import models
+from open_investing.price.money_field import MoneyField
 
 
 class Order(models.Model):
@@ -40,14 +41,26 @@ class Order(models.Model):
     decision = models.ForeignKey(
         "strategy.Decision", on_delete=models.CASCADE, blank=True, null=True
     )
+    currency = models.CharField(max_length=3, default="KRW")
 
-    price = models.FloatField(default=0)
+    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price = MoneyField(amount_field="price_amount", currency_field="currency")
 
-    quantity = models.FloatField(default=0)
-    filled_quantity = models.FloatField(default=0)
+    quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
 
-    average_fill_price = models.FloatField(default=0)
-    total_cost = models.FloatField(default=0)
+    filled_quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+
+    average_fill_price_amount = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
+    average_fill_price = MoneyField(
+        amount_field="average_fill_price_amount", currency_field="currency"
+    )
+
+    total_cost_amount = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
+    total_cost = MoneyField(amount_field="total_cost_amount", currency_field="currency")
 
     exchange_name = models.CharField(max_length=32, blank=True)
     exchange_api_code = models.CharField(max_length=32, blank=True)
@@ -97,7 +110,7 @@ class Order(models.Model):
         if self.filled_quantity == 0:
             return 0
 
-        current_value = float(current_price) * self.filled_quantity
+        current_value = current_price * self.filled_quantity
 
         if self.side == OrderSide.Buy:
             return current_value - self.total_cost
@@ -121,9 +134,13 @@ class Trade(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     date_at = models.DateTimeField()
 
-    quantity = models.FloatField(default=0)
+    quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
     order = models.ForeignKey("Order", on_delete=models.CASCADE)
-    price = models.FloatField()
+
+    currency = models.CharField(max_length=3, default="KRW")
+
+    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price = MoneyField(amount_field="price_amount", currency_field="currency")
 
 
 class OrderEventEntry(models.Model):

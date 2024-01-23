@@ -11,6 +11,7 @@ from open_investing.exchange.ebest.api_field import EbestApiField
 from open_library.time.datetime import combine
 from open_library.collections.dict import rename_keys
 import logging
+from open_investing.price.money import Money
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class OrderMixin:
             case OrderPriceType.Market:
                 pass
             case OrderPriceType.Limit:
-                additional.update(dict(order_price=order.price))
+                additional.update(dict(order_price=order.price_amount))
 
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
@@ -140,7 +141,7 @@ class OrderMixin:
                 data = dict(
                     security_code=security_code,
                     fill_quantity=int(data["chevol"]),
-                    fill_price=float(data["cheprice"]),
+                    fill_price=Money(amount=data["cheprice"]),
                     date_at=combine(date, time_obj),
                 )
 

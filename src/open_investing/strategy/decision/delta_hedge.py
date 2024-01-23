@@ -78,7 +78,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
                     max_tick_diff=5,
-                    tick_size=0.25,
+                    tick_size=0.01,
                     order_side=OrderSide.Sell,
                     security_code=self.decision_spec.leader_security_code,
                     quantity=self.decision_spec.leader_quantity,

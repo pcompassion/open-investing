@@ -194,7 +194,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                                 )
                                 continue
                             except TimeoutError as e:
-                                logger.info(f"wait for order fill data timeout {e}")
+                                logger.info(
+                                    f"wait for order fill data timeout {self.limit_order_id}, tick_diff: {tick_diff}"
+                                )
                                 continue
 
                 else:
