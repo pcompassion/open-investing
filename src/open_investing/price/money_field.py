@@ -6,6 +6,7 @@ from django.db.models import Field
 from open_investing.price.money import Money
 
 from functools import total_ordering
+from django.db.models.expressions import Col
 
 
 @total_ordering
@@ -53,7 +54,10 @@ class NonDatabaseFieldBase:
     def contribute_to_class(self, cls, name, **kwargs):
         self.attname = self.name = name
         self.model = cls
-        cls._meta.add_field(self, private=True)
+        if not hasattr(cls, "_non_database_fields"):
+            cls._non_database_fields = {}
+        cls._non_database_fields[name] = self
+        # cls._meta.add_field(self, private=True)
         setattr(cls, name, self)
 
     def clean(self, value, model_instance):
@@ -125,3 +129,6 @@ class MoneyField(NonDatabaseFieldBase):
         if default_amount is None:
             return None
         return Money(amount=default_amount, currency=default_currency)
+
+    def get_col(self, alias, output_field=None):
+        return None
