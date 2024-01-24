@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from datetime import timedelta
+from open_library.time.datetime import now_local
+from django.db.models import Q
 from django.db import connection
 
 import time
@@ -7,7 +10,7 @@ from uuid import uuid4
 from django.core.exceptions import ObjectDoesNotExist
 
 from open_investing.order.models.order import Order, Trade, OrderEventEntry
-from open_investing.order.const.order import OrderEventName
+from open_investing.order.const.order import OrderEventName, OrderLifeStage
 from open_investing.order.models.composite.composite import CompositeOrder
 from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import OrderType
@@ -259,3 +262,26 @@ class OrderDataManager:
             offset_result["fully_offsetted"] = order_offset_relation.fully_offsetted
 
         return offset_result
+
+    async def pending_orders(
+        self,
+        filter_params: dict | None = None,
+        exchange_order_id: str | None = None,
+        time_window_seconds=3,
+    ):
+        filter_params = filter_params or {}
+
+        past = now_local() - timedelta(seconds=time_window_seconds)
+
+        filter_params_updated = filter_params | dict(
+            life_stage=OrderLifeStage.ExchangeOpenRequest,
+            life_stage_updated_at__gte=past,
+        )
+
+        q = Q(**filter_params_updated)
+        if exchange_order_id:
+            q = q | Q(**{"exchange_order_id": exchange_order_id})
+
+        qs = Order.objects.filter(q)
+
+        return await qs.aall()

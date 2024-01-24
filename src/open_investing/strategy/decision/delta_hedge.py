@@ -29,8 +29,8 @@ class DeltaHedgeDecisionSpec(DecisionSpec):
 
     leader_security_code: str
     follower_security_code: str
-    leader_follower_ratio: float
-    leader_quantity: float
+    leader_follower_ratio: Decimal
+    leader_quantity: int
 
 
 @TaskSpecHandlerRegistry.register_class

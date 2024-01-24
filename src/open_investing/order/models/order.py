@@ -28,6 +28,7 @@ class Order(models.Model):
     life_stage = models.CharField(
         max_length=32, blank=True, default=OrderLifeStage.Undefined, db_index=True
     )
+    life_stage_updated_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     date_at = models.DateTimeField(null=True)

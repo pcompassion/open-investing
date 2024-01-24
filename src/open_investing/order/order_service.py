@@ -7,7 +7,7 @@ from open_library.locator.service_locator import ServiceKey
 import asyncio
 
 from open_library.time.datetime import now_local
-from open_investing.order.const.order import OrderEventName
+from open_investing.order.const.order import OrderEventName, OrderLifeStage
 from open_library.observe.subscription_manager import SubscriptionManager
 from open_investing.event_spec.event_spec import OrderEventSpec
 from open_library.observe.listener_spec import ListenerSpec
@@ -121,12 +121,20 @@ class OrderService:
         exchange_manager = self.exchange_manager
         order_event_broker = self.order_event_broker
 
+        date_at = now_local()
         await order_data_manager.record_event(
             event_params=dict(
                 event_name=OrderEventName.ExchangeOpenRequest,
-                date_at=now_local(),
+                date_at=date_at,
             ),
             order=order,
+        )
+        await order_data_manager.save(
+            order,
+            save_params=dict(
+                life_stage=OrderLifeStage.ExchangeOpenRequest,
+                life_stage_updated_at=date_at,
+            ),
         )
 
         order_event_spec = OrderEventSpec(order_id=order.id)
@@ -143,6 +151,26 @@ class OrderService:
             await order_data_manager.save(
                 order, save_params=dict(exchange_order_id=exchange_order_id)
             )
+            order_event_name = OrderEventName.ExchangeOpenSuccess
+            order_life_stage = OrderLifeStage.ExchangeOpenSuccess
+        else:
+            order_event_name = OrderEventName.ExchangeOpenFailure
+            order_life_stage = OrderLifeStage.ExchangeOpenFailure
+
+        date_at = now_local()
+        await order_data_manager.record_event(
+            event_params=dict(
+                event_name=order_event_name,
+                date_at=date_at,
+            ),
+            order=order,
+        )
+        await order_data_manager.save(
+            order,
+            save_params=dict(
+                life_stage=order_life_stage, life_stage_updated_at=date_at
+            ),
+        )
 
     async def open_order(self, order, exchange_manager):
         logger.info(f"open_order: {order.id} {order.order_type}")
@@ -233,3 +261,6 @@ class OrderService:
 
         self.running_tasks.add(task)
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
+
+    async def fetch_order(self):
+        pass

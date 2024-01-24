@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 from datetime import time
 import pendulum
 
@@ -12,6 +13,7 @@ from open_library.time.datetime import combine
 from open_library.collections.dict import rename_keys, to_jsonable_python
 import logging
 from open_investing.price.money import Money
+from open_library.asynch.queue import call_function_after_delay
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +89,8 @@ class OrderMixin:
                 security_code = data["shtnIsuNo"]
                 logger.info(f"order ack security_code: {security_code}")
 
-    async def derivative_order_listener(self, message):
-        logger.info(f"derivative_order_listener {message}")
+    async def derivative_order_listener(self, message, retry=True):
+        logger.info(f"derivative_order_listener {message}, retry: {retry}")
         tr_cd = message["header"]["tr_cd"]
         data = message.get("body")
         match tr_cd:
@@ -97,7 +99,7 @@ class OrderMixin:
             case _:
                 security_code = data["expcode"]
                 exchange_order_id = data["ordno"]
-                exchange_order_id = int(exchange_order_id)
+                exchange_order_id = str(int(exchange_order_id))
 
                 order = await self.order_data_manager.get_single_order(
                     filter_params=dict(exchange_order_id=exchange_order_id)
@@ -105,8 +107,27 @@ class OrderMixin:
 
                 if order is None:
                     logger.warning(
-                        f"order not found for exchange_order_id: {exchange_order_id}"
+                        f"order not found for exchange_order_id: {exchange_order_id}, retry: {retry}"
                     )
+                    if retry:
+                        orders = await self.order_data_manager.pending_orders(
+                            exchange_order_id=exchange_order_id
+                        )
+                        if orders:
+                            delay_seconds = 1
+                            task = asyncio.create_task(
+                                call_function_after_delay(
+                                    self.derivative_order_listener,
+                                    delay_seconds,
+                                    message,
+                                    retry=False,
+                                )
+                            )
+                            self.running_tasks.add(task)
+                            task.add_done_callback(
+                                lambda t: self.running_tasks.remove(t)
+                            )
+
                     return
 
                 order_event_spec = OrderEventSpec(

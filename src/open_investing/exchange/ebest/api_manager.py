@@ -53,6 +53,7 @@ class EbestApiManager(OrderMixin):
         self.order_event_broker: PubsubBroker | None = None
         self.order_data_manager = None
         self.subscription_manager = SubscriptionManager()
+        self.running_tasks = []
 
     async def initialize(self, environment):
         EBEST_APP_KEY = environment.get("EBEST-OPEN-API-APP-KEY")

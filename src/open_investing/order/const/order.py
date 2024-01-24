@@ -74,7 +74,12 @@ class OrderCloseReason(str, Enum):
 
 class OrderLifeStage(str, Enum):
     Undefined = "undefined"
-    Opened = "opened"
+
+    ExchangeOpenRequest = "exchange_open_request"
+    ExchangeOpenSuccess = "exchange.open_success"  # place success
+    ExchangeOpenFailure = "exchange.open_failure"
+
+    Opened = "opened"  # there's some filled quantity
     Fullfilled = "fullfilled"
 
     Closing = "closing"
