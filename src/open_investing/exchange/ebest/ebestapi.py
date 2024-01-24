@@ -67,7 +67,6 @@ class EbestApi(ExchangeApi):
 
         self.env = env
 
-        self.ws_clients: Dict[str, WebSocketClient] = {}  # not used
         self.ws_client: WebSocketClient = None
 
         self.shutdown_event = asyncio.Event()
@@ -335,11 +334,8 @@ class EbestApi(ExchangeApi):
 
         token_manager = self.api_client.get_token_manager()
         token_manager.stop_refreshing()
-        ws_client_keys = list(self.ws_clients.keys())
-
-        for ws_client_key in ws_client_keys:
-            ws_client = self.ws_clients[ws_client_key]
-            await ws_client.close()
+        if self.ws_client:
+            await self.ws_client.close()
 
     async def wait_for_shutdown(self):
         await self.shutdown_event.wait()
