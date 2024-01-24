@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
+import time
 from decimal import Decimal
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import QuoteEventSpec
+
+
+from open_investing.exchange.const.market import MarketStatus
+
 from datetime import timedelta
 from typing import Any, Tuple
 from open_library.time.datetime import determine_datetime, now_local
@@ -18,7 +23,7 @@ from open_investing.const.code_name import DerivativeType
 from open_investing.security.derivative_code import DerivativeCode
 
 from open_investing.exchange.ebest.ebestapi import EbestApi
-from open_investing.exchange.const.market_type import ApiType
+from open_investing.exchange.const.market import ApiType
 from open_library.locator.service_locator import ServiceKey
 from open_investing.const.code_name import IndexCode
 from open_investing.security.derivative_code import DerivativeCode, DerivativeTypeCode
@@ -54,6 +59,8 @@ class EbestApiManager(OrderMixin):
         self.order_data_manager = None
         self.subscription_manager = SubscriptionManager()
         self.running_tasks = []
+        self._market_status = MarketStatus.Undefined
+        self._market_status_updated_at = None
 
     async def initialize(self, environment):
         EBEST_APP_KEY = environment.get("EBEST-OPEN-API-APP-KEY")
@@ -69,6 +76,8 @@ class EbestApiManager(OrderMixin):
             EBEST_APP_KEY_DERIVATIVE, EBEST_APP_SECRET_DERIVATIVE
         )
 
+        await self.subscribe_market_status()
+
     async def subscribe_stock_order(self):
         await self.stock_api.subscribe(
             tr_type="1", tr_code="SC1", tr_key="", handler=self.stock_order_listener
@@ -80,6 +89,11 @@ class EbestApiManager(OrderMixin):
             tr_code="C01",
             tr_key="",
             handler=self.derivative_order_listener,
+        )
+
+    async def subscribe_market_status(self):
+        await self.stock_api.subscribe(
+            tr_type="3", tr_code="JIF", tr_key="0", handler=self.market_status_listener
         )
 
     async def get_market_data(
@@ -550,3 +564,22 @@ class EbestApiManager(OrderMixin):
 
     async def news_listener(self, message):
         logger.info(f"news_listener {message}")
+
+    async def market_status_listener(self, message):
+        data = message["body"]
+        logger.debug(f"market_status, {data}")
+
+        jangubun = data["jangubun"]
+
+        if jangubun == "C":
+            self._market_status = MarketStatus.CLOSED
+        elif jangubun == "O":
+            self._market_status = MarketStatus.OPEN
+
+        self._market_status_updated_at = time.monotonic()
+
+    def is_market_open(self):
+        now = time.monotonic()
+        if self._market_status_updated_at and now - self._market_status_updated_at < 5:
+            return self._market_status == MarketStatus.Open
+        return False

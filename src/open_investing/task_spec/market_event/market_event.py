@@ -12,7 +12,7 @@ from open_investing.const.const import EXCHANGE
 
 from open_investing.task_spec.task_spec import TaskSpec, TaskSpecHandler
 
-from open_investing.exchange.const.market_type import ApiType
+from open_investing.exchange.const.market import ApiType
 
 
 class MarketEventType(str, Enum):

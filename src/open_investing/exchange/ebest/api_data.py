@@ -2,7 +2,7 @@
 import pendulum
 from open_investing.const.code_name import FieldName
 
-from open_investing.exchange.const.market_type import MarketType
+from open_investing.exchange.const.market import MarketType
 from open_investing.exchange.ebest.const.const import EbestUrl, EbestCode
 
 

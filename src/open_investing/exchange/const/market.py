@@ -13,3 +13,9 @@ class ApiType(str, Enum):
     Derivative = "derivative"
 
     Undefined = "undefined"
+
+
+class MarketStatus(str, Enum):
+    Undefined = "undefined"
+    Open = "open"
+    Closed = "closed"

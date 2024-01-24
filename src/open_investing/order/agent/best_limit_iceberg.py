@@ -140,24 +140,14 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     else:
                         price = recent_quote.ask_price_1
 
-                    test = False
-
-                    if test:
-                        # for faster testing
-                        if order_side == OrderSide.Buy:
-                            # logger.info(
-                            #     f"buying at {recent_quote.ask_price_2}, instead of {price}"
-                            # )
-                            price = recent_quote.ask_price_2
-                        else:
-                            # logger.info(
-                            #     f"selling at {recent_quote.bid_price_2}, instead of {price}"
-                            # )
-
-                            price = recent_quote.bid_price_2
-
                 except TimeoutError as e:
                     logger.warning(f"wait for quote data timeout {e}")
+                    exchange_manager = self.exchange_manager
+
+                    if not exchange_manager.is_market_open():
+                        logger.info(f"exchange is not open")
+                        continue
+
                     await self._subscribe_quote(order_spec.security_code)
 
                     continue

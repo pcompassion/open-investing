@@ -7,11 +7,11 @@ from enum import Enum
 from django.db.models.query import QuerySet
 
 
-class DataReturnType(str, Enum):
-    Dataframe = "dataframe"
-    List = "list"
+# class DataReturnType(str, Enum):
+#     Dataframe = "dataframe"
+#     List = "list"
 
 
-_DataReturnTypeHint = Union[list[Any], pd.DataFrame]
+# _DataReturnTypeHint = Union[list[Any], pd.DataFrame]
 
-DataReturnTypeHint = _DataReturnTypeHint | dict[str, _DataReturnTypeHint]
+# DataReturnTypeHint = _DataReturnTypeHint | dict[str, _DataReturnTypeHint]

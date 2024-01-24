@@ -2,7 +2,7 @@
 import re
 from enum import Enum, auto
 
-from open_investing.exchange.const.market_type import MarketType
+from open_investing.exchange.const.market import MarketType
 
 from open_investing.exchange.ebest.api_data import EbestApiData
 
