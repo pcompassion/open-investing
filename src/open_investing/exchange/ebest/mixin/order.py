@@ -9,7 +9,7 @@ from open_investing.event_spec.event_spec import OrderEventSpec
 from open_investing.order.const.order import OrderEventName, OrderPriceType, OrderSide
 from open_investing.exchange.ebest.api_field import EbestApiField
 from open_library.time.datetime import combine
-from open_library.collections.dict import rename_keys
+from open_library.collections.dict import rename_keys, to_jsonable_python
 import logging
 from open_investing.price.money import Money
 
@@ -43,7 +43,7 @@ class OrderMixin:
             case OrderPriceType.Market:
                 pass
             case OrderPriceType.Limit:
-                additional.update(dict(order_price=order.price_amount))
+                additional.update(dict(order_price=float(str(order.price.amount))))
 
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
@@ -68,7 +68,10 @@ class OrderMixin:
                     "OrdNo"
                 )
             if exchange_order_id:
-                exchange_order_id = int(exchange_order_id)
+                exchange_order_id = str(int(exchange_order_id))
+
+        if not exchange_order_id:
+            logger.warning(f"open_order fail, {order.id}")
 
         return exchange_order_id, api_response
 

@@ -139,10 +139,10 @@ class OrderService:
 
         exchange_order_id, _ = await exchange_manager.open_order(order)
 
-        await order_data_manager.save(
-            order, save_params=dict(exchange_order_id=exchange_order_id)
-        )
-        pass
+        if exchange_order_id:
+            await order_data_manager.save(
+                order, save_params=dict(exchange_order_id=exchange_order_id)
+            )
 
     async def open_order(self, order, exchange_manager):
         logger.info(f"open_order: {order.id} {order.order_type}")

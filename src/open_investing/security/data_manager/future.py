@@ -56,15 +56,19 @@ class FutureDataManager:
     async def nearby_futures(
         self,
         max_time_diff: timedelta = timedelta(days=5),
+        field_names: list | None = None,
         filter_params: dict | None = None,
         return_type: ListDataType = ListDataType.Dataframe,
     ) -> ListDataTypeHint:
         # TODO: don't need this logic
-        filter_params = filter_params or {}
         now = now_local()
 
+        filter_params = filter_params or {}
+
+        filter_params_updated = dict(expire_at__gt=now) | filter_params
+
         future_qs = (
-            Future.objects.filter(expire_at__gt=now)
+            Future.objects.filter(**filter_params_updated)
             .annotate(
                 recent_at=Window(
                     expression=Min("expire_at"), partition_by=[F("security_code")]
@@ -84,4 +88,4 @@ class FutureDataManager:
         # if filter_params_updated:
         #     future_qs = future_qs.filter(**filter_params_updated)
 
-        return await as_list_type(future_qs, return_type)
+        return await as_list_type(future_qs, return_type, field_names)

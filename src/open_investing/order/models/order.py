@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from open_investing.price.money import Money
+
 from open_investing.order.const.order import OrderSide
 import uuid
 from open_investing.order.const.order import OrderLifeStage
@@ -108,7 +110,7 @@ class Order(models.Model):
 
     def calculate_pnl(self, current_price):
         if self.filled_quantity == 0:
-            return 0
+            return Money(amount=0, currency=current_price.currency)
 
         current_value = current_price * self.filled_quantity
 

@@ -37,6 +37,7 @@ class NonDatabaseFieldBase:
 
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
+        self.dependent_field_names = []
 
     def __eq__(self, other):
         if isinstance(other, (Field, NonDatabaseFieldBase)):
@@ -83,6 +84,7 @@ class MoneyField(NonDatabaseFieldBase):
         self.amount_field = amount_field
         self.currency_field = currency_field
         self.verbose_name = verbose_name
+        self.dependent_field_names = ["amount_field", "currency_field"]
 
     def __str__(self):
         return "MoneyField(amount_field=%s, currency_field=%s)" % (
@@ -108,6 +110,9 @@ class MoneyField(NonDatabaseFieldBase):
             currency = value.currency
         setattr(instance, self.amount_field, amount)
         setattr(instance, self.currency_field, currency)
+
+    def get(self, instance):
+        return self.__get__(instance)
 
     def get_default(self):
         default_currency = None

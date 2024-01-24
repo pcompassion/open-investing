@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import QuoteEventSpec
 from datetime import timedelta
@@ -534,6 +535,10 @@ class EbestApiManager(OrderMixin):
         data["date_at"] = date_at
 
         data = EbestApiField.get_response_data(tr_code=tr_code, **data)
+
+        for k, v in data.items():
+            if k in Quote.model_fields and Quote.model_fields[k].annotation == Money:
+                data[k] = Money(amount=Decimal(v), currency="KRW")
 
         quote_event_spec = QuoteEventSpec(security_code=security_code)
         quote = Quote(**data)

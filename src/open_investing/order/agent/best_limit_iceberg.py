@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from decimal import Decimal
 from dataclasses import dataclass
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import OrderEventSpec, QuoteEventSpec
@@ -44,7 +45,7 @@ class BestLimitIcebergOrderSpec(OrderSpec):
     spec_type_name: str = spec_type_name_classvar
 
     max_tick_diff: int
-    tick_size: float
+    tick_size: Decimal
 
 
 @dataclass
@@ -169,7 +170,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     else:
                         price_diff = self.quote.ask_price_1 - price
 
-                    tick_diff = math.floor(price_diff / order_spec.tick_size)
+                    tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
                     if tick_diff > max_tick_diff:
                         # TODO: cancel all
