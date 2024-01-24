@@ -21,12 +21,12 @@ class Option(models.Model):
     strike_price_amount = models.DecimalField(
         max_digits=16, decimal_places=2, default=0.0
     )
-    # strike_price = MoneyField(
-    #     amount_field="strike_price_amount", currency_field="currency"
-    # )
+    strike_price = MoneyField(
+        amount_field="strike_price_amount", currency_field="currency"
+    )
 
     price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
-    # price = MoneyField(amount_field="price_amount", currency_field="currency")
+    price = MoneyField(amount_field="price_amount", currency_field="currency")
 
     date_at = models.DateTimeField(db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -45,23 +45,23 @@ class Option(models.Model):
             )
         ]
 
-    @property
-    def strike_price(self):
-        return Money(amount=self.strike_price_amount, currency=self.currency)
+    # @property
+    # def strike_price(self):
+    #     return Money(amount=self.strike_price_amount, currency=self.currency)
 
-    @strike_price.setter
-    def strike_price(self, value):
-        self.strike_price_amount = value.amount
-        self.currency = value.currency
+    # @strike_price.setter
+    # def strike_price(self, value):
+    #     self.strike_price_amount = value.amount
+    #     self.currency = value.currency
 
-    @property
-    def price(self):
-        return Money(amount=self.price_amount, currency=self.currency)
+    # @property
+    # def price(self):
+    #     return Money(amount=self.price_amount, currency=self.currency)
 
-    @price.setter
-    def price(self, value):
-        self.price_amount = value.amount
-        self.currency = value.currency
+    # @price.setter
+    # def price(self, value):
+    #     self.price_amount = value.amount
+    #     self.currency = value.currency
 
 
 class Future(models.Model):
@@ -70,7 +70,7 @@ class Future(models.Model):
 
     security_code = models.CharField(max_length=8, db_index=True)
     price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
-    # price = MoneyField(amount_field="price_amount", currency_field="currency")
+    price = MoneyField(amount_field="price_amount", currency_field="currency")
     derivative_type = models.CharField(max_length=16, db_index=True)
 
     exchange_api_code = models.CharField(max_length=32, blank=True)
@@ -90,14 +90,14 @@ class Future(models.Model):
             )
         ]
 
-    @property
-    def price(self):
-        return Money(amount=self.price_amount, currency=self.currency)
+    # @property
+    # def price(self):
+    #     return Money(amount=self.price_amount, currency=self.currency)
 
-    @price.setter
-    def price(self, value):
-        self.price_amount = value.amount
-        self.currency = value.currency
+    # @price.setter
+    # def price(self, value):
+    #     self.price_amount = value.amount
+    #     self.currency = value.currency
 
 
 class NearbyFuture(models.Model):
