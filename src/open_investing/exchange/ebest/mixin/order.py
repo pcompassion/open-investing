@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from open_investing.exchange.const.market import MarketType
 import asyncio
 from datetime import time
 import pendulum
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 class OrderMixin:
     async def open_order(self, order):
         security_code = order.security_code
+        market_type = self.open_market_type()
 
         tr_code = None
         api = None
@@ -28,6 +30,11 @@ class OrderMixin:
             derivative_code = DerivativeCode.from_string(security_code)
             tr_code = "CFOAT00100"
             api = self.derivative_api
+
+            if market_type == MarketType.FutureOptionDay:
+                tr_code = "CFOAT00100"
+            elif market_type == MarketType.FutureOptionNight:
+                tr_code = "CEXAT11100"
 
         except ValueError:
             tr_code = "CSPAT00601"
@@ -61,14 +68,10 @@ class OrderMixin:
         )
         exchange_order_id = None
         if api_response.success:
-            if tr_code == "CFOAT00100":
-                exchange_order_id = api_response.raw_data["CFOAT00100OutBlock2"].get(
-                    "OrdNo"
-                )
-            elif tr_code == "CSPAT00601":
-                exchange_order_id = api_response.raw_data["CSPAT00601OutBlock2"].get(
-                    "OrdNo"
-                )
+            exchange_order_id = api_response.raw_data[f"{tr_code}OutBlock2"].get(
+                "OrdNo"
+            )
+
             if exchange_order_id:
                 exchange_order_id = str(int(exchange_order_id))
 
@@ -184,6 +187,13 @@ class OrderMixin:
         order,
     ):
         tr_code = "CFOAT00300"
+        market_type = self.open_market_type()
+
+        if market_type == MarketType.FutureOptionDay:
+            tr_code = "CFOAT00300"
+
+        elif market_type == MarketType.FutureOptionNight:
+            tr_code = "CEXAT11300"
 
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,

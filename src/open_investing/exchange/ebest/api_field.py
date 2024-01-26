@@ -2,7 +2,7 @@
 import re
 from enum import Enum, auto
 
-from open_investing.exchange.const.market import MarketType
+from open_investing.exchange.const.market import MarketSecurityType
 
 from open_investing.exchange.ebest.api_data import EbestApiData
 
@@ -12,21 +12,21 @@ from open_investing.const.code_name import IndexCode, DerivativeType
 
 class EbestApiField:
     field_name_map = {
-        MarketType.STOCK: {
+        MarketSecurityType.STOCK: {
             "security_code": "IsuNo",
             "order_quantity": "OrdQty",
             "order_price": "OrdPrc",
             "order_side": "BnsTpCode",
             "order_price_type": "OrdprcPtnCode",
         },
-        MarketType.DERIVATIVE: {
+        MarketSecurityType.DERIVATIVE: {
             "security_code": "FnoIsuNo",
             "order_quantity": "OrdQty",
             "order_price": "FnoOrdPrc",
             "order_side": "BnsTpCode",
             "order_price_type": "FnoOrdprcPtnCode",
         },
-        MarketType.UNDEFINED: {
+        MarketSecurityType.UNDEFINED: {
             "cancel_quantity": "CancQty",
             "exchange_order_id": "OrgOrdNo",
         },
@@ -138,7 +138,7 @@ class EbestApiField:
         if tr_code:
             fn_map_tr = EbestApiData.get_field_name_map(tr_code)
 
-        fn_map = cls.field_name_map[MarketType.UNDEFINED]
+        fn_map = cls.field_name_map[MarketSecurityType.UNDEFINED]
 
         market_type = EbestApiData.get_market_type(tr_code)
 

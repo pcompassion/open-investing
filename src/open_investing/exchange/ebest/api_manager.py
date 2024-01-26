@@ -4,7 +4,7 @@ import time
 from decimal import Decimal
 from open_library.observe.listener_spec import ListenerSpec
 from open_investing.event_spec.event_spec import QuoteEventSpec
-
+from open_investing.exchange.const.market import MarketType
 
 from open_investing.exchange.const.market import MarketStatus
 
@@ -119,7 +119,14 @@ class EbestApiManager(OrderMixin):
     ) -> Tuple[ListDataTypeHint, ApiResponse]:
         api = self.stock_api
 
-        api_code = "t8435"
+        api_code = None
+        market_type = self.open_market_type()
+        if market_type == MarketType.FutureOptionDay:
+            api_code = "t8435"
+        elif market_type == MarketType.FutureOptionNight:
+            api_code = "t8437"
+        else:
+            return
 
         api_response = await api.get_market_data(
             api_code, send_data={FieldName.DERIVATIVE_NAME: DerivativeType.MiniFuture}
@@ -193,7 +200,7 @@ class EbestApiManager(OrderMixin):
         night_market_tr = "t8429"
 
         time_interval_day_market = EbestApiData.get(day_market_tr, "time_interval")
-        time_interval_night_market = EbestApiData.get(day_market_tr, "time_interval")
+        time_interval_night_market = EbestApiData.get(night_market_tr, "time_interval")
 
         send_data = EbestApiField.get_interval(interval_second=interval_second)
 
@@ -353,13 +360,21 @@ class EbestApiManager(OrderMixin):
         save=True,
     ):
         api = self.stock_api
-        tr_code = "t2301"
+        tr_code = None
+        market_type = self.open_market_type()
+        if market_type == MarketType.FutureOptionDay:
+            tr_code = "t2301"
+        elif market_type == MarketType.FutureOptionNight:
+            tr_code = "t2853"
+        else:
+            return
+
         api_response = await api.get_market_data(tr_code)
 
         if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
 
-        data = api_response.data + api_response.raw_data["t2301OutBlock2"]
+        data = api_response.data + api_response.raw_data[f"{tr_code}OutBlock2"]
         df = pd.DataFrame(data)
 
         valid_codes = {code.value for code in DerivativeTypeCode}
@@ -583,3 +598,24 @@ class EbestApiManager(OrderMixin):
         if self._market_status_updated_at and now - self._market_status_updated_at < 5:
             return self._market_status == MarketStatus.Open
         return False
+
+    def open_market_type(self):
+        now = now_local()
+        time = now.time()
+        hour = now.hour
+        time_hour = pendulum.time(hour)
+
+        day_intervals = [[pendulum.time(8, 45), pendulum.time(15, 45)]]
+        night_intervals = [
+            [pendulum.time(18), pendulum.time(23)],
+            [pendulum.time(0), pendulum.time(6)],
+        ]
+        for interval in day_intervals:
+            if interval[0] <= time <= interval[1]:
+                return MarketType.FutureOptionDay
+
+        for interval in night_intervals:
+            if interval[0] <= time_hour <= interval[1]:
+                return MarketType.FutureOptionNight
+
+        return MarketType.Undefined

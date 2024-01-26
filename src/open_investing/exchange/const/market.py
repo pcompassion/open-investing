@@ -2,7 +2,7 @@
 from enum import Enum, auto
 
 
-class MarketType(str, Enum):
+class MarketSecurityType(str, Enum):
     STOCK = "stock"
     DERIVATIVE = "derivative"
     UNDEFINED = "undefined"
@@ -19,3 +19,9 @@ class MarketStatus(str, Enum):
     Undefined = "undefined"
     Open = "open"
     Closed = "closed"
+
+
+class MarketType(str, Enum):
+    Undefined = "undefined"
+    FutureOptionDay = "future_option_day"
+    FutureOptionNight = "future_option_night"
