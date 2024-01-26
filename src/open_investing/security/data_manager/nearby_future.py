@@ -45,51 +45,19 @@ class NearbyFutureDataManager:
 
         return futures_data
 
-    async def nearby_futures(
+    async def nearby_future(
         self,
-        max_time_diff: timedelta = timedelta(days=5),
-        filter_params: dict | None = None,
-        return_type: ListDataType = ListDataType.Dataframe,
-    ) -> ListDataTypeHint:
-        # TODO: don't need this logic
-        filter_params = filter_params or {}
-        now = now_local()
-
-        future_qs = (
-            NearbyFuture.objects.filter(expire_at__gt=now)
-            .annotate(
-                recent_at=Window(
-                    expression=Min("expire_at"), partition_by=[F("security_code")]
-                )
-            )
-            .filter(expire_at=F("recent_at"))
-            .order_by("expire_at")
-        )
-
-        # filter_params_updated = dict(expire_at__gt=now) | filter_params
-
-        # if filter_params_updated:
-        #     future_qs = future_qs.filter(**filter_params_updated)
-
-        return await as_list_type(future_qs, return_type)
-
-    async def nearby_expires(
-        self,
-        filter_params: dict | None = None,
+        # 0: trade at expire date
+        # 1: trade until previous date of expire date
+        minimum_days_before_expire: int = 2,
     ):
-        filter_params = filter_params or {}
         now = now_local()
+        today = now.date()
 
-        qs = (
-            NearbyFuture.objects.filter(expire_at__gt=now)
-            .values_list("expire_at", flat=True)
-            .order_by("expire_at")
-            .distinct()
+        future = today + timedelta(days=minimum_days_before_expire)
+
+        qs = NearbyFuture.objects.filter(expire_at__date__gte=future).order_by(
+            "expire_at"
         )
 
-        # filter_params_updated = dict(expire_at__gt=now) | filter_params
-
-        # if filter_params_updated:
-        #     future_qs = future_qs.filter(**filter_params_updated)
-
-        return await sync_to_async(list)(qs)
+        return await qs.afirst()

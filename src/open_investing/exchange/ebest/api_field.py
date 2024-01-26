@@ -140,10 +140,10 @@ class EbestApiField:
 
         fn_map = cls.field_name_map[MarketSecurityType.UNDEFINED]
 
-        market_type = EbestApiData.get_market_type(tr_code)
+        market_security_type = EbestApiData.get_market_security_type(tr_code)
 
-        # tr's map -> tr's market_type map -> general map
-        fn_map = fn_map | cls.field_name_map[market_type]
+        # tr's map -> tr's market_security_type map -> general map
+        fn_map = fn_map | cls.field_name_map[market_security_type]
         fn_map = fn_map | fn_map_tr
 
         return fn_map

@@ -87,7 +87,7 @@ class EbestApi(ExchangeApi):
             return True
         return False
 
-    def get_or_create_ws_client(self, tr_type) -> WebSocketClient:
+    async def get_or_create_ws_client(self, tr_type) -> WebSocketClient:
         token_manager = self.api_client.get_token_manager()
         ws_uri: str = ""
         match self.env:
@@ -101,6 +101,7 @@ class EbestApi(ExchangeApi):
             self.ws_client = WebSocketClient(
                 ws_uri, token_manager, self.topic_extractor
             )
+            await self.ws_client.connect()
         return self.ws_client
 
     def topic_extractor(self, response):
@@ -307,7 +308,7 @@ class EbestApi(ExchangeApi):
         tr_key: str,
         handler: Callable[[str], Awaitable[None]],
     ):
-        ws_client = self.get_or_create_ws_client(tr_type)
+        ws_client = await self.get_or_create_ws_client(tr_type)
         body = self._topic_body(tr_code, tr_key)
 
         header = {"tr_type": tr_type}
@@ -322,7 +323,7 @@ class EbestApi(ExchangeApi):
         tr_key: str,
         handler: Callable[[str], Awaitable[None]],
     ):
-        ws_client = self.get_or_create_ws_client(tr_type)
+        ws_client = await self.get_or_create_ws_client(tr_type)
         body = self._topic_body(tr_code, tr_key)
         header = {"tr_type": tr_type}
         topic_key = self._dict_to_key(body)

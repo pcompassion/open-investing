@@ -14,6 +14,7 @@ from open_investing.security.models import Future
 from open_library.locator.service_locator import ServiceKey
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_library.collections.dict import filter_dict
+from open_library.collections.dict import to_jsonable_python
 
 from open_library.extension.django.orm import get_model_field_names
 
@@ -30,6 +31,23 @@ class FutureDataManager:
 
     async def last(self, filter_params: dict | None = None):
         return await Future.objects.filter(**filter_params).order_by("date_at").alast()
+
+    async def prepare_future(self, params: dict, save=True):
+        params_updated = to_jsonable_python(params)
+
+        future = Future(**params_updated)
+
+        if save:
+            await self.save(future, {})
+
+        return future
+
+    async def save(self, future, save_params: dict):
+        params = to_jsonable_python(save_params)
+        for field, value in params.items():
+            setattr(future, field, value)
+
+        await future.asave()
 
     async def save_futures(
         self, futures_data: ListDataTypeHint, extra_data: dict, field_names=list[str]
@@ -55,7 +73,6 @@ class FutureDataManager:
 
     async def nearby_futures(
         self,
-        max_time_diff: timedelta = timedelta(days=5),
         field_names: list | None = None,
         filter_params: dict | None = None,
         return_type: ListDataType = ListDataType.Dataframe,

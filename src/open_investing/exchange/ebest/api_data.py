@@ -12,7 +12,7 @@ class EbestApiData:
             "body": {"cvolume": 0, "starttime": "", "endtime": "", "cts_time": ""},
             "page_key_names": ["cts_time"],
             "api_path": EbestUrl.stock_market_data,
-            "market_type": MarketSecurityType.STOCK,
+            "market_security_type": MarketSecurityType.STOCK,
             "field_name_map": {
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
@@ -93,7 +93,7 @@ class EbestApiData:
             },
             "page_key_names": ["cts_date", "cts_time"],
             "api_path": EbestUrl.option_chart_data,
-            "market_type": MarketSecurityType.DERIVATIVE,
+            "market_security_type": MarketSecurityType.DERIVATIVE,
             "field_name_map": {
                 FieldName.SECURITY_CODE: EbestCode.shcode,
             },
@@ -154,7 +154,7 @@ class EbestApiData:
                 "OrdCndiTpCode": "0",
                 "LoanDt": "",
             },
-            "market_type": MarketSecurityType.STOCK,
+            "market_security_type": MarketSecurityType.STOCK,
             "f_in_block_name": "{tr_code}InBlock1",
             "request_per_second": 10,
         },
@@ -162,12 +162,12 @@ class EbestApiData:
             "api_path": EbestUrl.option_order,
             "f_data_block_name": "{tr_code}OutBlock1",
             "f_in_block_name": "{tr_code}InBlock1",
-            "market_type": MarketSecurityType.DERIVATIVE,
+            "market_security_type": MarketSecurityType.DERIVATIVE,
             "request_per_second": 10,
         },
         "CFOAT00300": {
             "api_path": EbestUrl.option_order,
-            "market_type": MarketSecurityType.DERIVATIVE,
+            "market_security_type": MarketSecurityType.DERIVATIVE,
             "f_in_block_name": "{tr_code}InBlock1",
             "f_data_block_name": "{tr_code}OutBlock1",
             "request_per_second": 10,
@@ -189,15 +189,15 @@ class EbestApiData:
         return EbestApiField.get_field_name(name, tr_code)
 
     @classmethod
-    def get_market_type(cls, tr_code):
-        market_type = MarketSecurityType.UNDEFINED
+    def get_market_security_type(cls, tr_code):
+        market_security_type = MarketSecurityType.UNDEFINED
 
         if tr_code in cls.API_DATA:
-            market_type = cls.API_DATA[tr_code].get(
-                "market_type", MarketSecurityType.UNDEFINED
+            market_security_type = cls.API_DATA[tr_code].get(
+                "market_security_type", MarketSecurityType.UNDEFINED
             )
 
-        return market_type
+        return market_security_type
 
     @classmethod
     def get_api_path(cls, tr_code):

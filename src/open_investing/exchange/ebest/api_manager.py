@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import time
 from decimal import Decimal
 from open_library.observe.listener_spec import ListenerSpec
@@ -126,7 +127,7 @@ class EbestApiManager(OrderMixin):
         elif market_type == MarketType.FutureOptionNight:
             api_code = "t8437"
         else:
-            return
+            return [], None
 
         api_response = await api.get_market_data(
             api_code, send_data={FieldName.DERIVATIVE_NAME: DerivativeType.MiniFuture}
@@ -172,192 +173,41 @@ class EbestApiManager(OrderMixin):
 
         return pricejisu, api_response
 
-    async def future_prices(
+    async def future_price(
         self,
-        future_data,
-        interval_second: int,
-        future_data_manager=None,
-        save=True,
-        return_type: ListDataType = ListDataType.Dataframe,
-    ):
-        """
-        fetch future prices
-        if now is in day market, fetch day price
-        otherwise fetch night price
-        """
-        api = self.stock_api
-
-        security_code = future_data.security_code
-        base_datetime = pendulum.now()
-
-        future_last = None
-
-        MAX_DATAPOINTS = 900
-        num_intervals = MAX_DATAPOINTS  # MAX_DATAPOINTS
-        start_at = None
-
-        day_market_tr = "t2209"
-        night_market_tr = "t8429"
-
-        time_interval_day_market = EbestApiData.get(day_market_tr, "time_interval")
-        time_interval_night_market = EbestApiData.get(night_market_tr, "time_interval")
-
-        send_data = EbestApiField.get_interval(interval_second=interval_second)
-
-        fields = ["expire_at", "derivative_type"]
-        mf_dict = {field: getattr(future_data, field) for field in fields}
-        mf_code = DerivativeCode(**mf_dict, price=future_data.price)
-
-        tr_code = None
-        if (
-            time_interval_day_market[0]
-            <= base_datetime.time()
-            <= time_interval_day_market[1]
-        ):
-            tr_code = day_market_tr
-
-        elif (
-            time_interval_night_market[0]
-            <= base_datetime.time()
-            <= time_interval_night_market[1]
-        ):
-            tr_code = night_market_tr
-
-        if tr_code is None:
-            #     return pd.DataFrame()
-            tr_code = day_market_tr
-
-        if future_data_manager:
-            future_last = await future_data_manager.last(
-                filter_params=dict(
-                    security_code=security_code, exchange_api_code=tr_code
-                )
-            )
-
-            if future_last:
-                start_at = pendulum.instance(future_last.date_at)
-                num_intervals = (
-                    pendulum.now().diff(start_at).in_seconds() // interval_second + 10
-                )
-                num_intervals = min(num_intervals, MAX_DATAPOINTS)
-
-        send_data.update(
-            {"cnt": num_intervals, FieldName.SECURITY_CODE: mf_code.security_code}
-        )
-        api_response = await api.get_market_data(tr_code, send_data=send_data)
-
-        if api_response is None:
-            return await as_list_type([], return_type), api_response
-
-        futures_df = pd.DataFrame(api_response.data)
-        if not len(futures_df):
-            return await as_list_type([], return_type), api_response
-
-        futures_df["date_at"] = futures_df["chetime"].apply(
-            lambda x: determine_datetime(x, base_datetime, self.DEFAULT_TIME_FORMAT)
-        )
-
-        if start_at:
-            futures_df = futures_df.loc[futures_df["date_at"] > start_at]
-
-        futures_df["security_code"] = security_code
-        futures_df["expire_at"] = future_data.expire_at
-
-        futures_df = futures_df[["security_code", "expire_at", "date_at", "price"]]
-
-        if save:
-            if not future_data_manager:
-                raise ValueError("future_data_manager is None")
-
-            extra_data = dict(
-                exchange_name=api.name,
-                exchange_api_code=tr_code,
-                timeframe=timedelta(seconds=interval_second),
-            )
-            futures_df = await future_data_manager.save_futures(
-                futures_df, extra_data=extra_data
-            )
-
-        result = await as_list_type(futures_df, return_type)
-
-        return result, api_response
-
-    async def option_list_8433(
-        self,
-        return_type: ListDataType = ListDataType.Dataframe,
+        security_code: str,
     ):
         api = self.stock_api
-        api_response = await api.get_market_data("t8433")
 
-        if api_response is None:
-            return pd.DataFrame(), api_response
+        api_code = None
 
-        df = pd.DataFrame(api_response.data)
+        market_type = self.open_market_type()
+        if market_type == MarketType.FutureOptionDay:
+            api_code = "t2101"
+        elif market_type == MarketType.FutureOptionNight:
+            api_code = "t2830"
+        else:
+            return [], None
 
-        valid_codes = {code.value for code in DerivativeTypeCode}
-        mask = df["shcode"].str.startswith(tuple(valid_codes), na=False)
-        df = df[mask]
-
-        field_names = [
-            "name",
-            "strike_price",
-            "expire_at",
-            "security_code",
-            "derivative_type",
-        ]
-
-        df[field_names] = df["shcode"].apply(
-            lambda x: DerivativeCode.get_fields(x, field_names)
-        )
-        result = await as_list_type(df, return_type)
-
-        return result, api_response
-
-    async def future_list(
-        self,
-        interval_second: int,
-        return_type: ListDataType = ListDataType.Dataframe,
-    ):
-        api = self.stock_api
-        tr_code = "t8432"
-        api_response = await api.get_market_data(tr_code)
+        send_data = {
+            FieldName.SECURITY_CODE: security_code,
+        }
+        api_response = await api.get_market_data(api_code, send_data=send_data)
         # return pd.DataFrame(), api_response
 
         if api_response is None or not api_response.success:
-            logger.warn(f"api error while fetching future list")
+            logger.warn(f"api error while fetching future price")
             return pd.DataFrame(), api_response
         # logger.info(f"api response raw_data {api_response.raw_data} ")
-        df = pd.DataFrame(api_response.data)
 
-        valid_codes = {code.value for code in DerivativeTypeCode}
-        mask = df["shcode"].str.startswith(tuple(valid_codes), na=False)
-        df = df[mask]
+        price = Money(api_response.data["price"], currency="KRW")
 
-        df["price"] = df["recprice"]
-
-        infered_field_names = [
-            "expire_at",
-            "security_code",
-            "derivative_type",
-        ]
-
-        df[infered_field_names] = df["shcode"].apply(
-            lambda x: DerivativeCode.get_fields(x, infered_field_names)
-        )
-
-        mask = df["derivative_type"].isin([DerivativeType.Future])
-        df = df[mask]
-
-        result = await as_list_type(df, return_type)
-
-        return result, api_response
+        return price, api_response
 
     async def option_list(
         self,
-        interval_second: int,
-        option_data_manager=None,
+        expire_at: datetime.datetime,
         return_type: ListDataType = ListDataType.Dataframe,
-        save=True,
     ):
         api = self.stock_api
         tr_code = None
@@ -369,7 +219,9 @@ class EbestApiManager(OrderMixin):
         else:
             return
 
-        api_response = await api.get_market_data(tr_code)
+        yyyymm = expire_at.strftime("%Y%m")
+        send_data = {"yyyymm": yyyymm}
+        api_response = await api.get_market_data(tr_code, send_data=send_data)
 
         if api_response is None or not api_response.success:
             return pd.DataFrame(), api_response
@@ -398,128 +250,9 @@ class EbestApiManager(OrderMixin):
         mask = df["derivative_type"].isin([DerivativeType.Call, DerivativeType.Put])
         df = df[mask]
 
-        field_names = infered_field_names + ["price"]
-
         df["price_amount"] = df["price"].apply(lambda x: x.amount)
 
-        if save:
-            if not option_data_manager:
-                raise ValueError("option_data_manager is None")
-
-            extra_data = dict(
-                exchange_name=api.name,
-                exchange_api_code=tr_code,
-                timeframe=timedelta(seconds=interval_second),
-                date_at=now_local(),
-            )
-            df = await option_data_manager.save_options(df, extra_data=extra_data)
-
         result = await as_list_type(df, return_type)
-
-        return result, api_response
-
-    async def option_prices(
-        self,
-        option_data,
-        interval_second: int,
-        option_data_manager=None,
-        save=True,
-        return_type: ListDataType = ListDataType.Dataframe,
-    ):
-        """
-        fetch option prices
-        if now is in day market, fetch day price
-        otherwise fetch night price
-        """
-        api = self.stock_api
-
-        security_code = option_data.security_code
-        base_datetime = pendulum.now()
-
-        option_last = None
-
-        MAX_DATAPOINTS = 900
-        num_intervals = MAX_DATAPOINTS  # MAX_DATAPOINTS
-        start_at = None
-
-        day_market_tr = "t2209"
-        night_market_tr = "t8429"
-
-        time_interval_day_market = EbestApiData.get(day_market_tr, "time_interval")
-        time_interval_night_market = EbestApiData.get(day_market_tr, "time_interval")
-
-        tr_code = None
-        if (
-            time_interval_day_market[0]
-            <= base_datetime.time()
-            <= time_interval_day_market[1]
-        ):
-            tr_code = day_market_tr
-
-        elif (
-            time_interval_night_market[0]
-            <= base_datetime.time()
-            <= time_interval_night_market[1]
-        ):
-            tr_code = night_market_tr
-
-        if tr_code is None:
-            # return pd.DataFrame()
-            tr_code = day_market_tr
-
-        if option_data_manager:
-            option_last = await option_data_manager.last(security_code=security_code)
-
-            if option_last:
-                start_at = pendulum.instance(option_last.date_at)
-                num_intervals = (
-                    pendulum.now().diff(start_at).in_seconds() // interval_second + 10
-                )
-                num_intervals = min(num_intervals, MAX_DATAPOINTS)
-
-        send_data = EbestApiField.get_interval(interval_second=interval_second)
-
-        send_data.update(
-            {"cnt": num_intervals, FieldName.SECURITY_CODE: option_data.security_code}
-        )
-
-        api_response = await api.get_market_data(tr_code, send_data=send_data)
-
-        if api_response is None:
-            return await as_list_type([], return_type), api_response
-
-        options_df = pd.DataFrame(api_response.data)
-        if not len(options_df):
-            return await as_list_type([], return_type), api_response
-
-        options_df["date_at"] = options_df["chetime"].apply(
-            lambda x: determine_datetime(x, base_datetime, self.DEFAULT_TIME_FORMAT)
-        )
-
-        if start_at:
-            options_df = options_df.loc[options_df["date_at"] > start_at]
-
-        options_df["expire_at"] = option_data.expire_at
-
-        options_df = options_df[["date_at", "price"]]
-
-        if save:
-            if not option_data_manager:
-                raise ValueError("option_data_manager is None")
-
-            extra_data = dict(
-                exchange_name=api.name,
-                exchange_api_code=tr_code,
-                strike_price=option_data.strike_price,
-                security_code=security_code,
-                derivative_type=option_data.derivative_type,
-                timeframe=timedelta(seconds=interval_second),
-            )
-            options_df = await option_data_manager.save_options(
-                options_df, extra_data=extra_data
-            )
-
-        result = await as_list_type(options_df, return_type)
 
         return result, api_response
 
