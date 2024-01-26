@@ -156,9 +156,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 if self.quote is not None:
                     if order_side == OrderSide.Buy:
-                        price_diff = price - self.quote.bid_price_1
+                        price_diff = self.quote.bid_price_1 - price
                     else:
-                        price_diff = self.quote.ask_price_1 - price
+                        price_diff = price - self.quote.ask_price_1
 
                     tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
