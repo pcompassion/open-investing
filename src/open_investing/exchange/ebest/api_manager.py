@@ -321,13 +321,14 @@ class EbestApiManager(OrderMixin):
         logger.debug(f"market_status, {data}")
 
         jangubun = data["jangubun"]
+        jstatus = data["jstatus"]
+        if jangubun in ["5", "8"] and jstatus in ["21", "41"]:
+            if jstatus == "21":
+                self._market_status = MarketStatus.Open
+            elif jstatus == "41":
+                self._market_status = MarketStatus.Closed
 
-        if jangubun == "C":
-            self._market_status = MarketStatus.CLOSED
-        elif jangubun == "O":
-            self._market_status = MarketStatus.OPEN
-
-        self._market_status_updated_at = time.monotonic()
+            self._market_status_updated_at = time.monotonic()
 
     def is_market_open(self):
         now = time.monotonic()
