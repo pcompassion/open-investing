@@ -33,9 +33,16 @@ class NearbyFutureDataManager:
 
         future_dicts = await as_list_type(futures_data, data_type=ListDataType.ListDict)
 
+        non_database_field_names = list(NearbyFuture._non_database_fields.keys())
+
         for future_data in future_dicts:
+            params = {
+                k: v
+                for k, v in future_data.items()
+                if k not in non_database_field_names
+            }
             future, created = await NearbyFuture.objects.aget_or_create(
-                **future_data,
+                **params,
                 **extra_data,
             )
             future_data["id"] = future.id

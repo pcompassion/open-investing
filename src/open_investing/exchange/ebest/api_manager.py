@@ -200,7 +200,7 @@ class EbestApiManager(OrderMixin):
             return pd.DataFrame(), api_response
         # logger.info(f"api response raw_data {api_response.raw_data} ")
 
-        price = Money(api_response.data["price"], currency="KRW")
+        price = Money(amount=api_response.data["price"], currency="KRW")
 
         return price, api_response
 
@@ -229,6 +229,11 @@ class EbestApiManager(OrderMixin):
         data = api_response.data + api_response.raw_data[f"{tr_code}OutBlock2"]
         df = pd.DataFrame(data)
 
+        df.rename(columns={"price": "price_amount"}, inplace=True)
+        df["price"] = df["price_amount"].apply(
+            lambda x: Money(amount=x, currency="KRW")
+        )
+
         valid_codes = {code.value for code in DerivativeTypeCode}
         mask = df["optcode"].str.startswith(tuple(valid_codes), na=False)
         df = df[mask]
@@ -249,8 +254,6 @@ class EbestApiManager(OrderMixin):
 
         mask = df["derivative_type"].isin([DerivativeType.Call, DerivativeType.Put])
         df = df[mask]
-
-        df["price_amount"] = df["price"].apply(lambda x: x.amount)
 
         result = await as_list_type(df, return_type)
 
