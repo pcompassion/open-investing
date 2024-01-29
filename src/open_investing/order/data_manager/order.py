@@ -109,7 +109,8 @@ class OrderDataManager:
         params = dict(
             order=order,
             quantity=event_params["fill_quantity"],
-            price=event_params["fill_price"],
+            price_amount=fill_price.amount,
+            currency=fill_price.currency,
             date_at=event_params["date_at"],
         )
         trade = await Trade.objects.acreate(**params)
