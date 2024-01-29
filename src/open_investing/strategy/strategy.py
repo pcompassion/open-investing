@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 from typing import Generic, TypeVar, cast
 from open_library.locator.service_locator import ServiceKey
 import functools
@@ -13,6 +14,8 @@ from open_investing.strategy.data_manager.protocol.decision import (
     DecisionDataManagerProtocol,
 )
 from uuid import UUID
+from open_investing.task.task_command import SubCommand, TaskCommand
+from open_investing.strategy.const.strategy import StrategyCommandName
 
 
 class StrategySpec(TaskSpec):
@@ -27,12 +30,28 @@ class StrategySpec(TaskSpec):
         return self.spec_type_name
 
 
+class StrategyCommand(SubCommand):
+    name: StrategyCommandName
+
+
+class StrategyTaskCommand(TaskCommand):
+    strategy_command: StrategyCommand
+
+    @property
+    def sub_command(self) -> StrategyCommand:
+        return self.strategy_command
+
+
 T = TypeVar("T", bound=StrategySpec)
 
 
 class Strategy(Generic[T], TaskSpecHandler):
     def __init__(self, task_spec: StrategySpec) -> None:
         super().__init__(task_spec)
+        self.command_queue = asyncio.Queue()
+
+    async def enqueue_command(self, strategy_info):
+        await self.command_queue.put(strategy_info)
 
     @property
     def strategy_spec(self) -> T:

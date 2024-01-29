@@ -16,6 +16,7 @@ from django.db.models import Window, F, Max, Min
 from open_library.data.conversion import as_list_type, ListDataType, ListDataTypeHint
 from open_library.extension.django.orm import get_model_field_names
 from open_library.collections.dict import filter_dict
+from open_library.collections.dict import to_jsonable_python
 
 
 class OptionDataManager:
@@ -27,6 +28,21 @@ class OptionDataManager:
 
     def initialize(self, environment):
         pass
+
+    async def save(self, option_or_id, save_params: dict):
+        params = to_jsonable_python(save_params)
+
+        if isinstance(option_or_id, Option):
+            option = option_or_id
+
+            for field, value in params.items():
+                setattr(option, field, value)
+
+            update_fields = list(params.keys())
+
+            await option.asave(update_fields=update_fields)
+        else:
+            await Option.objects.filter(id=option_or_id).aupdate(**params)
 
     async def last(self, **params):
         return await Option.objects.filter(**params).order_by("date_at").alast()

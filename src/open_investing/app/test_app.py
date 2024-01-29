@@ -16,6 +16,8 @@ from open_library.locator.service_locator import ServiceLocator
 from open_investing.exchange.ebest.api_manager import EbestApiManager
 from open_investing.app.base_app import App as BaseApp
 
+from open_investing.task.redis_task_dispatcher import RedisTaskDispatcher
+
 
 async def debug_control():
     while True:
@@ -31,3 +33,16 @@ class App(BaseApp):
 
     async def init(self):
         await super().init()
+
+    async def main(self):
+        # await self.init()
+        redis_config = self.config.redis_config
+        STRATEGY_CHANNEL_NAME = self.config.STRATEGY_CHANNEL_NAME
+
+        redis_client = aioredis.from_url(**redis_config["strategy"])
+
+        task_dispatcher = RedisTaskDispatcher(STRATEGY_CHANNEL_NAME, redis_client)
+        task_dispatcher.init()
+        self.task_dispatcher = task_dispatcher
+
+        await task_dispatcher.start_listening()

@@ -10,3 +10,7 @@ class StrategyLifeStage(str, Enum):
     Opened = "opened"
 
     Closed = "closed"
+
+
+class StrategyCommandName(str, Enum):
+    UserConfirm = "user_confirm"

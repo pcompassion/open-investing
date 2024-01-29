@@ -104,6 +104,10 @@ class TaskManager:
         await self.command_queue.put(task_info)
 
     async def run(self):
+        from open_investing.strategy.strategy import StrategyTaskCommand
+        from open_investing.task_spec.order.order import OrderTaskCommand
+        from open_investing.task_spec.decision.decison import DecisionTaskCommand
+
         while True:
             try:
                 # while not self.command_queue.empty():
@@ -117,7 +121,14 @@ class TaskManager:
                     task_spec = task_spec_
 
                 if isinstance(command_, dict):
-                    command = TaskCommand(**command_)
+                    if "strategy_command" in command_:
+                        command = StrategyTaskCommand(**command_)
+                    elif "order_command" in command_:
+                        command = OrderTaskCommand(**command_)
+                    elif "decision_command" in command_:
+                        command = DecisionTaskCommand(**command_)
+                    else:
+                        command = TaskCommand(**command_)
                 else:
                     command = command_
 
