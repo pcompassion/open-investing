@@ -171,7 +171,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                 if order.security_code == self.decision_spec.leader_security_code:
                     # TODO: min quantity is 1 ?
-                    MIN_QUANTITY = 1
+                    MIN_QUANTITY = Decimal(1)
                     quantity = max(
                         fill_quantity * self.decision_spec.leader_follower_ratio,
                         MIN_QUANTITY,

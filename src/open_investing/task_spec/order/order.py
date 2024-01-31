@@ -33,7 +33,7 @@ class OrderSpec(TaskSpec):
     price: Money | None = None
 
     security_code: str
-    quantity: float
+    quantity: Decimal
 
     def __hash__(self):
         attrs_hash = map(
