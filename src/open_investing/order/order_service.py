@@ -67,7 +67,7 @@ class OrderService:
 
         match event_name:
             case OrderEventName.ExchangeFilled:
-                filled_data = await order_data_manager.handle_filled_event(
+                filled_data = await order_data_manager.handle_exchange_filled_event(
                     data_initial, order=order
                 )
 
@@ -97,6 +97,10 @@ class OrderService:
                     )
 
                     await order_event_broker.enqueue_message(message)
+            case OrderEventName.ExchangeCancelSuccess:
+                await order_data_manager.handle_cancel_success_event(
+                    data_initial, order
+                )
 
                 # check if filled,
             case _:
@@ -180,11 +184,18 @@ class OrderService:
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
     async def offset_order(
-        self, offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+        self,
+        offsetting_order,
+        offsetted_order_id,
+        offset_quantity_order,
+        exchange_manager,
     ):
         task = asyncio.create_task(
             self._offset_order(
-                offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+                offsetting_order,
+                offsetted_order_id,
+                offset_quantity_order,
+                exchange_manager,
             )
         )
 
@@ -192,7 +203,11 @@ class OrderService:
         task.add_done_callback(lambda t: self.running_tasks.remove(t))
 
     async def _offset_order(
-        self, offsetting_order, offsetted_order_id, offset_quantity, exchange_manager
+        self,
+        offsetting_order,
+        offsetted_order_id,
+        offset_quantity_order,
+        exchange_manager,
     ):
         # TODO: maybe do something other than open_order
         order_data_manager = self.order_data_manager
@@ -200,7 +215,7 @@ class OrderService:
         await order_data_manager.create_offset_order_relation(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
-            offset_quantity=offset_quantity,
+            offset_quantity_order=offset_quantity_order,
         )
 
         return await self._open_order(offsetting_order, exchange_manager)
@@ -225,11 +240,11 @@ class OrderService:
             order, cancel_quantity
         )
 
-        cancelled_quantity = cancel_order_result["cancelled_quantity"]
+        cancelled_quantity_order = cancel_order_result["cancelled_quantity_order"]
 
         event_name = OrderEventName.ExchangeCancelFailure
         next_event_name = OrderEventName.CancelFailure
-        if cancelled_quantity > 0:
+        if cancelled_quantity_order > 0:
             event_name = OrderEventName.ExchangeCancelSuccess
             next_event_name = OrderEventName.CancelSuccess
 

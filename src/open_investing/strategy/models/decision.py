@@ -23,8 +23,10 @@ class Decision(models.Model):
     # decision_type = models.CharField(max_length=128)
     decision_params = models.JSONField(default=dict)
 
-    quantity = models.FloatField(default=0)
-    filled_quantity = models.FloatField(default=0)
+    quantity_order = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    filled_quantity_order = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
 
     life_stage = models.CharField(
         max_length=32, default=DecisionLifeStage.Undefined, db_index=True
@@ -37,10 +39,10 @@ class Decision(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def update_fill(self, fill_quantity):
+    def update_fill(self, fill_quantity_order):
         # Update total cost and filled quantity
 
-        self.filled_quantity += fill_quantity
+        self.filled_quantity_order += fill_quantity_order
 
     def is_fullfilled(self):
-        return self.filled_quantity >= self.quantity
+        return self.filled_quantity_order >= self.quantity_order

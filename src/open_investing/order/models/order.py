@@ -49,9 +49,21 @@ class Order(models.Model):
     price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
     price = MoneyField(amount_field="price_amount", currency_field="currency")
 
-    quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    quantity_multiplier = models.DecimalField(
+        max_digits=16, decimal_places=2, default=1
+    )
 
-    filled_quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    quantity_order = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    quantity_exposure = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
+
+    filled_quantity_order = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
+    filled_quantity_exposure = models.DecimalField(
+        max_digits=16, decimal_places=2, default=0.0
+    )
 
     average_fill_price_amount = models.DecimalField(
         max_digits=16, decimal_places=2, default=0.0
@@ -78,15 +90,17 @@ class Order(models.Model):
         related_name="offsetting_me",
     )
 
-    def update_fill(self, fill_quantity, fill_price):
+    def update_fill(self, fill_quantity_order, fill_price):
         # Update total cost and filled quantity
-        new_cost = fill_quantity * fill_price
+        new_cost = fill_quantity_order * self.quantity_multiplier * fill_price
         self.total_cost += new_cost
-        self.filled_quantity += fill_quantity
-
+        self.filled_quantity_order += fill_quantity_order
+        self.filled_quantity_exposure = (
+            self.filled_quantity_order * self.quantity_multiplier
+        )
         # Update average fill price
-        if self.filled_quantity > 0:
-            self.average_fill_price = self.total_cost / self.filled_quantity
+        if self.filled_quantity_order > 0:
+            self.average_fill_price = self.total_cost / self.filled_quantity_exposure
 
         if self.life_stage == OrderLifeStage.Undefined:
             self.life_stage = OrderLifeStage.Opened
@@ -96,24 +110,25 @@ class Order(models.Model):
         Calculates the return on investment (ROI) based on the current price.
         """
 
-        if self.filled_quantity == 0:
+        if self.filled_quantity_order == 0:
             return 0  # If nothing has been filled, ROI is 0
 
-        invested = self.average_fill_price * self.filled_quantity
-        current_value = current_price * self.filled_quantity
+        invested = self.average_fill_price * self.filled_quantity_exposure
+        current_value = current_price * self.filled_quantity_exposure
         return (current_value - invested) / invested
 
     def is_filled(self):
-        return self.filled_quantity >= self.quantity
+        return self.filled_quantity_order >= self.quantity_order
 
-    def subtract_quantity(self, quantity):
-        self.quantity -= quantity
+    def subtract_quantity(self, quantity_order):
+        self.quantity_order -= quantity_order
+        self.quantity_exposure -= quantity_order * self.quantity_multiplier
 
     def calculate_pnl(self, current_price):
-        if self.filled_quantity == 0:
+        if self.filled_quantity_order == 0:
             return Money(amount=0, currency=current_price.currency)
 
-        current_value = current_price * self.filled_quantity
+        current_value = current_price * self.filled_quantity_exposure
 
         if self.side == OrderSide.Buy:
             return current_value - self.total_cost
@@ -131,6 +146,26 @@ class Order(models.Model):
         Returns a queryset of Orders that offset this Order
         """
         return self.offsetting_me.all()
+
+    def set_quantity(self):
+        if self.quantity_order is None:
+            self.quantity_order = self.quantity_exposure / self.quantity_multiplier
+        elif self.quantity_exposure is None:
+            self.quantity_exposure = self.quantity_order * self.quantity_multiplier
+
+    def save(self, *args, **kwargs):
+        self.set_quantity()
+
+        if self.quantity_order is None:
+            raise ValueError("quantity_order is None")
+        if self.quantity_exposure is None:
+            raise ValueError("quantity_exposure is None")
+
+        if self.quantity_order * self.quantity_multiplier != self.quantity_exposure:
+            raise ValueError(
+                "quantity_order * self.quantity_multiplier != self.quantity_exposure"
+            )
+        super(Order, self).save(*args, **kwargs)
 
 
 class Trade(models.Model):

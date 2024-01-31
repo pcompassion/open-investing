@@ -48,9 +48,11 @@ class OrderDataManager:
             updated_params = params | {"id": uuid4()}
 
         if order_type.is_single_order:
-            return Order(**updated_params)
+            order = Order(**updated_params)
+            order.set_quantity()
         else:
-            return CompositeOrder(**updated_params)
+            order = CompositeOrder(**updated_params)
+            order.set_quantity()
 
     async def save(self, order, save_params: dict):
         params = to_jsonable_python(save_params)
@@ -95,7 +97,7 @@ class OrderDataManager:
         except ObjectDoesNotExist:
             return None
 
-    async def handle_filled_event(self, event_params: dict, order) -> dict:
+    async def handle_exchange_filled_event(self, event_params: dict, order) -> dict:
         parent_order = None
         trade = None
         order_type = OrderType(order.order_type)
@@ -103,12 +105,13 @@ class OrderDataManager:
         # if order_type.is_single_order:
         #     parent_order = order.parent_order
 
-        fill_quantity = event_params["fill_quantity"]
+        fill_quantity_order = event_params["fill_quantity_order"]
         fill_price = event_params["fill_price"]
 
         params = dict(
             order=order,
-            quantity=event_params["fill_quantity"],
+            quantity_order=event_params["fill_quantity_order"],
+            quantity_multiplier=order.quantity_multiplier,
             price_amount=fill_price.amount,
             currency=fill_price.currency,
             date_at=event_params["date_at"],
@@ -116,17 +119,17 @@ class OrderDataManager:
         trade = await Trade.objects.acreate(**params)
 
         if order:
-            order.update_fill(fill_quantity, fill_price)
+            order.update_fill(fill_quantity_order, fill_price)
 
         if order.parent_order_id:
             parent_order = await self.get_composite_order(
                 filter_params=dict(id=order.parent_order_id)
             )
-            await self.handle_filled_event_for_composite_order(
+            await self.handle_exchange_filled_event_for_composite_order(
                 event_params, order, parent_order
             )
 
-        offset_result = await self.offset_order(order, fill_quantity)
+        offset_result = await self.offset_order(order, fill_quantity_order)
 
         await order.asave()
 
@@ -135,9 +138,9 @@ class OrderDataManager:
     async def handle_cancel_success_event(self, event_params: dict, order):
         parent_order = order.parent_order
 
-        cancelled_quantity = event_params["cancelled_quantity"]
+        cancelled_quantity_order = event_params["cancelled_quantity_order"]
 
-        order.subtract_quantity(cancelled_quantity)
+        order.subtract_quantity(cancelled_quantity_order)
 
         if parent_order:
             await self.handle_cancel_success_event_for_composite_order(
@@ -146,18 +149,18 @@ class OrderDataManager:
 
         await order.asave()
 
-    async def handle_filled_event_for_composite_order(
+    async def handle_exchange_filled_event_for_composite_order(
         self, event_params: dict, order, composite_order
     ):
-        fill_quantity = event_params["fill_quantity"]
+        fill_quantity_order = event_params["fill_quantity_order"]
         fill_price = event_params["fill_price"]
 
         match composite_order.order_type:
             case OrderType.BestMarketIceberg:
-                composite_order.update_fill(fill_quantity, fill_price)
+                composite_order.update_fill(fill_quantity_order, fill_price)
                 # decision = composite_order.decision
             case OrderType.BestLimitIceberg:
-                composite_order.update_fill(fill_quantity, fill_price)
+                composite_order.update_fill(fill_quantity_order, fill_price)
 
             case _:
                 pass
@@ -167,26 +170,13 @@ class OrderDataManager:
     async def handle_cancel_success_event_for_composite_order(
         self, event_params: dict, order, composite_order
     ):
-        cancelled_quantity = event_params["cancelled_quantity"]
+        cancelled_quantity_order = event_params["cancelled_quantity_order"]
 
         match composite_order.order_type:
             case OrderType.BestMarketIceberg:
-                composite_order.subtract_quantity(cancelled_quantity)
+                composite_order.subtract_quantity(cancelled_quantity_order)
             case _:
                 pass
-
-    async def handle_event(self, event_params: dict, order=None):
-        event_name = event_params["event_name"]
-        match event_name:
-            case OrderEventName.ExchangeFilled:
-                await self.handle_filled_event(event_params, order)
-
-            case OrderEventName.ExchangeCancelSuccess:
-                await self.handle_cancel_success_event(event_params, order)
-            case _:
-                pass
-
-        await self.record_event(event_params, order=order)
 
     async def record_event(self, event_params: dict, order=None):
         event_params_updated = to_jsonable_python(event_params)
@@ -226,15 +216,15 @@ class OrderDataManager:
         return await as_list_type(qs, return_type, field_names)
 
     async def create_offset_order_relation(
-        self, offsetting_order, offsetted_order_id, offset_quantity
+        self, offsetting_order, offsetted_order_id, offset_quantity_order
     ):
         order_offset_relation, _ = await OrderOffsetRelation.objects.aget_or_create(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
-            kwargs={"offset_quantity": offset_quantity},
+            kwargs={"offset_quantity_order": offset_quantity_order},
         )
 
-    async def offset_order(self, offsetting_order, fill_quantity) -> dict:
+    async def offset_order(self, offsetting_order, fill_quantity_order) -> dict:
         # TODO: possibly there are many order_offset_relation,
         order_offset_relation = await OrderOffsetRelation.objects.filter(
             offsetting_order=offsetting_order, fully_offsetted=False
@@ -250,11 +240,13 @@ class OrderDataManager:
             offset_result[
                 "offsetted_order_id"
             ] = order_offset_relation.offsetted_order_id
-            remaining_quantity = order_offset_relation.update_fill(fill_quantity)
+            remaining_quantity_order = order_offset_relation.update_fill(
+                fill_quantity_order
+            )
 
-            if remaining_quantity < 0:
+            if remaining_quantity_order < 0:
                 logger.warning(
-                    f"offset_order bigger quantity than requested {remaining_quantity}"
+                    f"offset_order bigger quantity than requested {remaining_quantity_order}"
                 )
 
             await order_offset_relation.asave()

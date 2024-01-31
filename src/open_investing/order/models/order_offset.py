@@ -9,22 +9,29 @@ class OrderOffsetRelation(models.Model):
     offsetted_order = models.ForeignKey(
         "order.Order", related_name="_offsetting_me", on_delete=models.CASCADE
     )
-    offset_quantity = models.PositiveIntegerField(
+    offset_quantity_order = models.PositiveIntegerField(
         default=0
     )  # Field for offset quantity
-    filled_quantity = models.PositiveIntegerField(default=0)
+    filled_quantity_order = models.PositiveIntegerField(default=0)
+    quantity_multiplier = models.DecimalField(
+        max_digits=16, decimal_places=2, default=1
+    )
 
     fully_offsetted = models.BooleanField(default=False, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def update_fill(self, fill_quantity):
-        self.filled_quantity += fill_quantity
+    def update_fill(self, fill_quantity_order):
+        self.filled_quantity_order += fill_quantity_order
 
-        remaining_quantity = self.offset_quantity - self.filled_quantity
-        self.filled_quantity = min(self.offset_quantity, self.filled_quantity)
+        remaining_quantity_order = (
+            self.offset_quantity_order - self.filled_quantity_order
+        )
+        self.filled_quantity_order = min(
+            self.offset_quantity_order, self.filled_quantity_order
+        )
 
-        if self.filled_quantity == self.offset_quantity:
+        if self.filled_quantity_order == self.offset_quantity_order:
             self.fully_offsetted = True
 
-        return remaining_quantity
+        return remaining_quantity_order

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from open_investing.price.money import Money
 import operator
 import functools
@@ -34,6 +35,7 @@ class OrderSpec(TaskSpec):
 
     security_code: str
     quantity: Decimal
+    quantity_exposure: Decimal
 
     def __hash__(self):
         attrs_hash = map(

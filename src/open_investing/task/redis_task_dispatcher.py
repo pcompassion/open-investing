@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import redis
+
 from open_investing.task.task_command import TaskCommand
 from typing import Callable
 from open_library.observe.listener_spec import ListenerSpec
@@ -45,8 +47,10 @@ class RedisTaskDispatcher(TaskDispatcher):
     async def _(self, task_spec: TaskSpec, command):
         task_json = task_spec.model_dump()
         command_json = command.model_dump()
-
-        await self.dispatch_task(task_json, command_json)
+        try:
+            await self.dispatch_task(task_json, command_json)
+        except redis.exceptions.ReadOnlyError:
+            logger.error(f"redis readonly error: {self.redis_client}")
 
     @dispatch_task.register(dict)
     async def _(self, task_spec, command):

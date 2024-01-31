@@ -46,6 +46,7 @@ class BestLimitIcebergOrderSpec(OrderSpec):
 
     max_tick_diff: int
     tick_size: Decimal
+    multiplier: Decimal
 
 
 @dataclass
@@ -91,7 +92,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.quote = None
         self.composite_order = None
-        self.filled_quantity = None
+        self.filled_quantity_order = None
         self.order_command_queues = dict()
         self.limit_order_id = None
 
@@ -104,9 +105,11 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             self.composite_order = order
             max_tick_diff = order_spec.max_tick_diff
             security_code = order_spec.security_code
-            quantity = order_spec.quantity
+            quantity_order = (
+                order_spec.quantity_exposure / order_spec.quantity_multiplier
+            )
 
-            self.filled_quantity = order.filled_quantity
+            self.filled_quantity_order = order.filled_quantity_order
 
             orders = dict()
             composite_order_id = order.id
@@ -116,9 +119,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
             order_command_queue = self.order_command_queues.get(composite_order_id)
 
-            while self.filled_quantity < quantity:
+            while self.filled_quantity_order < quantity_order:
                 # TODO: probably need tighter check
-                remaining_quantity = quantity - self.filled_quantity
+                remaining_quantity_order = quantity_order - self.filled_quantity_order
 
                 if order_command_queue is not None and not order_command_queue.empty():
                     internal_order_command = await order_command_queue.get()
@@ -126,7 +129,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                     if name == "STOP" and self.limit_order_id:
                         await self.cancel_remaining(
-                            self.limit_order_id, security_code, remaining_quantity
+                            self.limit_order_id, security_code, remaining_quantity_order
                         )
 
                         break
@@ -171,7 +174,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         await self.cancel_remaining(
                             self.limit_order_id,
                             security_code,
-                            remaining_quantity,
+                            remaining_quantity_order,
                         )
                         continue
                     else:
@@ -206,10 +209,11 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 order_spec_dict = self.base_spec_dict | {
                     "spec_type_name": OrderType.Limit,
-                    # "quantity": quantity_partial,
                     # TODO: quantity type
                     "order_side": order_spec.order_side,
-                    "quantity": int(remaining_quantity),
+                    "quantity_exposure": int(remaining_quantity_order)
+                    * self.order_spec.quantity_multiplier,
+                    "quantity_multiplier": self.order_spec.quantity_multiplier,
                     "order_id": order_id,
                     "parent_order_id": self.composite_order.id,
                     "strategy_session_id": order_spec.strategy_session_id,  # TODO: shouldnt be neccessary
@@ -278,7 +282,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 composite_order = await self.order_data_manager.get_composite_order(
                     filter_params=dict(id=self.composite_order.id)
                 )
-                self.filled_quantity = composite_order.filled_quantity
+                self.filled_quantity_order = composite_order.filled_quantity_order
 
                 date_at = data["date_at"]
                 await self.order_fill_tracker.add_data(data, date_at)
@@ -332,31 +336,32 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         await self._subscribe_quote(order_spec.security_code)
 
+        order = None
+        if order_id:
+            order = await order_data_manager.get_composite_order(
+                filter_params=dict(id=order_id, order_type=self.order_type)
+            )
+
+        if order is None:
+            order = await order_data_manager.prepare_order(
+                params=dict(
+                    id=order_id,
+                    quantity_exposure=order_spec.quantity_exposure,
+                    quantity_multiplier=order_spec.multiplier,
+                    order_type=self.order_type,
+                    strategy_session_id=strategy_session_id,
+                    decision_id=decision_id,
+                    data=dict(
+                        security_code=order_spec.security_code,
+                        max_tick_diff=order_spec.max_tick_diff,
+                        tick_size=order_spec.tick_size,
+                    ),
+                ),
+                save=True,
+            )
+
         match command.name:
             case OrderCommandName.Open:
-                order = None
-                if order_id:
-                    order = await order_data_manager.get_composite_order(
-                        filter_params=dict(id=order_id, order_type=self.order_type)
-                    )
-
-                if order is None:
-                    order = await order_data_manager.prepare_order(
-                        params=dict(
-                            id=order_id,
-                            quantity=order_spec.quantity,
-                            order_type=self.order_type,
-                            strategy_session_id=strategy_session_id,
-                            decision_id=decision_id,
-                            data=dict(
-                                security_code=order_spec.security_code,
-                                max_tick_diff=order_spec.max_tick_diff,
-                                tick_size=order_spec.tick_size,
-                            ),
-                        ),
-                        save=True,
-                    )
-
                 if self.run_order_task:
                     logger.warning("already running order task")
                     return

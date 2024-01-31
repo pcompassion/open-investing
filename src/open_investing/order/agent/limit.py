@@ -49,7 +49,8 @@ class LimitOrderAgent(OrderAgent):
             order = await order_data_manager.prepare_order(
                 params=dict(
                     id=order_id,
-                    quantity=order_spec.quantity,
+                    quantity_exposure=order_spec.quantity_exposure,
+                    quantity_multiplier=order_spec.quantity_multiplier,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
                     strategy_session_id=order_spec.strategy_session_id,

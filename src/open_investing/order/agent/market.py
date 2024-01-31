@@ -50,7 +50,8 @@ class MarketOrderAgent(OrderAgent):
         if not order:
             order = await order_data_manager.prepare_order(
                 params=dict(
-                    quantity=order_spec.quantity,
+                    quantity_exposure=order_spec.quantity_exposure,
+                    quantity_multiplier=order_spec.quantity_multiplier,
                     order_type=self.order_type,
                     security_code=order_spec.security_code,
                     side=order_spec.order_side,
@@ -78,7 +79,8 @@ class MarketOrderAgent(OrderAgent):
 
                 offsetting_order = await order_data_manager.prepare_order(
                     params=dict(
-                        quantity=order.filled_quantity,
+                        quantity_order=order.filled_quantity_order,
+                        quantity_multiplier=order.quantity_multiplier,
                         order_type=self.order_type,
                         security_code=order_spec.security_code,
                         side=OrderSide(order.side).opposite,
@@ -96,7 +98,7 @@ class MarketOrderAgent(OrderAgent):
                 await self.order_service.offset_order(
                     offsetting_order,
                     offsetted_order_id,
-                    offset_quantity=offsetted_order.filled_quantity,
+                    offset_quantity_order=offsetted_order.filled_quantity_order,
                     exchange_manager=exchange_manager,
                 )
 

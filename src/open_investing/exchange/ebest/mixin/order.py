@@ -167,7 +167,7 @@ class OrderMixin:
 
                 data = dict(
                     security_code=security_code,
-                    fill_quantity=int(data["chevol"]),
+                    fill_quantity_order=int(data["chevol"]),
                     fill_price=Money(amount=data["cheprice"], currency="KRW"),
                     date_at=combine(date, time_obj),
                 )
@@ -209,7 +209,7 @@ class OrderMixin:
         result = rename_keys(
             api_response.data,
             key_mapping=dict(
-                CancQty="cancelled_quantity",
+                CancQty="cancelled_quantity_order",
                 OrgOrdNo="open_order_id",
                 OrdNo="cancel_order_id",
             ),
