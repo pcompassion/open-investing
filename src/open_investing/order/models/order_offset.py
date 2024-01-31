@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from django.db import models
+from decimal import Decimal
 
 
 class OrderOffsetRelation(models.Model):
@@ -14,7 +15,7 @@ class OrderOffsetRelation(models.Model):
     )  # Field for offset quantity
     filled_quantity_order = models.PositiveIntegerField(default=0)
     quantity_multiplier = models.DecimalField(
-        max_digits=16, decimal_places=2, default=1
+        max_digits=16, decimal_places=2, default=Decimal("1")
     )
 
     fully_offsetted = models.BooleanField(default=False, db_index=True)

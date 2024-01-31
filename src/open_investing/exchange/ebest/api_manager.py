@@ -267,25 +267,28 @@ class EbestApiManager(OrderMixin):
 
         api = self.stock_api
 
-        tr_code = None
+        tr_codes = []
 
         match derivative_code.derivative_type:
             case DerivativeType.Future | DerivativeType.MiniFuture:
-                tr_code = "FH0"
+                tr_codes.append("FH0")
 
             case DerivativeType.Put | DerivativeType.Call:
-                tr_code = "OH0"
+                tr_codes.append("OH0")
+                tr_codes.append("EH0")
+
             case _:
                 pass
 
         self.subscription_manager.subscribe(event_spec, listener_spec)
 
-        await api.subscribe(
-            tr_type="3",
-            tr_code=tr_code,
-            tr_key=security_code,
-            handler=self.quote_listener,
-        )
+        for tr_code in tr_codes:
+            await api.subscribe(
+                tr_type="3",
+                tr_code=tr_code,
+                tr_key=security_code,
+                handler=self.quote_listener,
+            )
 
     async def quote_listener(self, message):
         quote_logger.info(f"quote_listener {message['header']}")
@@ -331,10 +334,17 @@ class EbestApiManager(OrderMixin):
             self._market_status_updated_at = time.monotonic()
 
     def is_market_open(self):
-        now = time.monotonic()
-        if self._market_status_updated_at and now - self._market_status_updated_at < 5:
-            return self._market_status == MarketStatus.Open
-        return False
+        # now = time.monotonic()
+        # if self._market_status_updated_at and now - self._market_status_updated_at < 5:
+        #     return self._market_status == MarketStatus.Open
+        # return False
+
+        market_type = self.open_market_type()
+
+        if market_type == MarketType.Undefined:
+            return False
+
+        return True
 
     def open_market_type(self):
         now = now_local()

@@ -43,7 +43,7 @@ class OrderMixin:
         order_price_type = order.order_price_type
 
         security_code = order.security_code
-        quantity = order.quantity
+        quantity = order.quantity_order
         side = order.side
 
         additional = {}

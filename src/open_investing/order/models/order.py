@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from decimal import Decimal
 
 from open_investing.price.money import Money
 
@@ -46,11 +47,13 @@ class Order(models.Model):
     )
     currency = models.CharField(max_length=3, default="KRW")
 
-    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price_amount = models.DecimalField(
+        max_digits=16, decimal_places=2, default=Decimal("0")
+    )
     price = MoneyField(amount_field="price_amount", currency_field="currency")
 
     quantity_multiplier = models.DecimalField(
-        max_digits=16, decimal_places=2, default=1
+        max_digits=16, decimal_places=2, default=Decimal("1")
     )
 
     quantity_order = models.DecimalField(
@@ -61,21 +64,21 @@ class Order(models.Model):
     )
 
     filled_quantity_order = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     filled_quantity_exposure = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
 
     average_fill_price_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     average_fill_price = MoneyField(
         amount_field="average_fill_price_amount", currency_field="currency"
     )
 
     total_cost_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     total_cost = MoneyField(amount_field="total_cost_amount", currency_field="currency")
 
@@ -179,14 +182,16 @@ class Trade(models.Model):
     )
 
     quantity_multiplier = models.DecimalField(
-        max_digits=16, decimal_places=2, default=1
+        max_digits=16, decimal_places=2, default=Decimal("1")
     )
 
     order = models.ForeignKey("Order", on_delete=models.CASCADE)
 
     currency = models.CharField(max_length=3, default="KRW")
 
-    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price_amount = models.DecimalField(
+        max_digits=16, decimal_places=2, default=Decimal("0")
+    )
     price = MoneyField(amount_field="price_amount", currency_field="currency")
 
 

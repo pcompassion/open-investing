@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from typing import Protocol
 from typing import Dict, Any
 
@@ -11,7 +12,11 @@ class DecisionDataManagerProtocol(Protocol):
     # from open_investing.strategy.models.decision import Decision
 
     async def make_decision(
-        self, decision: "Decision", decision_params: Dict[str, Any], quantity: float
+        self,
+        decision: "Decision",
+        decision_params: Dict[str, Any],
+        quantity_order: Decimal,
+        quantity_multiplier: Decimal,
     ) -> Any:
         ...
 

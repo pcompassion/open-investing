@@ -19,24 +19,24 @@ class Option(models.Model):
     currency = models.CharField(max_length=3, default="KRW")
 
     strike_price_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal('0')
     )
     strike_price = MoneyField(
         amount_field="strike_price_amount", currency_field="currency"
     )
 
-    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0'))
     price = MoneyField(amount_field="price_amount", currency_field="currency")
 
     strike_price_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal('0')
     )
 
     delta = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0, db_index=True
+        max_digits=16, decimal_places=2, default=Decimal('0'), db_index=True
     )
     theta = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0, db_index=True
+        max_digits=16, decimal_places=2, default=Decimal('0'), db_index=True
     )
 
     date_at = models.DateTimeField(db_index=True)
@@ -80,7 +80,7 @@ class Future(models.Model):
     currency = models.CharField(max_length=3, default="KRW")
 
     security_code = models.CharField(max_length=8, db_index=True)
-    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0'))
     price = MoneyField(amount_field="price_amount", currency_field="currency")
     derivative_type = models.CharField(max_length=16, db_index=True)
 
@@ -116,7 +116,7 @@ class NearbyFuture(models.Model):
     currency = models.CharField(max_length=3, default="KRW")
 
     security_code = models.CharField(max_length=8, db_index=True)
-    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    price_amount = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0'))
     price = MoneyField(amount_field="price_amount", currency_field="currency")
     derivative_type = models.CharField(max_length=16, db_index=True)
 

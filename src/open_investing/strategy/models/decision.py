@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from django.db import models
 
 import uuid
@@ -23,9 +24,23 @@ class Decision(models.Model):
     # decision_type = models.CharField(max_length=128)
     decision_params = models.JSONField(default=dict)
 
-    quantity_order = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    quantity_multiplier = models.DecimalField(
+        max_digits=16, decimal_places=2, default=Decimal("1")
+    )
+
+    quantity_order = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True
+    )
+
+    quantity_exposure = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True
+    )
+
     filled_quantity_order = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
+    )
+    filled_quantity_exposure = models.DecimalField(
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
 
     life_stage = models.CharField(
@@ -36,13 +51,33 @@ class Decision(models.Model):
     class Meta:
         ordering = ["created_at"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def update_fill(self, fill_quantity_order):
         # Update total cost and filled quantity
 
         self.filled_quantity_order += fill_quantity_order
+        self.filled_quantity_exposure = (
+            self.filled_quantity_order * self.quantity_multiplier
+        )
 
     def is_fullfilled(self):
         return self.filled_quantity_order >= self.quantity_order
+
+    def set_quantity(self):
+        if self.quantity_order is None:
+            self.quantity_order = self.quantity_exposure / self.quantity_multiplier
+        elif self.quantity_exposure is None:
+            self.quantity_exposure = self.quantity_order * self.quantity_multiplier
+
+    def save(self, *args, **kwargs):
+        self.set_quantity()
+
+        if self.quantity_order is None:
+            raise ValueError("quantity_order is None")
+        if self.quantity_exposure is None:
+            raise ValueError("quantity_exposure is None")
+
+        if self.quantity_order * self.quantity_multiplier != self.quantity_exposure:
+            raise ValueError(
+                "quantity_order * self.quantity_multiplier != self.quantity_exposure"
+            )
+        super().save(*args, **kwargs)

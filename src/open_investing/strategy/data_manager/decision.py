@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from decimal import Decimal
 from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from typing import Dict, Any
 from open_investing.strategy.models.decision import Decision
@@ -16,8 +17,17 @@ class DecisionDataManager:
         params={"model": "Strategy.Decision"},
     )
 
+    excludes_json = [
+        "quantity_multiplier",
+        "quantity_order",
+        "quantity_exposure",
+        "filled_quantity_order",
+        "filled_quantity_exposure",
+    ]
+
     async def prepare_decision(self, params: dict, save=True):
-        params_updated = to_jsonable_python(params)
+        plain = {k: v for k, v in params.items() if k in self.excludes_json}
+        params_updated = to_jsonable_python(params, excludes=self.excludes_json) | plain
 
         decision = Decision(**params_updated)
 
@@ -27,7 +37,10 @@ class DecisionDataManager:
         return decision
 
     async def save(self, decision, save_params: dict):
-        params = to_jsonable_python(save_params)
+        plain = {k: v for k, v in save_params.items() if k in self.excludes_json}
+
+        params = to_jsonable_python(save_params, excludes=self.excludes_json) | plain
+
         for field, value in params.items():
             setattr(decision, field, value)
 
@@ -37,15 +50,19 @@ class DecisionDataManager:
         self,
         decision: Decision,
         decision_params: Dict[str, Any],
-        quantity: float,
+        quantity_order: Decimal,
+        quantity_multiplier: Decimal,
     ):
+        save_params = dict(
+            decision_params=decision_params,
+            quantity_order=quantity_order,
+            quantity_multiplier=quantity_multiplier,
+            life_stage=DecisionLifeStage.Decided,
+        )
+
         await self._save(
             decision,
-            save_params=dict(
-                decision_params=decision_params,
-                quantity=quantity,
-                life_stage=DecisionLifeStage.Decided,
-            ),
+            save_params=save_params,
         )
         return decision
 
@@ -93,7 +110,10 @@ class DecisionDataManager:
         decision: Decision,
         save_params: Dict[str, Any],
     ):
-        params = to_jsonable_python(save_params)
+        plain = {k: v for k, v in save_params.items() if k in self.excludes_json}
+
+        params = to_jsonable_python(save_params, excludes=self.excludes_json) | plain
+
         for field, value in params.items():
             setattr(decision, field, value)
         await decision.asave()

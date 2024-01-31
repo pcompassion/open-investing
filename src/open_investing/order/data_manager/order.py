@@ -28,9 +28,17 @@ class OrderDataManager:
         service_name="database",
         params={"model": "Order.Order"},
     )
+    excludes_json = [
+        "quantity_multiplier",
+        "quantity_order",
+        "quantity_exposure",
+        "filled_quantity_order",
+        "filled_quantity_exposure",
+    ]
 
     async def prepare_order(self, params: dict, save=True):
-        params_updated = to_jsonable_python(params)
+        plain = {k: v for k, v in params.items() if k in self.excludes_json}
+        params_updated = to_jsonable_python(params) | plain
 
         order = self._unsaved_order(params_updated)
 
@@ -53,9 +61,11 @@ class OrderDataManager:
         else:
             order = CompositeOrder(**updated_params)
             order.set_quantity()
+        return order
 
     async def save(self, order, save_params: dict):
-        params = to_jsonable_python(save_params)
+        plain = {k: v for k, v in save_params.items() if k in self.excludes_json}
+        params = to_jsonable_python(save_params) | plain
         for field, value in params.items():
             setattr(order, field, value)
 
@@ -179,7 +189,9 @@ class OrderDataManager:
                 pass
 
     async def record_event(self, event_params: dict, order=None):
-        event_params_updated = to_jsonable_python(event_params)
+        plain = {k: v for k, v in event_params.items() if k in self.excludes_json}
+
+        event_params_updated = to_jsonable_python(event_params) | plain
 
         composite_order = None
         trade = None

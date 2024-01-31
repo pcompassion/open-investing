@@ -46,7 +46,6 @@ class BestLimitIcebergOrderSpec(OrderSpec):
 
     max_tick_diff: int
     tick_size: Decimal
-    multiplier: Decimal
 
 
 @dataclass
@@ -347,7 +346,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 params=dict(
                     id=order_id,
                     quantity_exposure=order_spec.quantity_exposure,
-                    quantity_multiplier=order_spec.multiplier,
+                    quantity_multiplier=order_spec.quantity_multiplier,
                     order_type=self.order_type,
                     strategy_session_id=strategy_session_id,
                     decision_id=decision_id,

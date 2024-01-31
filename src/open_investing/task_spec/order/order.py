@@ -34,7 +34,7 @@ class OrderSpec(TaskSpec):
     price: Money | None = None
 
     security_code: str
-    quantity: Decimal
+    quantity_multiplier: Decimal
     quantity_exposure: Decimal
 
     def __hash__(self):

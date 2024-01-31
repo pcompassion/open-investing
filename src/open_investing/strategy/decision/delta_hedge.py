@@ -31,7 +31,7 @@ class DeltaHedgeDecisionSpec(DecisionSpec):
     follower_security_code: str
     leader_follower_ratio: Decimal
 
-    leader_quantity_exposure: int
+    leader_quantity_exposure: Decimal
     leader_multiplier: Decimal
     follower_multiplier: Decimal
 

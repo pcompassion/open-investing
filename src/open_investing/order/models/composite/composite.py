@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from decimal import Decimal
 import uuid
 from django.db import models
 from open_investing.order.const.order import OrderLifeStage
@@ -24,7 +25,7 @@ class CompositeOrder(models.Model):
     )
 
     quantity_multiplier = models.DecimalField(
-        max_digits=16, decimal_places=2, default=1
+        max_digits=16, decimal_places=2, default=Decimal("1")
     )
 
     quantity_order = models.DecimalField(
@@ -35,23 +36,23 @@ class CompositeOrder(models.Model):
     )
 
     filled_quantity_order = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     filled_quantity_exposure = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
 
     currency = models.CharField(max_length=3, default="KRW")
 
     average_fill_price_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     average_fill_price = MoneyField(
         amount_field="average_fill_price_amount", currency_field="currency"
     )
 
     total_cost_amount = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     total_cost = MoneyField(amount_field="total_cost_amount", currency_field="currency")
 
