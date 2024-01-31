@@ -98,7 +98,7 @@ class EbestApiField:
             if field_name:
                 kwargs.pop(k)
 
-                value = cls.field_value_map.get(v, v)
+                value = cls.get_field_value(v, tr_code=tr_code) or v
                 res[field_name] = value
 
         return kwargs | res
@@ -151,5 +151,24 @@ class EbestApiField:
     @classmethod
     def get_field_name(cls, name, tr_code=None):
         fn_map = cls._get_field_name_map(tr_code)
+
+        return fn_map.get(name, None)
+
+    @classmethod
+    def _get_field_value_map(cls, tr_code=None):
+        fn_map = {}
+        fn_map_tr = {}
+        if tr_code:
+            fn_map_tr = EbestApiData.get_field_value_map(tr_code)
+
+        fn_map = cls.field_value_map
+
+        fn_map = fn_map | fn_map_tr
+
+        return fn_map
+
+    @classmethod
+    def get_field_value(cls, name, tr_code=None):
+        fn_map = cls._get_field_value_map(tr_code)
 
         return fn_map.get(name, None)

@@ -135,7 +135,7 @@ class EbestApiManager(OrderMixin):
 
         mini_future_codes = [
             DerivativeCode.from_string(
-                e["shcode"], price=Money(amount=e["recprice"], currency="KRW")
+                e["shcode"], price=Money(amount=0, currency="KRW")  # price not relavant
             )
             for e in api_response.data[:count]
         ]
@@ -215,7 +215,7 @@ class EbestApiManager(OrderMixin):
         if market_type == MarketType.FutureOptionDay:
             tr_code = "t2301"
         elif market_type == MarketType.FutureOptionNight:
-            tr_code = "t2853"
+            tr_code = "t2835"
         else:
             return [], None
 

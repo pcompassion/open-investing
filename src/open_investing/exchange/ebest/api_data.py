@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import pendulum
-from open_investing.const.code_name import FieldName
+from open_investing.const.code_name import DerivativeType, FieldName
 
 from open_investing.exchange.const.market import MarketSecurityType
 from open_investing.exchange.ebest.const.const import EbestUrl, EbestCode
@@ -44,7 +44,23 @@ class EbestApiData:
             "api_path": EbestUrl.option_market_data,
             "request_per_second": 3,
         },
+        "t2830": {
+            "body": {},
+            "field_name_map": {
+                FieldName.SECURITY_CODE: EbestCode.focode,
+            },
+            "api_path": EbestUrl.option_market_data,
+            "request_per_second": 3,
+        },
         "t2301": {
+            "body": {
+                "gubun": "G",
+            },
+            "f_data_block_name": "{tr_code}OutBlock1",
+            "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
+        },
+        "t2835": {
             "body": {
                 "gubun": "G",
             },
@@ -130,11 +146,18 @@ class EbestApiData:
             "field_name_map": {
                 FieldName.DERIVATIVE_NAME: EbestCode.gubun,
             },
-            "code_field_values": {
-                "MF": "미니선물",
-                "MO": "미니옵션",
-                "WK": "위클리옵션",
-                "SF": "코스닥150선물",
+            "api_path": EbestUrl.option_market_data,
+            "request_per_second": 2,
+        },
+        "t8437": {
+            # - 최근월 미니선물 2개: t8435에서 종목 마스터 조회후 상위2개 (TR.md 참조)
+            "field_name_map": {
+                FieldName.DERIVATIVE_NAME: EbestCode.gubun,
+            },
+            "field_value_map": {
+                DerivativeType.MiniFuture: "NM",
+                DerivativeType.Future: "NF",
+                DerivativeType.Option: "NO",
             },
             "api_path": EbestUrl.option_market_data,
             "request_per_second": 2,
@@ -179,6 +202,14 @@ class EbestApiData:
         fn_map = {}
         if tr_code in cls.API_DATA:
             fn_map = cls.API_DATA[tr_code].get("field_name_map", {})
+
+        return fn_map
+
+    @classmethod
+    def get_field_value_map(cls, tr_code):
+        fn_map = {}
+        if tr_code in cls.API_DATA:
+            fn_map = cls.API_DATA[tr_code].get("field_value_map", {})
 
         return fn_map
 

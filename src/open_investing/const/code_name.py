@@ -24,6 +24,7 @@ class DerivativeType(str, Enum):
     Future = "Future"
     Call = "Call"
     Put = "Put"
+    Option = "Option"
 
 
 # class SecurityType(str, Enum):
