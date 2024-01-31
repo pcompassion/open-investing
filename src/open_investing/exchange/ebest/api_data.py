@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_investing.order.const.order import OrderPriceType
 import pendulum
 from open_investing.const.code_name import DerivativeType, FieldName
 
@@ -193,10 +194,14 @@ class EbestApiData:
             "f_data_block_name": "{tr_code}OutBlock1",
             "f_in_block_name": "{tr_code}InBlock1",
             "market_security_type": MarketSecurityType.DERIVATIVE,
-            "request_per_second": 10,
-            # "field_name_map": {
-            #     "order_price_type": "ErxPrcCndiTpCode",
-            # },
+            "request_per_second": 5,
+            "field_name_map": {
+                "order_price_type": "ErxPrcCndiTpCode",
+            },
+            "field_value_map": {
+                OrderPriceType.Market: "1",
+                OrderPriceType.Limit: "2",
+            },
         },
         "CFOAT00300": {
             "api_path": EbestUrl.option_order,
