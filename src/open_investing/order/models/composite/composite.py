@@ -27,9 +27,11 @@ class CompositeOrder(models.Model):
         max_digits=16, decimal_places=2, default=1
     )
 
-    quantity_order = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    quantity_order = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True
+    )
     quantity_exposure = models.DecimalField(
-        max_digits=16, decimal_places=2, default=0.0
+        max_digits=16, decimal_places=2, null=True, blank=True
     )
 
     filled_quantity_order = models.DecimalField(
