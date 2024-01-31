@@ -25,6 +25,7 @@ class CompositeOrder(models.Model):
 
     quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
     filled_quantity = models.DecimalField(max_digits=16, decimal_places=2, default=0.0)
+    currency = models.CharField(max_length=3, default="KRW")
 
     average_fill_price_amount = models.DecimalField(
         max_digits=16, decimal_places=2, default=0.0
