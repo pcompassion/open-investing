@@ -297,8 +297,10 @@ class EbestApiManager(OrderMixin):
         tr_code = message["header"]["tr_cd"]
 
         data = message["body"]
-
-        time = time_from_format(data["hotime"], time_format=self.DEFAULT_TIME_FORMAT)
+        hotime = data["hotime"]
+        if hotime[:2] == "24":
+            hotime = "00" + hotime[2:]
+        time = time_from_format(hotime, time_format=self.DEFAULT_TIME_FORMAT)
         date_at = combine(now_local().date(), time)
 
         data["date_at"] = date_at

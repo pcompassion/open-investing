@@ -30,6 +30,8 @@ class OrderSpec(TaskSpec):
     decision_id: UUID
     order_side: OrderSide
     order_id: UUID | None
+    offsetted_order_id: UUID | None = None
+    is_offset: bool = False
     parent_order_id: UUID | None = None
     price: Money | None = None
 

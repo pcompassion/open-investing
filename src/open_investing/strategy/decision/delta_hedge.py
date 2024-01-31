@@ -82,7 +82,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
                     max_tick_diff=5,
-                    tick_size=Decimal(0.01),
+                    tick_size=Decimal("0.01"),
                     order_side=OrderSide.Sell,
                     security_code=self.decision_spec.leader_security_code,
                     quantity_exposure=self.decision_spec.leader_quantity_exposure,
@@ -114,27 +114,40 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 )
 
                 order_data_manager = self.order_data_manager
-                orders_single = await order_data_manager.filter(
-                    filter_params=dict(strategy_session_id=self.strategy_session_id),
-                    return_type=ListDataType.List,
-                )
-                orders_composite = await order_data_manager.filter(
+                # orders_single = await order_data_manager.filter(
+                #     filter_params=dict(strategy_session_id=self.strategy_session_id),
+                #     return_type=ListDataType.List,
+                # )
+                orders_composite = await order_data_manager.filter_composite(
                     filter_params=dict(
                         strategy_session_id=self.strategy_session_id,
                         order_type=OrderType.BestLimitIceberg,
+                        is_offset=False,
                     ),
                     return_type=ListDataType.List,
                 )
 
-                orders = orders_single + orders_composite
+                # orders = orders_single + orders_composite
+
+                orders = orders_composite
 
                 for order in orders:
+                    order_id = uuid4()
+
                     order_spec_dict = self.base_spec_dict | dict(
                         spec_type_name=order.order_type,
-                        strategy_name=order.strategy_session.strategy_name,
+                        max_tick_diff=5,
+                        tick_size=Decimal("0.01"),
                         strategy_session_id=order.strategy_session_id,
-                        order_id=order.id,
+                        order_side=OrderSide(order.side).opposite,
+                        security_code=order.security_code,
+                        quantity_exposure=order.filled_quantity_exposure,
+                        quantity_multiplier=order.quantity_multiplier,
+                        decision_id=decision_id,
+                        offsetted_order_id=order.id,
+                        order_id=order_id,
                         parent_order_id=None,
+                        is_offset=True,
                     )
 
                     await order_task_dispatcher.dispatch_task(

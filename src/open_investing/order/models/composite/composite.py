@@ -59,6 +59,8 @@ class CompositeOrder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     data = models.JSONField(default=dict)
 
+    is_offset = models.BooleanField(default=False, db_index=True)
+
     def update_fill(self, fill_quantity_order, fill_price):
         # Update total cost and filled quantity
         new_cost = fill_quantity_order * self.quantity_multiplier * fill_price

@@ -76,7 +76,9 @@ class MarketOrderAgent(OrderAgent):
 
             case OrderCommandName.Close:
                 # TODO maybe need to do something for market order as well
-
+                #
+                # not using it for now
+                return
                 offsetting_order = await order_data_manager.prepare_order(
                     params=dict(
                         quantity_order=order.filled_quantity_order,

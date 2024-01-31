@@ -212,7 +212,7 @@ class OrderDataManager:
 
         return order_event
 
-    async def filter(
+    async def filter_single(
         self,
         filter_params: dict,
         field_names: list | None = None,
@@ -220,10 +220,17 @@ class OrderDataManager:
     ) -> ListDataTypeHint:
         order_type = filter_params.get("order_type", None)
 
-        if order_type is None or OrderType(order_type).is_single_order:
-            qs = Order.objects.filter(**filter_params)
-        else:
-            qs = CompositeOrder.objects.filter(**filter_params)
+        qs = Order.objects.filter(**filter_params)
+
+        return await as_list_type(qs, return_type, field_names)
+
+    async def filter_composite(
+        self,
+        filter_params: dict,
+        field_names: list | None = None,
+        return_type: ListDataType = ListDataType.Dataframe,
+    ) -> ListDataTypeHint:
+        qs = CompositeOrder.objects.filter(**filter_params)
 
         return await as_list_type(qs, return_type, field_names)
 
