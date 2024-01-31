@@ -217,7 +217,7 @@ class EbestApiManager(OrderMixin):
         elif market_type == MarketType.FutureOptionNight:
             tr_code = "t2853"
         else:
-            return
+            return [], None
 
         yyyymm = expire_at.strftime("%Y%m")
         send_data = {"yyyymm": yyyymm}
