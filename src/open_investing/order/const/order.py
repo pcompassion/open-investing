@@ -54,6 +54,7 @@ class OrderEventName(str, Enum):
     ExchangeOpenRequest = "exchange.open_request"  # place request
     ExchangeOpenSuccess = "exchange.open_success"  # place success
     ExchangeOpenFailure = "exchange.open_failure"
+    ExchangeOpenFailureNonRecoverable = "exchange.open_failure.non_recoverable"
 
     ExchangeCancelRequest = "exchange.cancel_request"  # cancel request
     ExchangeCancelSuccess = "exchange.cancel_success"  # cancel success

@@ -188,6 +188,7 @@ class EbestApiData:
             "f_in_block_name": "{tr_code}InBlock1",
             "market_security_type": MarketSecurityType.DERIVATIVE,
             "request_per_second": 10,
+            "non_recoverble_codes": ["01491"],
         },
         "CEXAT11100": {
             "api_path": EbestUrl.option_order,
@@ -202,6 +203,7 @@ class EbestApiData:
                 OrderPriceType.Market: "1",
                 OrderPriceType.Limit: "2",
             },
+            "non_recoverble_codes": ["01491"],
         },
         "CFOAT00300": {
             "api_path": EbestUrl.option_order,
@@ -294,3 +296,16 @@ class EbestApiData:
     def get(cls, tr_code, name, default=None):
         api_data = cls.get_api_data(tr_code)
         return api_data.get(name, default)
+
+    @classmethod
+    def is_recoverable(cls, tr_code, error_code):
+        api_data = cls.get_api_data(tr_code)
+
+        non_recoverable_codes = api_data.get("non_recoverable_codes") or []
+        if error_code in non_recoverable_codes:
+            return False
+        recoverable_codes = api_data.get("recoverable_codes") or []
+        if error_code in recoverable_codes:
+            return True
+
+        return None

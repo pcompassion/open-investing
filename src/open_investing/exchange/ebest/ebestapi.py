@@ -236,6 +236,7 @@ class EbestApi(ExchangeApi):
                 raise
         except:
             logger.warning(f"request: {body}, data: {data}")
+            is_recoverable = EbestApiData.is_recoverable(tr_code, rsp_cd)
             return ApiResponse(
                 success=False,
                 raw_data=data,
@@ -244,6 +245,7 @@ class EbestApi(ExchangeApi):
                 error_code=rsp_cd,
                 exchange_api_code=tr_code,
                 default_data_type=default_data_type,
+                is_recoverable=is_recoverable,
             )
 
         out_block_data = data.get(data_block_name, None)

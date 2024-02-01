@@ -297,6 +297,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 if event:
                     event.set()
                     del self.cancel_events[event]
+            case OrderEventName.ExchangeOpenFailureNonRecoverable:
+                logger.warning(
+                    f"failed to open order, and it's not recoverable {order.id}"
+                )
+                # TODO: maybe terminate the decision, inform user
+                pass
             case _:
                 pass
 

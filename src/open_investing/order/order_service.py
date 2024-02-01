@@ -101,6 +101,27 @@ class OrderService:
                 await order_data_manager.handle_cancel_success_event(
                     data_initial, order
                 )
+            case OrderEventName.ExchangeOpenSuccess:
+                pass
+            case OrderEventName.ExchangeOpenFailure:
+                data = data_initial
+                exchange_response = data["exchange_response"]
+
+                is_recoverable = exchange_response.get("is_recoverable")
+                if not is_recoverable:
+                    order_event_spec = OrderEventSpec(
+                        order_id=order.id,
+                        name=OrderEventName.ExchangeOpenFailureNonRecoverable,
+                    )
+                    message = dict(
+                        event_spec=order_event_spec,
+                        order=order,
+                        data=data,
+                    )
+
+                    await order_event_broker.enqueue_message(message)
+
+                pass
 
                 # check if filled,
             case _:
@@ -149,7 +170,8 @@ class OrderService:
 
         order_event_broker.subscribe(order_event_spec, listener_spec)  # type: ignore
 
-        exchange_order_id, _ = await exchange_manager.open_order(order)
+        exchange_order_id, api_response = await exchange_manager.open_order(order)
+        order_data = {}
 
         if exchange_order_id:
             await order_data_manager.save(
@@ -160,6 +182,8 @@ class OrderService:
         else:
             order_event_name = OrderEventName.ExchangeOpenFailure
             order_life_stage = OrderLifeStage.ExchangeOpenFailure
+            exchange_response = api_response.to_dict()
+            order_data.update(dict(exchange_response=exchange_response))
 
         date_at = now_local()
         await order_data_manager.record_event(
@@ -172,9 +196,25 @@ class OrderService:
         await order_data_manager.save(
             order,
             save_params=dict(
-                life_stage=order_life_stage, life_stage_updated_at=date_at
+                life_stage=order_life_stage,
+                life_stage_updated_at=date_at,
+                data=order_data,
             ),
         )
+
+        order_event_spec = OrderEventSpec(
+            name=order_event_name,
+            order_id=order.id,
+        )
+
+        data = order_data
+        message = dict(
+            event_spec=order_event_spec,
+            order=order,
+            data=data,
+        )
+
+        await order_event_broker.enqueue_message(message)
 
     async def open_order(self, order, exchange_manager):
         logger.info(f"open_order: {order.id} {order.order_type}")

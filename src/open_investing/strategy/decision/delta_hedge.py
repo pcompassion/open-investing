@@ -186,41 +186,42 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 # TODO: better check tighter condition
                 fill_quantity_order = data["fill_quantity_order"]
 
-                if (
-                    order.security_code == self.decision_spec.leader_security_code
-                    and order.is_filled()
-                ):
-                    # TODO: min quantity is 1 ?
-                    MIN_QUANTITY = Decimal(1)
-                    quantity_order = max(
-                        fill_quantity_order
-                        * self.decision_spec.leader_follower_ratio
-                        * self.decision_spec.leader_multiplier
-                        / self.decision_spec.follower_multiplier,
-                        MIN_QUANTITY,
-                    )
+                if order.security_code == self.decision_spec.leader_security_code:
+                    composite_order = order.parent_order
+                    # if opening order, we wait for filled
+                    # when offsetting order, immediate followup
+                    if order.is_filled() or composite_order.is_offset:
+                        # TODO: min quantity is 1 ?
+                        MIN_QUANTITY = Decimal(1)
+                        quantity_order = max(
+                            fill_quantity_order
+                            * self.decision_spec.leader_follower_ratio
+                            * self.decision_spec.leader_multiplier
+                            / self.decision_spec.follower_multiplier,
+                            MIN_QUANTITY,
+                        )
 
-                    order_spec_dict = self.base_spec_dict | dict(
-                        spec_type_name=OrderType.Market,
-                        security_code=self.decision_spec.follower_security_code,
-                        quantity_exposure=quantity_order
-                        * self.decision_spec.follower_multiplier,
-                        quantity_multiplier=self.decision_spec.follower_multiplier,
-                        order_side=OrderSide.Sell,
-                        strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
-                        order_id=None,
-                        parent_order_id=None,
-                    )
+                        order_spec_dict = self.base_spec_dict | dict(
+                            spec_type_name=OrderType.Market,
+                            security_code=self.decision_spec.follower_security_code,
+                            quantity_exposure=quantity_order
+                            * self.decision_spec.follower_multiplier,
+                            quantity_multiplier=self.decision_spec.follower_multiplier,
+                            order_side=OrderSide.Sell,
+                            strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
+                            order_id=None,
+                            parent_order_id=None,
+                        )
 
-                    order_command = OrderTaskCommand(
-                        name="command",
-                        order_command=OrderCommand(name=OrderCommandName.Open),
-                    )
-                    order_task_dispatcher = self.order_task_dispatcher
+                        order_command = OrderTaskCommand(
+                            name="command",
+                            order_command=OrderCommand(name=OrderCommandName.Open),
+                        )
+                        order_task_dispatcher = self.order_task_dispatcher
 
-                    await order_task_dispatcher.dispatch_task(
-                        order_spec_dict, order_command
-                    )
+                        await order_task_dispatcher.dispatch_task(
+                            order_spec_dict, order_command
+                        )
 
                 elif order.security_code == self.decision_spec.follower_security_code:
                     decision_fill_quantity = (
