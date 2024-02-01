@@ -60,8 +60,14 @@ class OrderService:
         order_event_broker = self.order_event_broker
 
         event_spec = order_info["event_spec"]
-        order = order_info["order"]
         data_initial = order_info.get("data")
+
+        order_id = event_spec.order_id
+
+        # we are making order fill sequential
+        order = await order_data_manager.get_single_order(
+            filter_params=dict(id=order_id)
+        )
 
         event_name = event_spec.name
 
