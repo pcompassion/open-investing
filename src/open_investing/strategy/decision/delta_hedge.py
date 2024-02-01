@@ -187,10 +187,11 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 fill_quantity_order = data["fill_quantity_order"]
 
                 if order.security_code == self.decision_spec.leader_security_code:
-                    composite_order = order.parent_order
-                    # if opening order, we wait for filled
-                    # when offsetting order, immediate followup
-                    if order.is_filled() or composite_order.is_offset:
+                    # composite_order = order.parent_order
+                    # # if opening order, we wait for filled
+                    # # when offsetting order, immediate followup
+                    # if order.is_filled() or composite_order.is_offset:
+                    if order.is_filled():
                         # TODO: min quantity is 1 ?
                         MIN_QUANTITY = Decimal(1)
                         quantity_order = max(
