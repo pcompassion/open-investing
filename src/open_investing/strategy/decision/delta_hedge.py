@@ -195,7 +195,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         # TODO: min quantity is 1 ?
                         MIN_QUANTITY = Decimal(1)
                         quantity_order = max(
-                            fill_quantity_order
+                            order.filled_quantity_order
                             * self.decision_spec.leader_follower_ratio
                             * self.decision_spec.leader_multiplier
                             / self.decision_spec.follower_multiplier,
