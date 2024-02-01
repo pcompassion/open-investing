@@ -201,6 +201,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                             / self.decision_spec.follower_multiplier,
                             MIN_QUANTITY,
                         )
+                        quantity_order = int(quantity_order)
 
                         order_spec_dict = self.base_spec_dict | dict(
                             spec_type_name=OrderType.Market,
