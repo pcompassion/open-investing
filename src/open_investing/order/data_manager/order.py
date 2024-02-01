@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from asgiref.sync import sync_to_async
 from datetime import timedelta
 from open_library.time.datetime import now_local
 from django.db.models import Q
@@ -296,4 +297,4 @@ class OrderDataManager:
 
         qs = Order.objects.filter(q)
 
-        return await qs.aall()
+        return await sync_to_async(list)(qs.all())
