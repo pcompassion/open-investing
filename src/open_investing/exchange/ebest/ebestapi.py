@@ -77,6 +77,8 @@ class EbestApi(ExchangeApi):
 
     def should_refresh_token_func(self, response: httpx.Response):
         data = response.json()
+        if "rsp_cd" not in data:
+            return False
         rsp_cd = data["rsp_cd"]
 
         token_refresh_response_codes = ["IGW00121"]
