@@ -130,6 +130,10 @@ class OrderMixin:
                             task.add_done_callback(
                                 lambda t: self.running_tasks.remove(t)
                             )
+                    else:
+                        logger.warning(
+                            f"order not found after retry.. for exchange_order_id: {exchange_order_id}"
+                        )
 
                     return
 
