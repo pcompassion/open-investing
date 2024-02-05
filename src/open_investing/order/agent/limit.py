@@ -59,6 +59,7 @@ class LimitOrderAgent(OrderAgent):
                     order_price_type=self.order_price_type,
                     price_amount=order_spec.price.amount,
                     currency=order_spec.price.currency,
+                    decision_id=order_spec.decision_id,
                 )
             )
 

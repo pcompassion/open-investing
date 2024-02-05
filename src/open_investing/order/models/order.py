@@ -94,6 +94,7 @@ class Order(models.Model):
         through_fields=("offsetting_order", "offsetted_order"),
         related_name="offsetting_me",
     )
+    is_offset = models.BooleanField(default=False, db_index=True)
 
     def update_fill(self, fill_quantity_order, fill_price):
         # Update total cost and filled quantity

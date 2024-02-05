@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 
+from decimal import Decimal
+from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from open_investing.event_spec.event_spec import OrderEventSpec
 from typing import ClassVar
 from open_investing.task_spec.order.order import OrderAgent, OrderSpec
@@ -10,9 +12,10 @@ from open_investing.order.const.order import OrderCommandName, OrderEventName
 class CancelRemainingOrderSpec(OrderSpec):
     spec_type_name_classvar: ClassVar[str] = "order.cancel_remaining"
     spec_type_name: str = spec_type_name_classvar
-    cancel_quantity: float
+    cancel_quantity: Decimal
 
 
+@TaskSpecHandlerRegistry.register_class
 class CancelRemainingOrderAgent(OrderAgent):
     task_spec_cls = CancelRemainingOrderSpec
 

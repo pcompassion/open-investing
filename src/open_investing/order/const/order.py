@@ -47,6 +47,8 @@ class OrderCommandName(str, Enum):
     CancelRemaining = "cancel_remaining"
     Close = "close"
 
+    Offset = "offset"
+
     Start = "start"
 
 
@@ -71,6 +73,7 @@ class OrderEventName(str, Enum):
 class OrderCloseReason(str, Enum):
     TakeProfit = "take_profit"
     StopLoss = "stop_loss"
+    Manual = "manual"
 
 
 class OrderLifeStage(str, Enum):

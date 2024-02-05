@@ -32,6 +32,7 @@ from open_library.observe.const import ListenerType
 
 from open_library.time_tracker.time_data_tracker import TimeDataTracker
 from open_library.logging.logging_filter import IntervalLoggingFilter
+from open_investing.exception.exception import CancelFailedException
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.quote_tracker = TimeDataTracker(time_window_seconds=10)
         self.order_fill_tracker = TimeDataTracker(time_window_seconds=10)
 
-        self.quote = None
+        self.quote = None  # quote when i placed order
 
         self.filled_quantity_order = None
         self.order_command_queues = dict()
@@ -160,23 +161,28 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 if self.quote is not None:
                     if order_side == OrderSide.Buy:
-                        price_diff = self.quote.bid_price_1 - price
+                        price_diff = price - self.quote.bid_price_1
                     else:
-                        price_diff = price - self.quote.ask_price_1
+                        price_diff = self.quote.ask_price_1 - price
 
                     tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
                     if tick_diff > max_tick_diff:
                         # TODO: cancel all
                         logger.info(
-                            f"tick diff bigger than max_tick_diff {max_tick_diff}"
+                            f"tick diff bigger than max_tick_diff {max_tick_diff}, cancel remaining orders"
                         )
-                        self.quote = recent_quote
-                        await self.cancel_remaining(
-                            limit_order_id,
-                            security_code,
-                            remaining_quantity_order,
-                        )
+                        try:
+                            await self.cancel_remaining(
+                                limit_order_id,
+                                security_code,
+                                remaining_quantity_order,
+                            )
+                        except CancelFailedException:
+                            pass
+                        else:
+                            self.quote = None
+                            limit_order_id = None
                         continue
                     else:
                         # wait for fill
@@ -265,6 +271,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         except asyncio.TimeoutError:
             logger.warning(f"cancel order timed out {order_id}")
+            raise CancelFailedException("cancel fail")
 
     async def on_order_event(self, order_info):
         order_event_spec = order_info["event_spec"]

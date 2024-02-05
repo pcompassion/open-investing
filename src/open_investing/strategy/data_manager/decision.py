@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from open_library.time.datetime import now_local
 from decimal import Decimal
 from open_library.data.conversion import ListDataType, ListDataTypeHint, as_list_type
 from typing import Dict, Any
@@ -53,11 +54,13 @@ class DecisionDataManager:
         quantity_order: Decimal,
         quantity_multiplier: Decimal,
     ):
+        now = now_local()
         save_params = dict(
             decision_params=decision_params,
             quantity_order=quantity_order,
             quantity_multiplier=quantity_multiplier,
             life_stage=DecisionLifeStage.Decided,
+            life_stage_upddated_at=now,
         )
 
         await self._save(
@@ -67,8 +70,12 @@ class DecisionDataManager:
         return decision
 
     async def set_started(self, decision: Decision):
+        now = now_local()
         await self._save(
-            decision, save_params=dict(life_stage=DecisionLifeStage.Started)
+            decision,
+            save_params=dict(
+                life_stage=DecisionLifeStage.Started, life_stage_updated_at=now
+            ),
         )
         return decision
 

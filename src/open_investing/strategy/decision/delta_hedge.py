@@ -10,7 +10,12 @@ from open_investing.strategy.const.decision import (
 )
 from open_investing.task_spec.order.order import OrderCommand, OrderTaskCommand
 from open_investing.task.task_command import SubCommand, TaskCommand
-from open_investing.order.const.order import OrderCommandName, OrderSide, OrderType
+from open_investing.order.const.order import (
+    OrderCommandName,
+    OrderLifeStage,
+    OrderSide,
+    OrderType,
+)
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 import asyncio
 from open_investing.strategy.models.decision import Decision
@@ -34,6 +39,7 @@ class DeltaHedgeDecisionSpec(DecisionSpec):
     leader_quantity_exposure: Decimal
     leader_multiplier: Decimal
     follower_multiplier: Decimal
+    max_tick_diff: int = 5
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -81,7 +87,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
-                    max_tick_diff=5,
+                    max_tick_diff=self.decision_spec.max_tick_diff,
                     tick_size=Decimal("0.01"),
                     order_side=OrderSide.Sell,
                     security_code=self.decision_spec.leader_security_code,
@@ -110,7 +116,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 # TODO: should stop all active order tasks
                 order_command = OrderTaskCommand(
                     name="command",
-                    order_command=OrderCommand(name=OrderCommandName.Close),
+                    order_command=OrderCommand(name=OrderCommandName.Offset),
                 )
 
                 order_data_manager = self.order_data_manager
@@ -123,6 +129,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         strategy_session_id=self.strategy_session_id,
                         order_type=OrderType.BestLimitIceberg,
                         is_offset=False,
+                        life_stage__in=[
+                            OrderLifeStage.Opened,
+                            OrderLifeStage.Fullfilled,
+                        ],
                     ),
                     return_type=ListDataType.List,
                 )
@@ -134,13 +144,16 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 for order in orders:
                     order_id = uuid4()
 
+                    decision = order.decision
+                    security_code = decision.decision_params.get("leader_security_code")
+
                     order_spec_dict = self.base_spec_dict | dict(
                         spec_type_name=order.order_type,
-                        max_tick_diff=5,
+                        max_tick_diff=self.decision_spec.max_tick_diff,
                         tick_size=Decimal("0.01"),
                         strategy_session_id=order.strategy_session_id,
-                        order_side=OrderSide(order.side).opposite,
-                        security_code=order.security_code,
+                        order_side=OrderSide.Buy,
+                        security_code=security_code,
                         quantity_exposure=order.filled_quantity_exposure,
                         quantity_multiplier=order.quantity_multiplier,
                         decision_id=decision_id,
@@ -174,28 +187,40 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         order = order_info["order"]
         data = order_info.get("data")
 
-        logger.info(f"on_order_event: {event_spec}")
+        logger.info(f"on_order_event: {event_spec}, data: {data}")
 
         if order.strategy_session_id != self.strategy_session_id:
             return
 
+        date_at = data.get("date_at")
+
         event_name = event_spec.name
+        decision = order.decision
 
         match event_name:
             case OrderEventName.Filled:
                 # TODO: better check tighter condition
-                fill_quantity_order = data["fill_quantity_order"]
 
                 if order.security_code == self.decision_spec.leader_security_code:
                     # composite_order = order.parent_order
                     # # if opening order, we wait for filled
                     # # when offsetting order, immediate followup
                     # if order.is_filled() or composite_order.is_offset:
-                    if order.is_filled():
+                    follow_condition_met = False
+                    fill_quantity_order = 0
+                    if order.is_offset:
+                        fill_quantity_order = data["fill_quantity_order"]
+                        follow_condition_met = True
+                    else:
+                        if order.is_filled():
+                            fill_quantity_order = order.fill_quantity_order
+                            follow_condition_met = True
+
+                    if follow_condition_met:
                         # TODO: min quantity is 1 ?
-                        MIN_QUANTITY = Decimal(1)
+                        MIN_QUANTITY = Decimal("1")
                         quantity_order = max(
-                            order.filled_quantity_order
+                            fill_quantity_order
                             * self.decision_spec.leader_follower_ratio
                             * self.decision_spec.leader_multiplier
                             / self.decision_spec.follower_multiplier,
@@ -224,6 +249,15 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         await order_task_dispatcher.dispatch_task(
                             order_spec_dict, order_command
                         )
+                    if not DecisionLifeStage(decision.life_stage).has_opened:
+                        save_params = dict(
+                            life_stage=DecisionLifeStage.Opened,
+                            life_stage_updated_at=date_at,
+                        )
+                        decision_data_manager = self.decision_data_manager
+                        await decision_data_manager.save(
+                            decision, save_params=save_params
+                        )
 
                 elif order.security_code == self.decision_spec.follower_security_code:
                     decision_fill_quantity = (
@@ -232,7 +266,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                     # actually decision filled
 
-                    decision = order.decision
                     decision.update_fill(decision_fill_quantity)
 
                     # TODO: maybe notify/update strategy
@@ -240,6 +273,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     save_params = {}
                     if decision.is_fullfilled():
                         save_params["life_stage"] = DecisionLifeStage.Fullfilled
+                        save_params["life_stage_updated_at"] = date_at
                     decision_data_manager = self.decision_data_manager
                     await decision_data_manager.save(decision, save_params=save_params)
 
@@ -250,6 +284,16 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 if event:
                     event.set()
                     del self.cancel_events[event]
+
+            case OrderEventName.ExchangeOpenRequest | OrderEventName.ExchangeOpenSuccess | OrderEventName.ExchangeOpenFailure:
+                if order.security_code == self.decision_spec.leader_security_code:
+                    save_params = dict(
+                        life_stage=event_name,
+                        life_stage_updated_at=date_at,
+                    )
+                    decision_data_manager = self.decision_data_manager
+                    await decision_data_manager.save(decision, save_params=save_params)
+
             case _:
                 pass
 

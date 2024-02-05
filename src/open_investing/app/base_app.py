@@ -202,6 +202,11 @@ class App(BaseApp):
             "DJANGO_SETTINGS_MODULE", self.environment.get("DJANGO_SETTINGS_MODULE")
         )
 
+        os.environ.setdefault(
+            "DJANGO_ALLOW_ASYNC_UNSAFE",
+            self.environment.get("DJANGO_ALLOW_ASYNC_UNSAFE") or "true",
+        )
+
         django.setup()
 
     def get_service_locator(self):

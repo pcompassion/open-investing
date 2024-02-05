@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from open_investing.exchange.const.market import MarketType
 import asyncio
 from datetime import time
@@ -187,7 +188,7 @@ class OrderMixin:
     async def cancel_order_quantity(
         self,
         security_code: str,
-        cancel_quantity: float,
+        cancel_quantity: Decimal,
         order,
     ):
         tr_code = "CFOAT00300"
@@ -202,7 +203,7 @@ class OrderMixin:
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
             security_code=security_code,
-            cancel_quantity=cancel_quantity,
+            cancel_quantity=int(cancel_quantity),
             exchange_order_id=order.exchange_order_id,
         )
 
