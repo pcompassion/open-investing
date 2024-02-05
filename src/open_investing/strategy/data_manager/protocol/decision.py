@@ -17,6 +17,7 @@ class DecisionDataManagerProtocol(Protocol):
         decision_params: Dict[str, Any],
         quantity_order: Decimal,
         quantity_multiplier: Decimal,
+        decision_command_name: str,
     ) -> Any:
         ...
 

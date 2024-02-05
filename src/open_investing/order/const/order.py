@@ -66,6 +66,7 @@ class OrderEventName(str, Enum):
     ExchangeCancelled = "exchange.cancelled"  # exchange notification for cancel
 
     Filled = "filled"  # order fill is recorded in db
+    FullyOffsetted = "fully_offsetted"
     CancelSuccess = "cancel_success"  # order cancel is recorded in db
     CancelFailure = "cancel_failure"  # order cancel is recorded in db
 
@@ -86,5 +87,5 @@ class OrderLifeStage(str, Enum):
     Opened = "opened"  # there's some filled quantity
     Fullfilled = "fullfilled"
 
-    Closing = "closing"
+    FullyOffsetted = "fully_offsetted"
     Closed = "closed"

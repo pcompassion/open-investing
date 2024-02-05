@@ -15,7 +15,6 @@ class DecisionLifeStage(str, Enum):
     Opened = "opened"  # partial filled
     Fullfilled = "fullfilled"  # fully filled
 
-    Closing = "closing"
     Closed = "closed"
 
     @property
@@ -53,3 +52,8 @@ class DecisionCommandName(str, Enum):
     Start = "start"
 
     Echo = "echo"
+
+
+class DecisionEventName(str, Enum):
+    Fullfilled = "fullfilled"
+    FullyOffsetted = "fully_offsetted"

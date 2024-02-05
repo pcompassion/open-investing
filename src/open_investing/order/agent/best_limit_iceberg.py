@@ -83,7 +83,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.cancel_events = {}
         self.run_order_task = None
-        self.close_order_task = None
+        self.offset_order_task = None
 
         self.tasks["run_quote_event"] = Task("run_quote_event", self.run_quote_event())
 
@@ -111,6 +111,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             )
 
             self.filled_quantity_order = order.filled_quantity_order
+
+            if order_spec.is_offset:
+                offsetted_order_id = order_spec.offsetted_order_id
+                await order_data_manager.create_composite_order_offset_relation(
+                    composite_order, offsetted_order_id, quantity_order
+                )
 
             orders = dict()
             composite_order_id = order.id
@@ -218,13 +224,14 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     "spec_type_name": OrderType.Limit,
                     "order_side": order_spec.order_side,
                     "quantity_exposure": int(remaining_quantity_order)
-                    * self.order_spec.quantity_multiplier,
-                    "quantity_multiplier": self.order_spec.quantity_multiplier,
+                    * order_spec.quantity_multiplier,
+                    "quantity_multiplier": order_spec.quantity_multiplier,
                     "order_id": order_id,
                     "parent_order_id": composite_order.id,
                     "strategy_session_id": order_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                     "security_code": security_code,
                     "price": price,
+                    "is_offset": order_spec.is_offset,
                 }
 
                 command = OrderTaskCommand(
@@ -291,6 +298,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 composite_order = await self.order_data_manager.get_composite_order(
                     filter_params=dict(id=composite_order_id)
                 )
+
                 self.filled_quantity_order = composite_order.filled_quantity_order
 
                 date_at = data["date_at"]
@@ -388,34 +396,16 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     self.run_order(order_spec, order, command.name)
                 )
 
-            case OrderCommandName.Close:
+            case OrderCommandName.Offset:
                 order_command_queue = self.order_command_queues.get(
                     order_spec.offsetted_order_id
                 )
-
-                # if order is None:
-                #     order = await order_data_manager.prepare_order(
-                #         params=dict(
-
-                #             quantity_exposure=order.filled_quantity_exposure,
-                #             quantity_multiplier=order.quantity_multiplier,
-                #             order_type=self.order_type,
-                #             strategy_session_id=strategy_session_id,
-                #             decision_id=decision_id,
-                #             data=dict(
-                #                 security_code=order_spec.security_code,
-                #                 max_tick_diff=order_spec.max_tick_diff,
-                #                 tick_size=order_spec.tick_size,
-                #             ),
-                #         ),
-                #         save=True,
-                #     )
 
                 if order_command_queue:
                     internal_order_command = InternalOrderCommand(name="STOP")
                     await order_command_queue.put(internal_order_command)
 
-                self.close_order_task = asyncio.create_task(
+                self.offset_order_task = asyncio.create_task(
                     self.run_order(order_spec, order, command.name)
                 )
 

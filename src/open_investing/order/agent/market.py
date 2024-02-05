@@ -60,6 +60,7 @@ class MarketOrderAgent(OrderAgent):
                     strategy_session_id=order_spec.strategy_session_id,
                     decision_id=order_spec.decision_id,
                     id=order_id,
+                    is_offset=order_spec.is_offset,
                 )
             )
 

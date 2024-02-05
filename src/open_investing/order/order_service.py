@@ -258,7 +258,7 @@ class OrderService:
         # TODO: maybe do something other than open_order
         order_data_manager = self.order_data_manager
 
-        await order_data_manager.create_offset_order_relation(
+        await order_data_manager.create_order_offset_relation(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
             offset_quantity_order=offset_quantity_order,

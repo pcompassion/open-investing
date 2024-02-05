@@ -60,6 +60,7 @@ class LimitOrderAgent(OrderAgent):
                     price_amount=order_spec.price.amount,
                     currency=order_spec.price.currency,
                     decision_id=order_spec.decision_id,
+                    is_offset=order_spec.is_offset,
                 )
             )
 

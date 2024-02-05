@@ -19,6 +19,7 @@ from open_investing.order.const.order import OrderType
 from open_library.collections.dict import to_jsonable_python
 from open_investing.order.models.order_offset import OrderOffsetRelation
 import logging
+from open_investing.order.models.order_offset import CompositeOrderOffsetRelation
 
 logger = logging.getLogger(__name__)
 
@@ -235,10 +236,22 @@ class OrderDataManager:
 
         return await as_list_type(qs, return_type, field_names)
 
-    async def create_offset_order_relation(
+    async def create_order_offset_relation(
         self, offsetting_order, offsetted_order_id, offset_quantity_order
     ):
         order_offset_relation, _ = await OrderOffsetRelation.objects.aget_or_create(
+            offsetting_order=offsetting_order,
+            offsetted_order_id=offsetted_order_id,
+            kwargs={"offset_quantity_order": offset_quantity_order},
+        )
+
+    async def create_composite_order_offset_relation(
+        self, offsetting_order, offsetted_order_id, offset_quantity_order
+    ):
+        (
+            composite_order_offset_relation,
+            _,
+        ) = await CompositeOrderOffsetRelation.objects.aget_or_create(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
             kwargs={"offset_quantity_order": offset_quantity_order},
@@ -273,6 +286,72 @@ class OrderDataManager:
 
             offset_result["offsetted"] = True
             offset_result["fully_offsetted"] = order_offset_relation.fully_offsetted
+
+        return offset_result
+
+    async def offset_composite_order(
+        self, offsetting_order, fill_quantity_order
+    ) -> dict:
+        # TODO: possibly there are many order_offset_relation,
+        order_offset_relation = (
+            await CompositeOrderOffsetRelation.objects.filter(
+                offsetting_order=offsetting_order, fully_offsetted=False
+            )
+            .select_related("offsetted_order")
+            .afirst()
+        )
+
+        offset_result = dict(
+            offsetted=False,
+            fully_offsetted=False,
+            offsetted_order_id=None,
+        )
+
+        if order_offset_relation:
+            offset_result[
+                "offsetted_order_id"
+            ] = order_offset_relation.offsetted_order_id
+            remaining_quantity_order = order_offset_relation.update_fill(
+                fill_quantity_order
+            )
+
+            if remaining_quantity_order < 0:
+                logger.warning(
+                    f"offset_order bigger quantity than requested {remaining_quantity_order}"
+                )
+
+            await order_offset_relation.asave()
+
+            offset_result["offsetted"] = True
+
+            date_at = now_local()
+
+            fully_offsetted = order_offset_relation.fully_offsetted
+            offset_result["fully_offsetted"] = fully_offsetted
+            offsetted_order = order_offset_relation.offsetted_order
+
+            if fully_offsetted:
+                await self.record_event(
+                    event_params=dict(
+                        event_name=OrderEventName.FullyOffsetted, date_at=date_at
+                    ),
+                    order=offsetted_order,
+                )
+
+                await self.save(
+                    offsetting_order,
+                    save_params=dict(
+                        life_stage=OrderLifeStage.FullyOffsetted,
+                        life_stage_updated_at=date_at,
+                    ),
+                )
+                await self.save(
+                    offsetted_order,
+                    save_params=dict(
+                        life_stage=OrderLifeStage.FullyOffsetted,
+                        life_stage_updated_at=date_at,
+                    ),
+                )
 
         return offset_result
 

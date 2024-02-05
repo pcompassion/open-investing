@@ -21,7 +21,7 @@ class Decision(models.Model):
         "strategy.StrategySession", on_delete=models.CASCADE
     )
 
-    # decision_type = models.CharField(max_length=128)
+    decision_command_name = models.CharField(max_length=64, blank=True, default="")
     decision_params = models.JSONField(default=dict)
 
     quantity_multiplier = models.DecimalField(

@@ -238,6 +238,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                             strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                             order_id=None,
                             parent_order_id=None,
+                            is_offset=order.is_offset,
                         )
 
                         order_command = OrderTaskCommand(
@@ -260,13 +261,23 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         )
 
                 elif order.security_code == self.decision_spec.follower_security_code:
-                    decision_fill_quantity = (
+                    fill_quantity_order = data["fill_quantity_order"]
+
+                    leader_fill_quantity_order = (
                         fill_quantity_order / self.decision_spec.leader_follower_ratio
+                    )
+
+                    order_data_manager = self.order_data_manager
+                    composite_order = await order_data_manager.get_composite_order(
+                        filter_params=dict(id=order.parent_order_id)
+                    )
+                    offset_result = await order_data_manager.offset_composite_order(
+                        composite_order, leader_fill_quantity_order
                     )
 
                     # actually decision filled
 
-                    decision.update_fill(decision_fill_quantity)
+                    decision.update_fill(leader_fill_quantity_order)
 
                     # TODO: maybe notify/update strategy
 

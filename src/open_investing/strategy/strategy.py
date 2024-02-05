@@ -17,6 +17,10 @@ from uuid import UUID
 from open_investing.task.task_command import SubCommand, TaskCommand
 from open_investing.strategy.const.strategy import StrategyCommandName
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class StrategySpec(TaskSpec):
     strategy_session_id: UUID
@@ -49,6 +53,7 @@ class Strategy(Generic[T], TaskSpecHandler):
     def __init__(self, task_spec: StrategySpec) -> None:
         super().__init__(task_spec)
         self.command_queue = asyncio.Queue()
+        self.decision_event_queue = asyncio.Queue()
 
     async def enqueue_command(self, strategy_info):
         await self.command_queue.put(strategy_info)
@@ -146,3 +151,28 @@ class Strategy(Generic[T], TaskSpecHandler):
 
         data_manager = self.services[service_key]
         return data_manager
+
+    @property
+    def decision_event_broker(self):
+        service_key = ServiceKey(
+            service_type="pubsub_broker",
+            service_name="decision_event_broker",
+        )
+
+        service = self.services[service_key]
+        return service
+
+    async def enqueue_decision_event(self, decision_event):
+        await self.decision_event_queue.put(decision_event)
+
+    async def run_decision_event(self):
+        while True:
+            try:
+                decision_event = await self.decision_event_queue.get()
+
+                await self.on_decision_event(decision_event)
+            except Exception as e:
+                logger.exception(f"run_decision_event: {e}")
+
+    async def on_decision_event(self, decision_event):
+        pass

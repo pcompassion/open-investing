@@ -53,6 +53,7 @@ class DecisionDataManager:
         decision_params: Dict[str, Any],
         quantity_order: Decimal,
         quantity_multiplier: Decimal,
+        decision_command_name: str,
     ):
         now = now_local()
         save_params = dict(
@@ -61,6 +62,7 @@ class DecisionDataManager:
             quantity_multiplier=quantity_multiplier,
             life_stage=DecisionLifeStage.Decided,
             life_stage_upddated_at=now,
+            decision_command_name=decision_command_name,
         )
 
         await self._save(

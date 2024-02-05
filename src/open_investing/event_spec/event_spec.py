@@ -5,6 +5,7 @@ from open_investing.order.const.order import OrderEventName
 from uuid import UUID
 
 from open_investing.const.code_name import DerivativeType
+from open_investing.strategy.const.decision import DecisionEventName
 
 
 class EventSpec(BaseSpec):
@@ -19,7 +20,7 @@ class EventSpec(BaseSpec):
 
 
 class QuoteEventSpec(EventSpec):
-    spec_type_name: str = "quote"
+    spec_type_name: str = "quote_event"
 
     security_code: str | None = None
     derivative_type: DerivativeType | list[DerivativeType] | None = None
@@ -30,7 +31,7 @@ class QuoteEventSpec(EventSpec):
 
 
 class OrderEventSpec(EventSpec):
-    spec_type_name: str = "order"
+    spec_type_name: str = "order_event"
 
     order_id: UUID | None = None
     name: OrderEventName | None = None
@@ -40,3 +41,16 @@ class OrderEventSpec(EventSpec):
     @property
     def hash_keys(self):
         return ["spec_type_name", "order_id"]
+
+
+class DecisionEventSpec(EventSpec):
+    spec_type_name: str = "decision_event"
+
+    order_id: UUID | None = None
+    name: DecisionEventName | None = None
+
+    data: dict[str, Any] | None = None
+
+    @property
+    def hash_keys(self):
+        return ["spec_type_name", "decision_id"]
