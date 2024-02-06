@@ -291,7 +291,7 @@ class OrderDataManager:
 
     async def offset_composite_order(
         self, offsetting_order, fill_quantity_order
-    ) -> dict:
+    ) -> tuple:
         # TODO: possibly there are many order_offset_relation,
         order_offset_relation = (
             await CompositeOrderOffsetRelation.objects.filter(
@@ -353,7 +353,7 @@ class OrderDataManager:
                     ),
                 )
 
-        return offset_result
+        return offset_result, order_offset_relation
 
     async def pending_orders(
         self,

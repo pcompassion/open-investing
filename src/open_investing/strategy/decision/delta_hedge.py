@@ -274,7 +274,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     composite_order = await order_data_manager.get_composite_order(
                         filter_params=dict(id=order.parent_order_id)
                     )
-                    offset_result = await order_data_manager.offset_composite_order(
+                    (
+                        offset_result,
+                        order_offset_relation,
+                    ) = await order_data_manager.offset_composite_order(
                         composite_order, leader_fill_quantity_order
                     )
 
@@ -288,8 +291,31 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     if decision.is_fullfilled():
                         save_params["life_stage"] = DecisionLifeStage.Fullfilled
                         save_params["life_stage_updated_at"] = date_at
+
                     decision_data_manager = self.decision_data_manager
                     await decision_data_manager.save(decision, save_params=save_params)
+
+                    if offset_result.get("fully_offsetted"):
+                        offsetted_order = order_offset_relation.offsetted_order
+                        offset_save_params = dict(
+                            life_stage=OrderLifeStage.FullyOffsetted,
+                            life_stage_updated_at=date_at,
+                        )
+                        await order_data_manager.save(
+                            order, save_params=offset_save_params
+                        )
+
+                        offsetted_decision = await decision_data_manager.get(
+                            filter_params=dict(id=offsetted_order.decision_id)
+                        )
+
+                        await decision_data_manager.save(
+                            offsetted_decision,
+                            save_params=dict(
+                                life_stage=DecisionLifeStage.FullyOffsetted,
+                                life_stage_updated_at=date_at,
+                            ),
+                        )
 
             case OrderEventName.CancelSuccess:
                 order_id = order.id

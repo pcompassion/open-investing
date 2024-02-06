@@ -390,7 +390,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     logger.warning("already running order task")
                     return
 
-                self.order_command_queues[order.id] = asyncio.Queue()
+                self.order_command_queues[str(order.id)] = asyncio.Queue()
 
                 self.run_order_task = asyncio.create_task(
                     self.run_order(order_spec, order, command.name)
@@ -398,7 +398,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
             case OrderCommandName.Offset:
                 order_command_queue = self.order_command_queues.get(
-                    order_spec.offsetted_order_id
+                    str(order_spec.offsetted_order_id)
                 )
 
                 if order_command_queue:

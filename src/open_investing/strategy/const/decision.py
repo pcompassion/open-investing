@@ -14,6 +14,7 @@ class DecisionLifeStage(str, Enum):
 
     Opened = "opened"  # partial filled
     Fullfilled = "fullfilled"  # fully filled
+    FullyOffsetted = "fully_offsetted"  # fully offsetted
 
     Closed = "closed"
 

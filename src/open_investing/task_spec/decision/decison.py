@@ -32,6 +32,16 @@ class DecisionSpec(TaskSpec):
         )
         return functools.reduce(operator.xor, attrs_hash, 0)
 
+    def __eq__(self, other):
+        if isinstance(other, DecisionSpec):
+            # Ensure all corresponding properties are equal
+            return (
+                self.spec_type_name == other.spec_type_name
+                and self.strategy_name == other.strategy_name
+                and self.strategy_session_id == other.strategy_session_id
+            )
+        return False
+
 
 class DecisionCommand(SubCommand):
     name: DecisionCommandName
