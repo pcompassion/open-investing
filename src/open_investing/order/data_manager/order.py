@@ -242,7 +242,7 @@ class OrderDataManager:
         order_offset_relation, _ = await OrderOffsetRelation.objects.aget_or_create(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
-            kwargs={"offset_quantity_order": offset_quantity_order},
+            defaults={"offset_quantity_order": offset_quantity_order},
         )
 
     async def create_composite_order_offset_relation(
@@ -254,7 +254,7 @@ class OrderDataManager:
         ) = await CompositeOrderOffsetRelation.objects.aget_or_create(
             offsetting_order=offsetting_order,
             offsetted_order_id=offsetted_order_id,
-            kwargs={"offset_quantity_order": offset_quantity_order},
+            defaults={"offset_quantity_order": offset_quantity_order},
         )
 
     async def offset_order(self, offsetting_order, fill_quantity_order) -> dict:
