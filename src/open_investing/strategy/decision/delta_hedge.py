@@ -213,7 +213,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         follow_condition_met = True
                     else:
                         if order.is_filled():
-                            fill_quantity_order = order.fill_quantity_order
+                            fill_quantity_order = order.filled_quantity_order
                             follow_condition_met = True
 
                     if follow_condition_met:

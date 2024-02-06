@@ -198,6 +198,7 @@ class EbestApiData:
             "request_per_second": 5,
             "field_name_map": {
                 "order_price_type": "ErxPrcCndiTpCode",
+                "order_price": "OrdPrc",
             },
             "field_value_map": {
                 OrderPriceType.Market: "1",
