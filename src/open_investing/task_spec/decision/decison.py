@@ -24,6 +24,7 @@ class DecisionSpec(TaskSpec):
     strategy_session_id: UUID
 
     decision_id: UUID
+    offsetted_decision_id: UUID | None = None
 
     def __hash__(self):
         attrs_hash = map(

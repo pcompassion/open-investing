@@ -108,7 +108,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     order_spec_dict, order_command
                 )
                 # logger.info("on_decision ended")
-            case DecisionCommandName.Close:
+            case DecisionCommandName.Offset:
                 # TODO: close all orders
                 # maybe keep ongoing_orders to avoid db read
 
@@ -124,9 +124,12 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                 #     filter_params=dict(strategy_session_id=self.strategy_session_id),
                 #     return_type=ListDataType.List,
                 # )
+
+                offsetted_decision_id = decision_spec.offsetted_decision_id
                 orders_composite = await order_data_manager.filter_composite(
                     filter_params=dict(
-                        strategy_session_id=self.strategy_session_id,
+                        decision_id=offsetted_decision_id,
+                        # strategy_session_id=self.strategy_session_id,
                         order_type=OrderType.BestLimitIceberg,
                         is_offset=False,
                         life_stage__in=[

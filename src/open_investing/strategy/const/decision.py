@@ -48,6 +48,7 @@ class DecisionCommandName(str, Enum):
     Cancel = "cancel"
     CancelRemaining = "cancel_remaining"
     Close = "close"
+    Offset = "offset"
 
     Start = "start"
 
