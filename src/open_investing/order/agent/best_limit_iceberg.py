@@ -168,7 +168,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                     # shouldn't happen
 
-                if self.quote is not None:
+                if limit_order_id is not None:
                     if order_side == OrderSide.Buy:
                         price_diff = price - self.quote.bid_price_1
                     else:
@@ -176,7 +176,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                     tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
-                    if limit_order_id and tick_diff > max_tick_diff:
+                    if tick_diff > max_tick_diff:
                         # TODO: cancel all
                         logger.info(
                             f"tick diff bigger than max_tick_diff {max_tick_diff}, cancel remaining orders"
@@ -194,25 +194,24 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         else:
                             self.quote = None
                             limit_order_id = None
-                        continue
+
                     else:
                         # wait for fill
-                        if limit_order_id:
-                            try:
-                                timed_data = (
-                                    await self.order_fill_tracker.wait_for_valid_data(
-                                        timeout_seconds=3
-                                    )
-                                )
-                                continue
-                            except TimeoutError as e:
-                                logger.info(
-                                    f"wait for order fill data timeout {limit_order_id}, tick_diff: {tick_diff}"
-                                )
-                                continue
 
-                else:
-                    self.quote = recent_quote
+                        try:
+                            timed_data = (
+                                await self.order_fill_tracker.wait_for_valid_data(
+                                    timeout_seconds=3
+                                )
+                            )
+                            continue
+                        except TimeoutError as e:
+                            logger.info(
+                                f"wait for order fill data timeout {limit_order_id}, tick_diff: {tick_diff}"
+                            )
+                    continue
+
+                self.quote = recent_quote
 
                 order_id = limit_order_id = uuid4()
                 orders[order_id] = None

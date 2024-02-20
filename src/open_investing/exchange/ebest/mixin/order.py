@@ -11,7 +11,7 @@ from open_investing.security.derivative_code import DerivativeCode
 from open_investing.event_spec.event_spec import OrderEventSpec
 from open_investing.order.const.order import OrderEventName, OrderPriceType, OrderSide
 from open_investing.exchange.ebest.api_field import EbestApiField
-from open_library.time.datetime import combine
+from open_library.time.datetime import combine, now_local
 from open_library.collections.dict import rename_keys, to_jsonable_python
 import logging
 from open_investing.price.money import Money
@@ -95,14 +95,59 @@ class OrderMixin:
 
     async def derivative_order_listener(self, message, retry=True):
         logger.info(f"derivative_order_listener {message}, retry: {retry}")
-        tr_cd = message["header"]["tr_cd"]
+        tr_code = message["header"]["tr_cd"]
         data = message.get("body")
-        match tr_cd:
+
+        if tr_code == "C01":
+            security_code = data["expcode"]
+            quantity = int(data["chevol"])
+
+            date_str = data["chedate"]
+            time_str = data["chetime"]
+            date_format = "YYYYMMDD"
+            # time_format = "HHmmssSSS"
+
+            dt = pendulum.from_format(date_str, date_format)
+            date = dt.date()
+
+            price_amount = data["cheprice"]
+
+        elif tr_code == "EU1":
+            security_code = data["fnoIsuno"]
+            quantity = int(data["execqty"])
+
+            time_str = data["ctrcttime"]
+            now = now_local()
+            date = now.date()
+            if now.time().hour < int(time_str[:2]):
+                date = date.subtract(days=1)
+
+            price_amount = data["execprc"]
+
+        # time = pendulum.parse(time_str, exact=True, formatter=time_format)
+
+        hours, minutes, seconds = (
+            int(time_str[:2]),
+            int(time_str[2:4]),
+            int(time_str[4:6]),
+        )
+        milliseconds = int(time_str[6:])
+
+        # Create a time object
+        time_obj = time(
+            hour=hours,
+            minute=minutes,
+            second=seconds,
+            microsecond=milliseconds * 1000,  # Convert milliseconds to microseconds
+        )
+        # Output: 2024-01-18
+        date_at = combine(date, time_obj)
+
+        exchange_order_id = data["ordno"]
+        match tr_code:
             case None:
                 pass
             case _:
-                security_code = data["expcode"]
-                exchange_order_id = data["ordno"]
                 exchange_order_id = str(int(exchange_order_id))
 
                 order = await self.order_data_manager.get_single_order(
@@ -143,38 +188,11 @@ class OrderMixin:
                     order_id=order.id,
                 )
 
-                date_str = data["chedate"]
-                time_str = data["chetime"]
-                date_format = "YYYYMMDD"
-                time_format = "HHmmssSSS"
-
-                dt = pendulum.from_format(date_str, date_format)
-                date = dt.date()
-
-                # time = pendulum.parse(time_str, exact=True, formatter=time_format)
-
-                hours, minutes, seconds = (
-                    int(time_str[:2]),
-                    int(time_str[2:4]),
-                    int(time_str[4:6]),
-                )
-                milliseconds = int(time_str[6:])
-
-                # Create a time object
-                time_obj = time(
-                    hour=hours,
-                    minute=minutes,
-                    second=seconds,
-                    microsecond=milliseconds
-                    * 1000,  # Convert milliseconds to microseconds
-                )
-                # Output: 2024-01-18
-
                 data = dict(
                     security_code=security_code,
-                    fill_quantity_order=int(data["chevol"]),
-                    fill_price=Money(amount=data["cheprice"], currency="KRW"),
-                    date_at=combine(date, time_obj),
+                    fill_quantity_order=quantity,
+                    fill_price=Money(amount=price_amount, currency="KRW"),
+                    date_at=date_at,
                 )
 
                 message = dict(

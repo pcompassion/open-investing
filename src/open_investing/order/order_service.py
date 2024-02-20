@@ -181,6 +181,7 @@ class OrderService:
         order_data = {}
 
         if exchange_order_id:
+            logger.info(f"exchange_order_id: {exchange_order_id}, order_id: {order.id}")
             await order_data_manager.save(
                 order, save_params=dict(exchange_order_id=exchange_order_id)
             )

@@ -85,12 +85,15 @@ class EbestApiManager(OrderMixin):
         )
 
     async def subscribe_derivative_order(self):
-        await self.derivative_api.subscribe(
-            tr_type="1",
-            tr_code="C01",
-            tr_key="",
-            handler=self.derivative_order_listener,
-        )
+        tr_codes = ["C01", "EU1"]
+
+        for tr_code in tr_codes:
+            await self.derivative_api.subscribe(
+                tr_type="1",
+                tr_code=tr_code,
+                tr_key="",
+                handler=self.derivative_order_listener,
+            )
 
     async def subscribe_market_status(self):
         await self.stock_api.subscribe(
