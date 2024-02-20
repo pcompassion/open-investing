@@ -82,8 +82,6 @@ class LimitOrderAgent(OrderAgent):
         order = order_info["order"]
         data = order_info.get("data")
 
-        logger.info(f"on_order_event: {event_spec}")
-
         event_name = event_spec.name
 
         match event_name:

@@ -61,6 +61,7 @@ class MarketOrderAgent(OrderAgent):
                     decision_id=order_spec.decision_id,
                     id=order_id,
                     is_offset=order_spec.is_offset,
+                    leader_follower_ratio=order_spec.leader_follower_ratio,
                 )
             )
 
@@ -109,8 +110,6 @@ class MarketOrderAgent(OrderAgent):
         event_spec = order_info["event_spec"]
         order = order_info["order"]
         data = order_info.get("data")
-
-        logger.info(f"on_order_event: {event_spec}")
 
         event_name = event_spec.name
 

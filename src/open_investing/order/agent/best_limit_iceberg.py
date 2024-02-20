@@ -135,9 +135,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     internal_order_command = await order_command_queue.get()
                     name = internal_order_command.name
 
-                    if name == "STOP" and limit_order_id:
+                    if name == "STOP" and limit_order_id and remaining_quantity_order:
                         await self.cancel_remaining(
-                            limit_order_id, security_code, remaining_quantity_order
+                            limit_order_id,
+                            security_code,
+                            remaining_quantity_order,
+                            order_spec.quantity_multiplier,
                         )
 
                         break
@@ -183,7 +186,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                                 limit_order_id,
                                 security_code,
                                 remaining_quantity_order,
+                                order_spec.quantity_multiplier,
                             )
+
                         except CancelFailedException:
                             pass
                         else:
@@ -245,7 +250,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         except Exception as e:
             logger.exception(f"run_order: {e}")
 
-    async def cancel_remaining(self, order_id, security_code, cancel_quantity):
+    async def cancel_remaining(
+        self, order_id, security_code, cancel_quantity_order, quantity_multiplier
+    ):
         order_task_dispatcher = self.order_task_dispatcher
 
         command = OrderTaskCommand(
@@ -259,9 +266,11 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         cancel_order_spec_dict = self.base_spec_dict | {
             "spec_type_name": "order.cancel_remaining",
-            "cancel_quantity": cancel_quantity,
             "order_id": order_id,
             "security_code": security_code,
+            "order_side": OrderSide.Undefined,
+            "quantity_multiplier": quantity_multiplier,
+            "quantity_exposure": cancel_quantity_order * quantity_multiplier,
         }
 
         await order_task_dispatcher.dispatch_task(cancel_order_spec_dict, command)
@@ -300,6 +309,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 )
 
                 self.filled_quantity_order = composite_order.filled_quantity_order
+                logger.info(
+                    f"quantity_order: {composite_order.quantity_order}, filled_quantity_order: {composite_order.filled_quantity_order}"
+                )
 
                 date_at = data["date_at"]
                 await self.order_fill_tracker.add_data(data, date_at)

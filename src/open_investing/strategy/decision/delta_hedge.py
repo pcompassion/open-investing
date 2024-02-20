@@ -166,6 +166,11 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         is_offset=True,
                     )
 
+                    order_event_spec = OrderEventSpec(order_id=order_id)
+                    self.order_event_broker.subscribe(
+                        order_event_spec, self.enqueue_order_event
+                    )
+
                     await order_task_dispatcher.dispatch_task(
                         order_spec_dict, order_command
                     )
@@ -222,26 +227,40 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     if follow_condition_met:
                         # TODO: min quantity is 1 ?
                         MIN_QUANTITY = Decimal("1")
-                        quantity_order = max(
+                        quantity_exposure = max(
                             fill_quantity_order
                             * self.decision_spec.leader_follower_ratio
                             * self.decision_spec.leader_multiplier
                             / self.decision_spec.follower_multiplier,
                             MIN_QUANTITY,
                         )
-                        quantity_order = int(quantity_order)
+                        quantity_exposure = int(quantity_exposure)
+
+                        leader_follower_ratio = (
+                            fill_quantity_order
+                            * self.decision_spec.leader_multiplier
+                            / self.decision_spec.follower_multiplier
+                        )
+
+                        order_id = uuid4()
 
                         order_spec_dict = self.base_spec_dict | dict(
                             spec_type_name=OrderType.Market,
                             security_code=self.decision_spec.follower_security_code,
-                            quantity_exposure=quantity_order
+                            quantity_exposure=quantity_exposure
                             * self.decision_spec.follower_multiplier,
                             quantity_multiplier=self.decision_spec.follower_multiplier,
                             order_side=OrderSide.Sell,
                             strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
-                            order_id=None,
-                            parent_order_id=None,
+                            order_id=order_id,
+                            parent_order_id=order.parent_order_id,
                             is_offset=order.is_offset,
+                            leader_follower_ratio=leader_follower_ratio,
+                        )
+
+                        order_event_spec = OrderEventSpec(order_id=order_id)
+                        self.order_event_broker.subscribe(
+                            order_event_spec, self.enqueue_order_event
                         )
 
                         order_command = OrderTaskCommand(
@@ -267,8 +286,15 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     fill_quantity_order = data["fill_quantity_order"]
 
                     leader_fill_quantity_order = (
-                        fill_quantity_order / self.decision_spec.leader_follower_ratio
+                        fill_quantity_order
+                        * self.decision_spec.follower_multiplier
+                        / order.leader_follower_ratio
+                        / self.decision_spec.leader_multiplier
                     )
+
+                    # leader_fill_quantity_order = (
+                    #     fill_quantity_order / self.decision_spec.leader_follower_ratio
+                    # )
 
                     order_data_manager = self.order_data_manager
                     composite_order = await order_data_manager.get_composite_order(
@@ -291,6 +317,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     if decision.is_fullfilled():
                         save_params["life_stage"] = DecisionLifeStage.Fullfilled
                         save_params["life_stage_updated_at"] = date_at
+                        logger.info(f"decision fullfilled: {decision.id}")
 
                     decision_data_manager = self.decision_data_manager
                     await decision_data_manager.save(decision, save_params=save_params)

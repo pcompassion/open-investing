@@ -96,6 +96,10 @@ class Order(models.Model):
     )
     is_offset = models.BooleanField(default=False, db_index=True)
 
+    leader_follower_ratio = models.DecimalField(
+        max_digits=16, decimal_places=2, default=Decimal("0")
+    )
+
     def update_fill(self, fill_quantity_order, fill_price):
         # Update total cost and filled quantity
         new_cost = fill_quantity_order * self.quantity_multiplier * fill_price

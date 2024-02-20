@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
 from open_library.observe.pubsub_broker import PubsubBroker
 from open_investing.event_spec.event_spec import OrderEventSpec
 
@@ -280,17 +281,24 @@ class OrderService:
             order=order,
         )
 
-        order_event_broker.subscribe(order.id, self.enqueue_order_event)  # type: ignore
+        order_event_spec = OrderEventSpec(order_id=order.id)
+        order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)  # type: ignore
 
-        cancel_order_result, _ = await exchange_manager.cancel_order_quantity(
-            order, cancel_quantity
+        (
+            cancel_order_result,
+            api_response,
+        ) = await exchange_manager.cancel_order_quantity(
+            order.security_code,
+            cancel_quantity,
+            order,
         )
-
-        cancelled_quantity_order = cancel_order_result["cancelled_quantity_order"]
+        cancelled_quantity_order = Decimal("0")
+        if api_response.success:
+            cancelled_quantity_order = cancel_order_result["cancelled_quantity_order"]
 
         event_name = OrderEventName.ExchangeCancelFailure
         next_event_name = OrderEventName.CancelFailure
-        if cancelled_quantity_order > 0:
+        if cancelled_quantity_order > Decimal("0"):
             event_name = OrderEventName.ExchangeCancelSuccess
             next_event_name = OrderEventName.CancelSuccess
 

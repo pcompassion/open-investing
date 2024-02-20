@@ -188,7 +188,7 @@ class OrderMixin:
     async def cancel_order_quantity(
         self,
         security_code: str,
-        cancel_quantity: Decimal,
+        cancel_quantity_order: Decimal,
         order,
     ):
         tr_code = "CFOAT00300"
@@ -203,8 +203,8 @@ class OrderMixin:
         send_data = EbestApiField.get_send_data(
             tr_code=tr_code,
             security_code=security_code,
-            cancel_quantity=int(cancel_quantity),
-            exchange_order_id=order.exchange_order_id,
+            cancel_quantity=int(cancel_quantity_order),
+            exchange_order_id=int(order.exchange_order_id),
         )
 
         api = self.derivative_api
@@ -219,5 +219,8 @@ class OrderMixin:
                 OrdNo="cancel_order_id",
             ),
         )
+
+        if "cancel_order_id" in result:
+            result["cancel_order_id"] = Decimal(result["cancel_order_id"])
 
         return result, api_response

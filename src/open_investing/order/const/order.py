@@ -25,6 +25,7 @@ SINGLE_ORDER_TYPES = (OrderType.Market, OrderType.Limit)
 class OrderSide(str, Enum):
     Buy = "buy"
     Sell = "sell"
+    Undefined = "undefined"
 
     @property
     def opposite(self):

@@ -12,7 +12,6 @@ from open_investing.order.const.order import OrderCommandName, OrderEventName
 class CancelRemainingOrderSpec(OrderSpec):
     spec_type_name_classvar: ClassVar[str] = "order.cancel_remaining"
     spec_type_name: str = spec_type_name_classvar
-    cancel_quantity: Decimal
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -39,14 +38,16 @@ class CancelRemainingOrderAgent(OrderAgent):
             case OrderCommandName.Start:  # this is actually start of cancel
                 order_event_broker = self.order_event_broker
 
-                cancel_quantity = order_spec.cancel_quantity
+                cancel_quantity_order = (
+                    order_spec.quantity_exposure / order_spec.quantity_multiplier
+                )
 
                 order_event_spec = OrderEventSpec(order_id=order_id)
 
                 order_event_broker.subscribe(order_event_spec, self.enqueue_order_event)
 
                 await self.order_service.cancel_order_quantity(
-                    order, exchange_manager, cancel_quantity
+                    order, exchange_manager, cancel_quantity_order
                 )
 
             case _:
