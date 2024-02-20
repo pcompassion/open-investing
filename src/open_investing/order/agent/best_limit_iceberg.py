@@ -176,7 +176,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                     tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
-                    if tick_diff > max_tick_diff:
+                    if limit_order_id and tick_diff > max_tick_diff:
                         # TODO: cancel all
                         logger.info(
                             f"tick diff bigger than max_tick_diff {max_tick_diff}, cancel remaining orders"
