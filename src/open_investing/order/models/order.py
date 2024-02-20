@@ -96,8 +96,9 @@ class Order(models.Model):
     )
     is_offset = models.BooleanField(default=False, db_index=True)
 
+    # we are using this to calculate the leader_quantity
     leader_follower_ratio = models.DecimalField(
-        max_digits=16, decimal_places=2, default=Decimal("0")
+        max_digits=16, decimal_places=2, null=True, blank=True
     )
 
     def update_fill(self, fill_quantity_order, fill_price):

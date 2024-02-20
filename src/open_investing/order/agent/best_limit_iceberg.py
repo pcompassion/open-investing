@@ -323,6 +323,20 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 if event:
                     event.set()
                     del self.cancel_events[event]
+
+            case OrderEventName.CancelFailure:
+                if (
+                    "error_reason" in data
+                    and result["error_reason"] == "nothing-to-cancel"
+                ):
+                    order_id = order.id
+
+                    event = self.cancel_events.get(order_id)
+
+                    if event:
+                        event.set()
+                        del self.cancel_events[event]
+
             case OrderEventName.ExchangeOpenFailureNonRecoverable:
                 logger.warning(
                     f"failed to open order, and it's not recoverable {order.id}"

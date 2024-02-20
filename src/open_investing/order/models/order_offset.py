@@ -51,10 +51,10 @@ class CompositeOrderOffsetRelation(models.Model):
         "order.CompositeOrder", related_name="_offsetting_me", on_delete=models.CASCADE
     )
     offset_quantity_order = models.DecimalField(
-        max_digits=16, decimal_places=2, null=True, blank=True
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
     filled_quantity_order = models.DecimalField(
-        max_digits=16, decimal_places=2, null=True, blank=True
+        max_digits=16, decimal_places=2, default=Decimal("0")
     )
 
     quantity_multiplier = models.DecimalField(

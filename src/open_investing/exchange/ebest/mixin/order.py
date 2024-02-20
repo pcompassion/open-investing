@@ -234,11 +234,16 @@ class OrderMixin:
             key_mapping=dict(
                 CancQty="cancelled_quantity_order",
                 OrgOrdNo="open_order_id",
-                OrdNo="cancel_order_id",
+                OrdNo="exchange_order_id",
             ),
         )
 
-        if "cancel_order_id" in result:
-            result["cancel_order_id"] = Decimal(result["cancel_order_id"])
+        # if "exchange_order_id" in result:
+        #     result["exchange_order_id"] = int(result["exchange_order_id"])
+        result["order_id"] = order.id
+        result["exchange_order_id"] = int(order.exchange_order_id)
+
+        if api_response.error_code == 1433:
+            result["error_reason"] = "nothing-to-cancel"
 
         return result, api_response

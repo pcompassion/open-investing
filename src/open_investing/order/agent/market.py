@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from decimal import Decimal
 from open_investing.task_spec.task_spec_handler_registry import TaskSpecHandlerRegistry
 from open_library.locator.service_locator import ServiceKey
 from open_investing.order.const.order import (
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 class MarketOrderSpec(OrderSpec):
     spec_type_name_classvar: ClassVar[str] = OrderType.Market
     spec_type_name: str = spec_type_name_classvar
+    leader_follower_ratio: Decimal | None = None
 
 
 @TaskSpecHandlerRegistry.register_class
