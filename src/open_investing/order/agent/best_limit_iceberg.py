@@ -208,7 +208,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         try:
                             timed_data = (
                                 await self.order_fill_tracker.wait_for_valid_data(
-                                    timeout_seconds=3
+                                    timeout_seconds=10
                                 )
                             )
                             if limit_order_id in self.orders:
@@ -263,6 +263,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
     async def cancel_remaining(
         self, order_id, security_code, cancel_quantity_order, quantity_multiplier
     ):
+        logger.info(f"cancel_remaining, {order_id}, {cancel_quantity_order}")
         order_task_dispatcher = self.order_task_dispatcher
 
         command = OrderTaskCommand(
@@ -317,15 +318,15 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     f"order_id: {order.id},quantity_order: {order.quantity_order}, filled_quantity_order: {order.filled_quantity_order}"
                 )
 
-                composite_order_id = order.parent_order_id
+                # composite_order_id = order.parent_order_id
 
-                fill_quantity_order = data["fill_quantity_order"]
-                fill_price = data["fill_price"]
+                # fill_quantity_order = data["fill_quantity_order"]
+                # fill_price = data["fill_price"]
 
-                composite_order = await self.order_data_manager.get_composite_order(
-                    filter_params=dict(id=composite_order_id)
-                )
-                composite_order.update_fill(fill_quantity_order, fill_price)
+                # composite_order = await self.order_data_manager.get_composite_order(
+                #     filter_params=dict(id=composite_order_id)
+                # )
+                # composite_order.update_fill(fill_quantity_order, fill_price)
 
                 date_at = data["date_at"]
                 self.orders[order.id] = order

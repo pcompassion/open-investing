@@ -40,6 +40,7 @@ class DeltaHedgeDecisionSpec(DecisionSpec):
     leader_multiplier: Decimal
     follower_multiplier: Decimal
     max_tick_diff: int = 5
+    fast_trade_test: bool = False
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -305,6 +306,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     and order.order_type == OrderType.Market
                 ):
                     fill_quantity_order = data["fill_quantity_order"]
+                    fill_price = data["fill_price"]
 
                     # leader_fill_quantity_order = (
                     #     fill_quantity_order
@@ -336,7 +338,8 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     )
 
                     # actually decision filled
-
+                    composite_order.update_fill(leader_fill_quantity_order, fill_price)
+                    await order_data_manager.save(composite_order, save_params={})
                     decision.update_fill(leader_fill_quantity_order)
 
                     logger.info(
