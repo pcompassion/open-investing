@@ -301,8 +301,12 @@ class EbestApiManager(OrderMixin):
 
         data = message["body"]
         hotime = data["hotime"]
-        if hotime[:2] == "24":
-            hotime = "00" + hotime[2:]
+        hour = int(hotime[:2])
+
+        if hour >= 24:
+            hour = hour - 24
+            hotime = f"{hour:02d}" + hotime[2:]
+        # TODO: time may not be synced, and ..
         time = time_from_format(hotime, time_format=self.DEFAULT_TIME_FORMAT)
         date_at = combine(now_local().date(), time)
 

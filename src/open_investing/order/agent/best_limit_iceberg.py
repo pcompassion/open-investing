@@ -139,12 +139,16 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         logger.info(
                             f"cancelling remaining order, order_id: {limit_order_id}, security_code: {security_code}"
                         )
-                        await self.cancel_remaining(
-                            limit_order_id,
-                            security_code,
-                            remaining_quantity_order,
-                            order_spec.quantity_multiplier,
-                        )
+                        try:
+                            await self.cancel_remaining(
+                                limit_order_id,
+                                security_code,
+                                remaining_quantity_order,
+                                order_spec.quantity_multiplier,
+                            )
+                        except CancelFailedException:
+                            # TODO: maybe retry
+                            pass
 
                         break
 

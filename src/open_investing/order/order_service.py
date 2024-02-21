@@ -293,15 +293,16 @@ class OrderService:
             cancel_quantity,
             order,
         )
-        cancelled_quantity_order = Decimal("0")
-        if api_response.success:
-            cancelled_quantity_order = cancel_order_result["cancelled_quantity_order"]
-
         event_name = OrderEventName.ExchangeCancelFailure
         next_event_name = OrderEventName.CancelFailure
-        if cancelled_quantity_order > Decimal("0"):
+
+        if api_response.success:
+            logger.info(f"cancelled order: {cancel_order_result}")
             event_name = OrderEventName.ExchangeCancelSuccess
             next_event_name = OrderEventName.CancelSuccess
+
+        else:
+            logger.warning(f"cancelled order failed: {cancel_order_result}")
 
         event_params = dict(
             event_name=event_name, date_at=now_local(), **cancel_order_result
