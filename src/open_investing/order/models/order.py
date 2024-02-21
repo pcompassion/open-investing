@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from open_library.time.datetime import now_local
 from decimal import Decimal
 
 from open_investing.price.money import Money
@@ -97,6 +98,9 @@ class Order(models.Model):
     is_offset = models.BooleanField(default=False, db_index=True)
 
     # we are using this to calculate the leader_quantity
+    leader_quantity_order = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True
+    )
     leader_follower_ratio = models.DecimalField(
         max_digits=16, decimal_places=2, null=True, blank=True
     )
@@ -115,6 +119,11 @@ class Order(models.Model):
 
         if self.life_stage == OrderLifeStage.Undefined:
             self.life_stage = OrderLifeStage.Opened
+            self.life_stage_updated_at = now_local()
+
+        if self.is_filled():
+            self.life_stage = OrderLifeStage.Fullfilled
+            self.life_stage_updated_at = now_local()
 
     def calculate_roi(self, current_price):
         """

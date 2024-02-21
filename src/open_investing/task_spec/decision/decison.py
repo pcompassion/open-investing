@@ -90,7 +90,7 @@ class DecisionHandler(Generic[T], TaskSpecHandler):
         from open_library.collections.dict import instance_to_dict
 
         return instance_to_dict(
-            self.decision_spec, ["strategy_name", "strategy_session_id", "decision_id"]
+            self.decision_spec, ["strategy_name", "strategy_session_id"]
         )
 
     @property

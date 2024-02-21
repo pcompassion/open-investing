@@ -92,7 +92,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
         self.quote = None  # quote when i placed order
 
-        self.filled_quantity_order = None
+        self.orders = dict()
         self.order_command_queues = dict()
 
     async def run_order(
@@ -103,14 +103,13 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             order_event_broker = self.order_event_broker
             order_task_dispatcher = self.order_task_dispatcher
 
-            order = composite_order
             max_tick_diff = order_spec.max_tick_diff
             security_code = order_spec.security_code
             quantity_order = (
                 order_spec.quantity_exposure / order_spec.quantity_multiplier
             )
 
-            self.filled_quantity_order = order.filled_quantity_order
+            filled_quantity_order = composite_order.filled_quantity_order
 
             if order_spec.is_offset:
                 offsetted_order_id = order_spec.offsetted_order_id
@@ -119,23 +118,27 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 )
 
             orders = dict()
-            composite_order_id = order.id
+            composite_order_id = composite_order.id
             order_event_spec = None
             listener_spec = None
             order_side = order_spec.order_side
             limit_order_id = None
+            quote_used = None
 
             order_command_queue = self.order_command_queues.get(composite_order_id)
 
-            while self.filled_quantity_order < quantity_order:
+            while filled_quantity_order < quantity_order:
                 # TODO: probably need tighter check
-                remaining_quantity_order = quantity_order - self.filled_quantity_order
+                remaining_quantity_order = quantity_order - filled_quantity_order
 
                 if order_command_queue is not None and not order_command_queue.empty():
                     internal_order_command = await order_command_queue.get()
                     name = internal_order_command.name
 
                     if name == "STOP" and limit_order_id and remaining_quantity_order:
+                        logger.info(
+                            f"cancelling remaining order, order_id: {limit_order_id}, security_code: {security_code}"
+                        )
                         await self.cancel_remaining(
                             limit_order_id,
                             security_code,
@@ -170,9 +173,9 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 if limit_order_id is not None:
                     if order_side == OrderSide.Buy:
-                        price_diff = price - self.quote.bid_price_1
+                        price_diff = price - quote_used.bid_price_1
                     else:
-                        price_diff = self.quote.ask_price_1 - price
+                        price_diff = quote_used.ask_price_1 - price
 
                     tick_diff = math.floor(price_diff.amount / order_spec.tick_size)
 
@@ -192,7 +195,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                         except CancelFailedException:
                             pass
                         else:
-                            self.quote = None
+                            quote_used = None
                             limit_order_id = None
 
                     else:
@@ -204,6 +207,10 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                                     timeout_seconds=3
                                 )
                             )
+                            if limit_order_id in self.orders:
+                                order = self.orders[limit_order_id]
+                                filled_quantity_order = order.filled_quantity_order
+
                             continue
                         except TimeoutError as e:
                             logger.info(
@@ -211,7 +218,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                             )
                     continue
 
-                self.quote = recent_quote
+                quote_used = recent_quote
 
                 order_id = limit_order_id = uuid4()
                 orders[order_id] = None
@@ -300,19 +307,24 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         match event_name:
             case OrderEventName.Filled:
                 # order is filled, do something
+                # TODO: not sure if we need CompositeOrder
+
+                logger.info(
+                    f"order_id: {order.id},quantity_order: {order.quantity_order}, filled_quantity_order: {order.filled_quantity_order}"
+                )
 
                 composite_order_id = order.parent_order_id
+
+                fill_quantity_order = data["fill_quantity_order"]
+                fill_price = data["fill_price"]
 
                 composite_order = await self.order_data_manager.get_composite_order(
                     filter_params=dict(id=composite_order_id)
                 )
-
-                self.filled_quantity_order = composite_order.filled_quantity_order
-                logger.info(
-                    f"quantity_order: {composite_order.quantity_order}, filled_quantity_order: {composite_order.filled_quantity_order}"
-                )
+                composite_order.update_fill(fill_quantity_order, fill_price)
 
                 date_at = data["date_at"]
+                self.orders[order.id] = order
                 await self.order_fill_tracker.add_data(data, date_at)
 
             case OrderEventName.CancelSuccess:
@@ -322,12 +334,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                 if event:
                     event.set()
-                    del self.cancel_events[event]
+                    del self.cancel_events[order_id]
 
             case OrderEventName.CancelFailure:
                 if (
                     "error_reason" in data
-                    and result["error_reason"] == "nothing-to-cancel"
+                    and data["error_reason"] == "nothing-to-cancel"
                 ):
                     order_id = order.id
 
@@ -335,7 +347,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
 
                     if event:
                         event.set()
-                        del self.cancel_events[event]
+                        del self.cancel_events[order_id]
 
             case OrderEventName.ExchangeOpenFailureNonRecoverable:
                 logger.warning(
@@ -429,6 +441,8 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 if order_command_queue:
                     internal_order_command = InternalOrderCommand(name="STOP")
                     await order_command_queue.put(internal_order_command)
+
+                self.order_command_queues[str(order.id)] = asyncio.Queue()
 
                 self.offset_order_task = asyncio.create_task(
                     self.run_order(order_spec, order, command.name)

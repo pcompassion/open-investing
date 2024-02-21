@@ -58,13 +58,15 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         )
         self.strategy_session_id = self.decision_spec.strategy_session_id
         self.order_ids = []
+        self.decision_specs = {}
 
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
-        logger.info(f"on_decision: {decision_spec}")
+        logger.info(f"on_decision: {decision_spec}, command: {decision_info.command}")
         order_task_dispatcher = self.order_task_dispatcher
 
         decision_id = decision_spec.decision_id
+        self.decision_specs[decision_id] = decision_spec
 
         decision_data_manager = self.decision_data_manager
         decision: Decision = await decision_data_manager.get(
@@ -87,13 +89,13 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                 order_spec_dict = self.base_spec_dict | dict(
                     spec_type_name=OrderType.BestLimitIceberg,
-                    max_tick_diff=self.decision_spec.max_tick_diff,
+                    max_tick_diff=decision_spec.max_tick_diff,
                     tick_size=Decimal("0.01"),
                     order_side=OrderSide.Sell,
-                    security_code=self.decision_spec.leader_security_code,
-                    quantity_exposure=self.decision_spec.leader_quantity_exposure,
-                    quantity_multiplier=self.decision_spec.leader_multiplier,
-                    strategy_session_id=self.decision_spec.strategy_session_id,
+                    security_code=decision_spec.leader_security_code,
+                    quantity_exposure=decision_spec.leader_quantity_exposure,
+                    quantity_multiplier=decision_spec.leader_multiplier,
+                    strategy_session_id=decision_spec.strategy_session_id,
                     decision_id=decision_id,
                     order_id=order_id,
                     parent_order_id=None,
@@ -133,6 +135,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         order_type=OrderType.BestLimitIceberg,
                         is_offset=False,
                         life_stage__in=[
+                            OrderLifeStage.Undefined,
                             OrderLifeStage.Opened,
                             OrderLifeStage.Fullfilled,
                         ],
@@ -152,14 +155,14 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                     order_spec_dict = self.base_spec_dict | dict(
                         spec_type_name=order.order_type,
-                        max_tick_diff=self.decision_spec.max_tick_diff,
+                        decision_id=decision_spec.decision_id,
+                        max_tick_diff=decision_spec.max_tick_diff,
                         tick_size=Decimal("0.01"),
                         strategy_session_id=order.strategy_session_id,
-                        order_side=OrderSide.Buy,
+                        order_side=OrderSide(order.side).opposite,
                         security_code=security_code,
                         quantity_exposure=order.filled_quantity_exposure,
                         quantity_multiplier=order.quantity_multiplier,
-                        decision_id=decision_id,
                         offsetted_order_id=order.id,
                         order_id=order_id,
                         parent_order_id=None,
@@ -205,11 +208,19 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         event_name = event_spec.name
         decision = order.decision
 
+        decision_id = order.decision_id
+
+        if decision_id in self.decision_specs:
+            decision_spec = self.decision_specs[decision_id]
+        else:
+            logger.warning(f"no decision_spec for decision_id: {decision_id}")
+            return
+
         match event_name:
             case OrderEventName.Filled:
                 # TODO: better check tighter condition
 
-                if order.security_code == self.decision_spec.leader_security_code:
+                if order.security_code == decision_spec.leader_security_code:
                     # composite_order = order.parent_order
                     # # if opening order, we wait for filled
                     # # when offsetting order, immediate followup
@@ -227,34 +238,41 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     if follow_condition_met:
                         # TODO: min quantity is 1 ?
                         MIN_QUANTITY = Decimal("1")
-                        quantity_exposure = max(
+                        quantity_order = max(
                             fill_quantity_order
-                            * self.decision_spec.leader_follower_ratio
-                            * self.decision_spec.leader_multiplier
-                            / self.decision_spec.follower_multiplier,
+                            * decision_spec.leader_follower_ratio
+                            * decision_spec.leader_multiplier
+                            / decision_spec.follower_multiplier,
                             MIN_QUANTITY,
                         )
-                        quantity_exposure = int(quantity_exposure)
+                        quantity_order = Decimal(int(quantity_order))
+
+                        quantity_exposure = (
+                            quantity_order * decision_spec.follower_multiplier
+                        )
 
                         leader_follower_ratio = (
-                            fill_quantity_order
-                            * self.decision_spec.leader_multiplier
-                            / self.decision_spec.follower_multiplier
+                            quantity_order
+                            / (fill_quantity_order * decision_spec.leader_multiplier)
+                            * decision_spec.follower_multiplier
                         )
+
+                        leader_quantity_order = fill_quantity_order
 
                         order_id = uuid4()
 
                         order_spec_dict = self.base_spec_dict | dict(
                             spec_type_name=OrderType.Market,
-                            security_code=self.decision_spec.follower_security_code,
-                            quantity_exposure=quantity_exposure
-                            * self.decision_spec.follower_multiplier,
-                            quantity_multiplier=self.decision_spec.follower_multiplier,
-                            order_side=OrderSide.Sell,
-                            strategy_session_id=self.decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
+                            decision_id=decision_spec.decision_id,
+                            security_code=decision_spec.follower_security_code,
+                            quantity_exposure=quantity_exposure,
+                            quantity_multiplier=decision_spec.follower_multiplier,
+                            order_side=OrderSide(order.side),
+                            strategy_session_id=decision_spec.strategy_session_id,  # TODO: shouldnt be neccessary
                             order_id=order_id,
                             parent_order_id=order.parent_order_id,
                             is_offset=order.is_offset,
+                            leader_quantity_order=leader_quantity_order,
                             leader_follower_ratio=leader_follower_ratio,
                         )
 
@@ -282,18 +300,28 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                             decision, save_params=save_params
                         )
 
-                elif order.security_code == self.decision_spec.follower_security_code:
+                elif (
+                    order.security_code == decision_spec.follower_security_code
+                    and order.order_type == OrderType.Market
+                ):
                     fill_quantity_order = data["fill_quantity_order"]
 
-                    leader_fill_quantity_order = (
-                        fill_quantity_order
-                        * self.decision_spec.follower_multiplier
-                        / order.leader_follower_ratio
-                        / self.decision_spec.leader_multiplier
-                    )
+                    # leader_fill_quantity_order = (
+                    #     fill_quantity_order
+                    #     * decision_spec.follower_multiplier
+                    #     / order.leader_follower_ratio
+                    #     / decision_spec.leader_multiplier
+                    # )
+
+                    leader_fill_quantity_order = order.leader_quantity_order
+                    leader_follower_ratio = order.leader_follower_ratio
+                    # assert (
+                    #     leader_fill_quantity_order
+                    #     == leader_follower_ratio * fill_quantity_order
+                    # )
 
                     # leader_fill_quantity_order = (
-                    #     fill_quantity_order / self.decision_spec.leader_follower_ratio
+                    #     fill_quantity_order / decision_spec.leader_follower_ratio
                     # )
 
                     order_data_manager = self.order_data_manager
@@ -310,6 +338,10 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     # actually decision filled
 
                     decision.update_fill(leader_fill_quantity_order)
+
+                    logger.info(
+                        f"decision_id: {decision.id},quantity_order: {decision.quantity_order}, filled_quantity_order: {decision.filled_quantity_order}"
+                    )
 
                     # TODO: maybe notify/update strategy
 
@@ -353,7 +385,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     del self.cancel_events[event]
 
             case OrderEventName.ExchangeOpenRequest | OrderEventName.ExchangeOpenSuccess | OrderEventName.ExchangeOpenFailure:
-                if order.security_code == self.decision_spec.leader_security_code:
+                if order.security_code == decision_spec.leader_security_code:
                     save_params = dict(
                         life_stage=event_name,
                         life_stage_updated_at=date_at,

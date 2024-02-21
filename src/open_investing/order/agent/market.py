@@ -23,6 +23,7 @@ class MarketOrderSpec(OrderSpec):
     spec_type_name_classvar: ClassVar[str] = OrderType.Market
     spec_type_name: str = spec_type_name_classvar
     leader_follower_ratio: Decimal | None = None
+    leader_quantity_order: Decimal | None = None
 
 
 @TaskSpecHandlerRegistry.register_class
@@ -63,6 +64,7 @@ class MarketOrderAgent(OrderAgent):
                     decision_id=order_spec.decision_id,
                     id=order_id,
                     is_offset=order_spec.is_offset,
+                    leader_quantity_order=order_spec.leader_quantity_order,
                     leader_follower_ratio=order_spec.leader_follower_ratio,
                 )
             )

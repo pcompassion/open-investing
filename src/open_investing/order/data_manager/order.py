@@ -133,13 +133,13 @@ class OrderDataManager:
         if order:
             order.update_fill(fill_quantity_order, fill_price)
 
-        if order.parent_order_id:
-            parent_order = await self.get_composite_order(
-                filter_params=dict(id=order.parent_order_id)
-            )
-            await self.handle_exchange_filled_event_for_composite_order(
-                event_params, order, parent_order
-            )
+        # if order.parent_order_id:
+        #     parent_order = await self.get_composite_order(
+        #         filter_params=dict(id=order.parent_order_id)
+        #     )
+        #     await self.handle_exchange_filled_event_for_composite_order(
+        #         event_params, order, parent_order
+        #     )
 
         offset_result = await self.offset_order(order, fill_quantity_order)
 

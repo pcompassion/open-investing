@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from open_library.time.datetime import now_local
 from decimal import Decimal
 import uuid
 from django.db import models
@@ -75,6 +76,14 @@ class CompositeOrder(models.Model):
 
         if self.life_stage == OrderLifeStage.Undefined:
             self.life_stage = OrderLifeStage.Opened
+            self.life_stage_updated_at = now_local()
+
+        if self.is_filled():
+            self.life_stage = OrderLifeStage.Fullfilled
+            self.life_stage_updated_at = now_local()
+
+    def is_filled(self):
+        return self.filled_quantity_order >= self.quantity_order
 
     def subtract_quantity(self, quantity_order):
         self.quantity_order -= quantity_order
