@@ -159,7 +159,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         max_tick_diff=decision_spec.max_tick_diff,
                         tick_size=Decimal("0.01"),
                         strategy_session_id=order.strategy_session_id,
-                        order_side=OrderSide(order.side).opposite,
+                        order_side=OrderSide.Buy,
                         security_code=security_code,
                         quantity_exposure=order.filled_quantity_exposure,
                         quantity_multiplier=order.quantity_multiplier,
