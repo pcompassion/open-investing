@@ -62,9 +62,9 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
     async def on_decision(self, decision_info):
         decision_spec = decision_info["task_spec"]
-        logger.info(
-            f"on_decision: {decision_spec}, command: {decision_info['command']}"
-        )
+        command = decision_info["command"]
+
+        logger.info(f"on_decision: {decision_spec}, command: {command}")
         order_task_dispatcher = self.order_task_dispatcher
 
         decision_id = decision_spec.decision_id
@@ -74,8 +74,6 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
         decision: Decision = await decision_data_manager.get(
             filter_params=dict(id=decision_id)
         )
-
-        command = decision_info["command"]
 
         match command.name:
             case DecisionCommandName.Start:
