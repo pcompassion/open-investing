@@ -114,6 +114,15 @@ class DecisionDataManager:
 
         return await as_list_type(qs, return_type, field_names)
 
+    async def filter(
+        self,
+        filter_params: dict,
+        return_type: ListDataType = ListDataType.List,
+        field_names: list | None = None,
+    ) -> ListDataTypeHint:
+        qs = Decision.objects.filter(**filter_params).order_by("created_at")
+        return await as_list_type(qs, return_type, field_names)
+
     async def _save(
         self,
         decision: Decision,

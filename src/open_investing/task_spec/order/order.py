@@ -207,7 +207,7 @@ class OrderAgent(Generic[T], TaskSpecHandler):
         from open_library.collections.dict import instance_to_dict
 
         spec_dict = instance_to_dict(
-            self.order_spec, ["strategy_name", "strategy_session_id", "decision_id"]
+            self.order_spec, ["strategy_name", "strategy_session_id"]
         )
 
         spec_dict["parent_order_id"] = self.order_spec.order_id

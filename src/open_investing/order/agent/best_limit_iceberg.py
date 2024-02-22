@@ -47,6 +47,7 @@ class BestLimitIcebergOrderSpec(OrderSpec):
 
     max_tick_diff: int
     tick_size: Decimal
+    fast_trade_test: bool = False
 
 
 @dataclass
@@ -58,6 +59,11 @@ class InternalOrderCommand:
 @TaskSpecHandlerRegistry.register_class
 class BestLimitIcebergOrderAgent(OrderAgent):
     task_spec_cls = BestLimitIcebergOrderSpec
+
+    """
+    best limit composite order is filled when leader (limit order) is filled, it has the total fillled so far
+    decision is filled when follower is filled
+    """
 
     order_type = OrderType.BestLimitIceberg
 
@@ -161,6 +167,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                     else:
                         price = recent_quote.ask_price_1
 
+                    if order_spec.fast_trade_test:
+                        if order_side == OrderSide.Buy:
+                            price = recent_quote.ask_price_1
+                        else:
+                            price = recent_quote.bid_price_1
+
                 except TimeoutError as e:
                     logger.warning(f"wait for quote data timeout {e}")
                     exchange_manager = self.exchange_manager
@@ -194,6 +206,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                                 security_code,
                                 remaining_quantity_order,
                                 order_spec.quantity_multiplier,
+                                order_spec.decision_id,
                             )
 
                         except CancelFailedException:
@@ -236,6 +249,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
                 self.order_event_broker.subscribe(order_event_spec, listener_spec)
 
                 order_spec_dict = self.base_spec_dict | {
+                    "decision_id": order_spec.decision_id,
                     "spec_type_name": OrderType.Limit,
                     "order_side": order_spec.order_side,
                     "quantity_exposure": int(remaining_quantity_order)
@@ -261,7 +275,12 @@ class BestLimitIcebergOrderAgent(OrderAgent):
             logger.exception(f"run_order: {e}")
 
     async def cancel_remaining(
-        self, order_id, security_code, cancel_quantity_order, quantity_multiplier
+        self,
+        order_id,
+        security_code,
+        cancel_quantity_order,
+        quantity_multiplier,
+        decision_id,
     ):
         logger.info(f"cancel_remaining, {order_id}, {cancel_quantity_order}")
         order_task_dispatcher = self.order_task_dispatcher
@@ -276,6 +295,7 @@ class BestLimitIcebergOrderAgent(OrderAgent):
         self.cancel_events[order_id] = cancel_event
 
         cancel_order_spec_dict = self.base_spec_dict | {
+            "decision_id": decision_id,
             "spec_type_name": "order.cancel_remaining",
             "order_id": order_id,
             "security_code": security_code,

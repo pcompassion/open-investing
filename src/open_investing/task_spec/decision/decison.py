@@ -138,3 +138,12 @@ class DecisionHandler(Generic[T], TaskSpecHandler):
         )
 
         return self.services[service_key]
+
+    @property
+    def decision_event_broker(self):
+        service_key = ServiceKey(
+            service_type="pubsub_broker",
+            service_name="decision_event_broker",
+        )
+
+        return self.services[service_key]

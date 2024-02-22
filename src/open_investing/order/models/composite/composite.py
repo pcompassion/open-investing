@@ -24,6 +24,7 @@ class CompositeOrder(models.Model):
     life_stage = models.CharField(
         max_length=32, blank=True, default=OrderLifeStage.Undefined
     )
+    life_stage_updated_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     quantity_multiplier = models.DecimalField(
         max_digits=16, decimal_places=2, default=Decimal("1")
@@ -111,3 +112,7 @@ class CompositeOrder(models.Model):
 
     # @classmethod
     # def create_order(cls, quantity_order=None, quantity_exposure=)
+
+
+# BestLimitOrder
+# filled when limit order is filled

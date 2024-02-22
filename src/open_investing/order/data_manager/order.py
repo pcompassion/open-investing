@@ -133,13 +133,13 @@ class OrderDataManager:
         if order:
             order.update_fill(fill_quantity_order, fill_price)
 
-        # if order.parent_order_id:
-        #     parent_order = await self.get_composite_order(
-        #         filter_params=dict(id=order.parent_order_id)
-        #     )
-        #     await self.handle_exchange_filled_event_for_composite_order(
-        #         event_params, order, parent_order
-        #     )
+        if order.parent_order_id:
+            parent_order = await self.get_composite_order(
+                filter_params=dict(id=order.parent_order_id)
+            )
+            await self.handle_exchange_filled_event_for_composite_order(
+                event_params, order, parent_order
+            )
 
         offset_result = await self.offset_order(order, fill_quantity_order)
 
@@ -154,10 +154,10 @@ class OrderDataManager:
 
         order.subtract_quantity(cancelled_quantity_order)
 
-        if parent_order:
-            await self.handle_cancel_success_event_for_composite_order(
-                event_params, order, parent_order
-            )
+        # if parent_order:
+        #     await self.handle_cancel_success_event_for_composite_order(
+        #         event_params, order, parent_order
+        #     )
 
         await order.asave()
 
@@ -172,7 +172,8 @@ class OrderDataManager:
                 composite_order.update_fill(fill_quantity_order, fill_price)
                 # decision = composite_order.decision
             case OrderType.BestLimitIceberg:
-                composite_order.update_fill(fill_quantity_order, fill_price)
+                if order.order_type == OrderType.Limit:
+                    composite_order.update_fill(fill_quantity_order, fill_price)
 
             case _:
                 pass

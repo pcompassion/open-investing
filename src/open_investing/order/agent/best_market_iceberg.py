@@ -112,6 +112,7 @@ class BestMarketIcebergOrderAgent(OrderAgent):
                 order_event_broker.subscribe(order_event_spec, listener_spec)
 
                 order_spec_dict = self.base_spec_dict | {
+                    "decision_id": order_spec.decision_id,
                     "spec_type_name": OrderType.Market,
                     # "quantity": quantity_partial,
                     # TODO: quantity type
@@ -148,6 +149,7 @@ class BestMarketIcebergOrderAgent(OrderAgent):
 
                     cancel_order_spec_dict = self.base_spec_dict | {
                         "spec_type_name": "order.cancel_remaining",
+                        "decision_id": order_spec.decision_id,
                         "cancel_quantity": remaining_quantity,
                         "order_id": order_id,
                         "security_code": security_code,

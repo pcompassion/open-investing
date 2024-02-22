@@ -92,22 +92,19 @@ class OrderService:
 
                 await order_event_broker.enqueue_message(message)
                 # TODO: haste, better think from where to send message
-                # if order.parent_order_id:
-                #     order_event_spec = OrderEventSpec(
-                #         order_id=order.parent_order_id,
-                #         name=OrderEventName.Filled,
-                #     )
-                #     message = dict(
-                #         event_spec=order_event_spec,
-                #         order=order,
-                #         data=data,
-                #     )
+                if order.parent_order_id:
+                    order_event_spec = OrderEventSpec(
+                        order_id=order.parent_order_id,
+                        name=OrderEventName.Filled,
+                    )
+                    message = dict(
+                        event_spec=order_event_spec,
+                        order=order,
+                        data=data,
+                    )
 
-                #     await order_event_broker.enqueue_message(message)
-            case OrderEventName.ExchangeCancelSuccess:
-                await order_data_manager.handle_cancel_success_event(
-                    data_initial, order
-                )
+                    await order_event_broker.enqueue_message(message)
+
             case OrderEventName.ExchangeOpenSuccess:
                 pass
             case OrderEventName.ExchangeOpenFailure:
@@ -295,18 +292,19 @@ class OrderService:
         )
         event_name = OrderEventName.ExchangeCancelFailure
         next_event_name = OrderEventName.CancelFailure
+        event_params = dict(
+            event_name=event_name, date_at=now_local(), **cancel_order_result
+        )
 
         if api_response.success:
             logger.info(f"cancelled order: {cancel_order_result}")
             event_name = OrderEventName.ExchangeCancelSuccess
             next_event_name = OrderEventName.CancelSuccess
+            await order_data_manager.handle_cancel_success_event(event_params, order)
 
         else:
             logger.warning(f"cancelled order failed: {cancel_order_result}")
 
-        event_params = dict(
-            event_name=event_name, date_at=now_local(), **cancel_order_result
-        )
         await order_data_manager.record_event(
             event_params=event_params,
             order=order,

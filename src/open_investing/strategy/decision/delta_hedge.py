@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 from decimal import Decimal
-from open_investing.event_spec.event_spec import OrderEventSpec
+from open_investing.event_spec.event_spec import DecisionEventSpec, OrderEventSpec
 from uuid import uuid4
 from open_library.data.conversion import ListDataType
 from open_investing.task.task import Task
 from open_investing.strategy.const.decision import (
-    DecisionCommandName,
+    DecisionEventName,
     DecisionLifeStage,
+    DecisionCommandName,
 )
 from open_investing.task_spec.order.order import OrderCommand, OrderTaskCommand
 from open_investing.task.task_command import SubCommand, TaskCommand
@@ -100,6 +101,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     decision_id=decision_id,
                     order_id=order_id,
                     parent_order_id=None,
+                    fast_trade_test=decision_spec.fast_trade_test,
                 )
 
                 order_command = OrderTaskCommand(
@@ -168,6 +170,7 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                         order_id=order_id,
                         parent_order_id=None,
                         is_offset=True,
+                        fast_trade_test=decision_spec.fast_trade_test,
                     )
 
                     order_event_spec = OrderEventSpec(order_id=order_id)
@@ -217,6 +220,11 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
             logger.warning(f"no decision_spec for decision_id: {decision_id}")
             return
 
+        order_data_manager = self.order_data_manager
+        composite_order = await order_data_manager.get_composite_order(
+            filter_params=dict(id=order.parent_order_id)
+        )
+
         match event_name:
             case OrderEventName.Filled:
                 # TODO: better check tighter condition
@@ -230,11 +238,17 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
                     fill_quantity_order = 0
                     if order.is_offset:
                         fill_quantity_order = data["fill_quantity_order"]
-                        follow_condition_met = True
+                        if not decision.is_fullfilled():
+                            # because we are breaking up orders, leader_quantity_order might fill faster
+                            # it's due to the fact we are firing market order for each limit order fill
+                            follow_condition_met = True
                     else:
                         if order.is_filled():
-                            fill_quantity_order = order.filled_quantity_order
-                            follow_condition_met = True
+                            if composite_order.is_filled():
+                                fill_quantity_order = (
+                                    composite_order.filled_quantity_order
+                                )
+                                follow_condition_met = True
 
                     if follow_condition_met:
                         # TODO: min quantity is 1 ?
@@ -303,81 +317,141 @@ class DeltaHedgeDecisionHandler(DecisionHandler):
 
                 elif (
                     order.security_code == decision_spec.follower_security_code
-                    and order.order_type == OrderType.Market
+                    and event_spec.order_id
+                    == order.id  # we also get composite order event
                 ):
-                    fill_quantity_order = data["fill_quantity_order"]
-                    fill_price = data["fill_price"]
+                    if order.is_filled():
+                        # market order can be filled partially
+                        fill_quantity_order = data["fill_quantity_order"]
+                        fill_price = data["fill_price"]
 
-                    # leader_fill_quantity_order = (
-                    #     fill_quantity_order
-                    #     * decision_spec.follower_multiplier
-                    #     / order.leader_follower_ratio
-                    #     / decision_spec.leader_multiplier
-                    # )
+                        # leader_fill_quantity_order = (
+                        #     fill_quantity_order
+                        #     * decision_spec.follower_multiplier
+                        #     / order.leader_follower_ratio
+                        #     / decision_spec.leader_multiplier
+                        # )
 
-                    leader_fill_quantity_order = order.leader_quantity_order
-                    leader_follower_ratio = order.leader_follower_ratio
-                    # assert (
-                    #     leader_fill_quantity_order
-                    #     == leader_follower_ratio * fill_quantity_order
-                    # )
+                        leader_fill_quantity_order = order.leader_quantity_order
+                        leader_follower_ratio = order.leader_follower_ratio
+                        # assert (
+                        #     leader_fill_quantity_order
+                        #     == leader_follower_ratio * fill_quantity_order
+                        # )
 
-                    # leader_fill_quantity_order = (
-                    #     fill_quantity_order / decision_spec.leader_follower_ratio
-                    # )
+                        # leader_fill_quantity_order = (
+                        #     fill_quantity_order / decision_spec.leader_follower_ratio
+                        # )
 
-                    order_data_manager = self.order_data_manager
-                    composite_order = await order_data_manager.get_composite_order(
-                        filter_params=dict(id=order.parent_order_id)
-                    )
-                    (
-                        offset_result,
-                        order_offset_relation,
-                    ) = await order_data_manager.offset_composite_order(
-                        composite_order, leader_fill_quantity_order
-                    )
-
-                    # actually decision filled
-                    composite_order.update_fill(leader_fill_quantity_order, fill_price)
-                    await order_data_manager.save(composite_order, save_params={})
-                    decision.update_fill(leader_fill_quantity_order)
-
-                    logger.info(
-                        f"decision_id: {decision.id},quantity_order: {decision.quantity_order}, filled_quantity_order: {decision.filled_quantity_order}"
-                    )
-
-                    # TODO: maybe notify/update strategy
-
-                    save_params = {}
-                    if decision.is_fullfilled():
-                        save_params["life_stage"] = DecisionLifeStage.Fullfilled
-                        save_params["life_stage_updated_at"] = date_at
-                        logger.info(f"decision fullfilled: {decision.id}")
-
-                    decision_data_manager = self.decision_data_manager
-                    await decision_data_manager.save(decision, save_params=save_params)
-
-                    if offset_result.get("fully_offsetted"):
-                        offsetted_order = order_offset_relation.offsetted_order
-                        offset_save_params = dict(
-                            life_stage=OrderLifeStage.FullyOffsetted,
-                            life_stage_updated_at=date_at,
-                        )
-                        await order_data_manager.save(
-                            order, save_params=offset_save_params
+                        (
+                            offset_result,
+                            order_offset_relation,
+                        ) = await order_data_manager.offset_composite_order(
+                            composite_order, leader_fill_quantity_order
                         )
 
-                        offsetted_decision = await decision_data_manager.get(
-                            filter_params=dict(id=offsetted_order.decision_id)
+                        # actually decision filled
+                        decision.update_fill(leader_fill_quantity_order)
+
+                        logger.info(
+                            f"decision_id: {decision.id},quantity_order: {decision.quantity_order}, filled_quantity_order: {decision.filled_quantity_order}"
                         )
 
+                        # TODO: maybe notify/update strategy
+
+                        save_params = {}
+                        leader_filled_quantity_order_total = None
+                        follower_filled_quantity_order_total = None
+                        if decision.is_fullfilled():
+                            save_params["life_stage"] = DecisionLifeStage.Fullfilled
+                            save_params["life_stage_updated_at"] = date_at
+                            logger.info(f"decision fullfilled: {decision.id}")
+
+                            follower_order_df = await order_data_manager.filter_single(
+                                filter_params=dict(
+                                    decision_id=decision.id,
+                                    security_code=decision_spec.follower_security_code,
+                                )
+                            )
+
+                            follower_filled_quantity_order_total = follower_order_df[
+                                "filled_quantity_order"
+                            ].sum()
+
+                            leader_order_df = await order_data_manager.filter_single(
+                                filter_params=dict(
+                                    decision_id=decision.id,
+                                    security_code=decision_spec.leader_security_code,
+                                )
+                            )
+
+                            leader_filled_quantity_order_total = leader_order_df[
+                                "filled_quantity_order"
+                            ].sum()
+
+                            if not offset_result.get("fully_offsetted"):
+                                decision_event_spec = DecisionEventSpec(
+                                    decision_id=decision.id,
+                                    name=DecisionEventName.Fullfilled,
+                                )
+
+                                data = dict(
+                                    leader_quantity_order=leader_filled_quantity_order_total,
+                                    follower_quantity_order=follower_filled_quantity_order_total,
+                                )
+                                message = dict(
+                                    event_spec=decision_event_spec, data=data
+                                )
+
+                                await self.decision_event_broker.enqueue_message(
+                                    message
+                                )
+
+                        decision_data_manager = self.decision_data_manager
                         await decision_data_manager.save(
-                            offsetted_decision,
-                            save_params=dict(
-                                life_stage=DecisionLifeStage.FullyOffsetted,
-                                life_stage_updated_at=date_at,
-                            ),
+                            decision, save_params=save_params
                         )
+
+                        if offset_result.get("fully_offsetted"):
+                            offsetted_order = order_offset_relation.offsetted_order
+                            offset_save_params = dict(
+                                life_stage=OrderLifeStage.FullyOffsetted,
+                                life_stage_updated_at=date_at,
+                            )
+                            await order_data_manager.save(
+                                order, save_params=offset_save_params
+                            )
+
+                            offsetted_decision = await decision_data_manager.get(
+                                filter_params=dict(id=offsetted_order.decision_id)
+                            )
+
+                            await decision_data_manager.save(
+                                offsetted_decision,
+                                save_params=dict(
+                                    life_stage=DecisionLifeStage.FullyOffsetted,
+                                    life_stage_updated_at=date_at,
+                                ),
+                            )
+                            logger.info(
+                                f"decision fully offsetted: offsetting_id: {decision.id}, offsetted_id: {offsetted_order.decision_id}"
+                            )
+
+                            decision_event_spec = DecisionEventSpec(
+                                decision_id=decision.id,
+                                name=DecisionEventName.FullyOffsetted,
+                            )
+
+                            data = dict(
+                                offsetting_decision_id=decision.id,
+                                offsetted_decision_id=offsetted_order.decision_id,
+                                offsetted_quantity_order=decision.filled_quantity_order,
+                                leader_quantity_order=leader_filled_quantity_order_total,
+                                follower_quantity_order=follower_filled_quantity_order_total,
+                            )
+                            message = dict(event_spec=decision_event_spec, data=data)
+
+                            await self.decision_event_broker.enqueue_message(message)
 
             case OrderEventName.CancelSuccess:
                 order_id = order.id

@@ -18,19 +18,31 @@ class DecisionLifeStage(str, Enum):
 
     Closed = "closed"
 
+    @classmethod
+    def active_stages(cls):
+        return (
+            cls.Decided,
+            cls.ExchangeOpenRequest,
+            cls.ExchangeOpenSuccess,
+            cls.ExchangeOpenFailure,
+            cls.Opened,
+            cls.Fullfilled,
+        )
+
+    @classmethod
+    def open_stages(cls):
+        return (
+            cls.Opened,
+            cls.Fullfilled,
+        )
+
     @property
     def is_active(self):
-        return self in [
-            self.Decided,
-            self.ExchangeOpenRequest,
-            self.ExchangeOpenSuccess,
-            self.ExchangeOpenFailure,
-            self.Opened,
-            self.Fullfilled,
-        ]
+        return self in self.active_stages()
 
     @property
     def has_opened(self):
+        # money involved
         return self not in [
             self.Undefined,
             self.Decided,

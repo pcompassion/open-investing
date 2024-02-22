@@ -46,7 +46,7 @@ class OrderEventSpec(EventSpec):
 class DecisionEventSpec(EventSpec):
     spec_type_name: str = "decision_event"
 
-    order_id: UUID | None = None
+    decision_id: UUID | None = None
     name: DecisionEventName | None = None
 
     data: dict[str, Any] | None = None
